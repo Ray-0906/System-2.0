@@ -1,357 +1,309 @@
-import { useEffect, memo } from 'react';
-import { Shield, Star, Award, Skull, Sword, Flame, ShieldPlus, Brain } from 'lucide-react';
-import { useUserStore } from '../store/userStore';
-import { useLoadUser } from '../utils/userLoader';
-import PropTypes from 'prop-types';
+import React, { useState, useEffect, useRef } from "react";
+import * as echarts from "echarts";
+import { useUserStore } from "../store/userStore";
+import { statLevelThresholds, userLevelThresholds } from "../utils/levelling";
 
-// Centralized theme constants for Solo Leveling aesthetic
-const theme = {
-  fonts: {
-    primary: "'Orbitron', sans-serif",
-  },
-  colors: {
-    background: 'bg-gradient-to-b from-black via-indigo-950 to-black',
-    card: 'bg-gradient-to-r from-gray-900 to-indigo-900',
-    statCard: 'bg-gray-900',
-    border: 'border-indigo-500/50',
-    shadow: 'shadow-indigo-500/50',
-    title: 'text-indigo-300',
-    accent: 'text-indigo-400',
-    rank: 'text-yellow-300',
-    level: 'text-green-400',
-    coins: 'text-blue-400',
-    stat: 'text-green-400',
-    text: 'text-gray-300',
-    muted: 'text-gray-400',
-    loading: 'text-indigo-400',
-    error: 'text-red-400',
-    progress: 'bg-indigo-600',
-    progressBg: 'bg-gray-700',
-    particle: 'bg-indigo-400',
-  },
-  animations: {
-    fadeInUp: 'animate-fade-in-up',
-    pulse: 'animate-pulse',
-    glow: 'animate-glow',
-  },
-};
-
-// CSS-in-JS for animations, hover effects, and particle background
-const styles = `
-  @keyframes fadeInUp {
-    from { opacity: 0; transform: translateY(20px); }
-    to { opacity: 1; transform: translateY(0); }
-  }
-  @keyframes pulse {
-    0% { opacity: 1; }
-    50% { opacity: 0.5; }
-    100% { opacity: 1; }
-  }
-  @keyframes glow {
-    0% { box-shadow: 0 0 5px rgba(99, 102, 241, 0.3); }
-    50% { box-shadow: 0 0 20px rgba(99, 102, 241, 0.6); }
-    100% { box-shadow: 0 0 5px rgba(99, 102, 241, 0.3); }
-  }
-  @keyframes float {
-    0% { transform: translateY(0); opacity: 0.5; }
-    50% { opacity: 0.8; }
-    100% { transform: translateY(-100vh); opacity: 0; }
-  }
-  .animate-fade-in-up {
-    animation: fadeInUp 0.5s ease-out;
-  }
-  .animate-pulse {
-    animation: pulse 2s infinite;
-  }
-  .animate-glow {
-    animation: glow 3s infinite;
-  }
-  .hover-glow {
-    transition: all 0.3s ease;
-  }
-  .hover-glow:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 0 20px rgba(99, 102, 241, 0.6);
-    border-color: rgba(165, 180, 252, 0.8);
-  }
-  .particle {
-    position: absolute;
-    width: 4px;
-    height: 4px;
-    border-radius: 50%;
-    background: rgba(99, 102, 241, 0.5);
-    animation: float 8s infinite;
-    pointer-events: none;
-  }
-`;
-
-/**
- * Loading state component for user data
- * @returns {JSX.Element} Animated loading text
- */
-const LoadingState = memo(() => (
-  <p
-    className={`text-center mt-8 ${theme.colors.loading} ${theme.animations.pulse}`}
-    style={{ fontFamily: theme.fonts.primary }}
-  >
-    Loading...
-  </p>
-));
-
-/**
- * Error state component for failed user data load
- * @param {Object} props
- * @param {string} props.message - Error message
- * @returns {JSX.Element} Error message display
- */
-const ErrorState = memo(({ message }) => (
-  <p
-    className={`text-center mt-8 ${theme.colors.error}`}
-    style={{ fontFamily: theme.fonts.primary }}
-  >
-    {message}
-  </p>
-));
-
-ErrorState.propTypes = {
-  message: PropTypes.string.isRequired,
-};
-
-/**
- * Stat card for user attributes (rank, level, coins)
- * @param {Object} props
- * @param {string} props.title - Card title
- * @param {string|number} props.value - Card value
- * @param {string} props.color - Tailwind color class
- * @param {React.Component} props.icon - Lucide icon component
- * @returns {JSX.Element} Styled stat card
- */
-const StatCard = memo(({ title, value, color, icon: Icon }) => (
-  <div
-    className={`${theme.colors.card} rounded-2xl p-6 ${theme.colors.shadow} ${theme.colors.border} text-center ${theme.animations.fadeInUp} hover-glow ${theme.animations.glow}`}
-    style={{ fontFamily: theme.fonts.primary }}
-  >
-    <h2 className={`text-xl font-semibold ${theme.colors.muted} mb-2`}>{title}</h2>
-    <div className="flex items-center justify-center">
-      {Icon && <Icon className={`w-6 h-6 mr-2 ${color} drop-shadow-[0_0_4px_rgba(99,102,241,0.6)]`} />}
-      <p className={`text-3xl ${color}`}>{value}</p>
-    </div>
-  </div>
-));
-
-StatCard.propTypes = {
-  title: PropTypes.string.isRequired,
-  value: PropTypes.oneOfType([PropTypes.string, PropTypes.number]).isRequired,
-  color: PropTypes.string.isRequired,
-  icon: PropTypes.elementType.isRequired,
-};
-
-/**
- * Skills & Attributes grid
- * @param {Object} props
- * @param {Object} props.skills - Skills/Attributes object with fake data
- * @returns {JSX.Element} Grid of skill cards with progress bars
- */
-const SkillsGrid = memo(({ skills }) => (
-  <div
-    className={`${theme.colors.card} rounded-2xl p-6 ${theme.colors.shadow} ${theme.colors.border} ${theme.animations.fadeInUp}`}
-    style={{ fontFamily: theme.fonts.primary }}
-  >
-    <div className="flex items-center mb-4">
-      <Sword className={`w-6 h-6 mr-2 ${theme.colors.title} drop-shadow-[0_0_4px_rgba(99,102,241,0.4)]`} />
-      <h2 className={`text-2xl font-semibold ${theme.colors.title} drop-shadow-[0_0_4px_rgba(99,102,241,0.4)]`}>
-        Skills & Attributes
-      </h2>
-    </div>
-    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-      {skills &&
-        Object.entries(skills).map(([key, skill], index) => {
-          const progress = Math.min((skill.value / 100) * 100, 100); // Normalize value to 0-100 for progress bar
-          const Icon = key.toLowerCase().includes('strength')
-            ? Flame
-            : key.toLowerCase().includes('intelligence')
-            ? Brain
-            : ShieldPlus; // Icon mapping
-          return (
-            <div
-              key={key}
-              className={`${theme.colors.statCard} rounded-xl p-4 ${theme.colors.border} text-center hover-glow ${theme.animations.glow}`}
-              style={{ animationDelay: `${index * 0.1}s` }}
-            >
-              <div className="flex items-center justify-center mb-2">
-                <Icon className={`w-5 h-5 mr-2 ${theme.colors.stat} drop-shadow-[0_0_4px_rgba(34,197,94,0.4)]`} />
-                <h3 className={`text-lg font-medium ${theme.colors.muted} capitalize`}>{key}</h3>
-              </div>
-              <p className={`text-2xl ${theme.colors.stat} mb-1`}>{skill.value}</p>
-              <div className={`w-full ${theme.colors.progressBg} rounded-full h-2.5`}>
-                <div
-                  className={`${theme.colors.progress} h-2.5 rounded-full transition-all duration-500 ease-in-out`}
-                  style={{ width: `${progress}%` }}
-                />
-              </div>
-              <p className={`text-sm ${theme.colors.muted} mt-1`}>Lv {skill.level}</p>
-            </div>
-          );
-        })}
-    </div>
-  </div>
-));
-
-SkillsGrid.propTypes = {
-  skills: PropTypes.objectOf(
-    PropTypes.shape({
-      value: PropTypes.number.isRequired,
-      level: PropTypes.number.isRequired,
-    })
-  ),
-};
-
-/**
- * Titles section for user achievements
- * @param {Object} props
- * @param {string[]} props.titles - Array of user titles
- * @returns {JSX.Element} Titles display with badges
- */
-const TitlesSection = memo(({ titles }) => (
-  <div
-    className={`${theme.colors.card} rounded-2xl p-6 ${theme.colors.shadow} ${theme.colors.border} ${theme.animations.fadeInUp}`}
-    style={{ fontFamily: theme.fonts.primary }}
-  >
-    <div className="flex items-center mb-4">
-      <Award className={`w-6 h-6 mr-2 ${theme.colors.title} drop-shadow-[0_0_4px_rgba(99,102,241,0.4)]`} />
-      <h2 className={`text-2xl font-semibold ${theme.colors.title} drop-shadow-[0_0_4px_rgba(99,102,241,0.4)]`}>
-        Titles
-      </h2>
-    </div>
-    <div className="flex flex-wrap gap-2">
-      {titles?.length ? (
-        titles.map((title, index) => (
-          <span
-            key={index}
-            className={`${theme.colors.statCard} ${theme.colors.border} rounded-full px-4 py-1 text-sm ${theme.colors.text} hover-glow ${theme.animations.glow}`}
-            style={{ animationDelay: `${index * 0.1}s` }}
-          >
-            {title}
-          </span>
-        ))
-      ) : (
-        <p className={theme.colors.muted}>No titles earned yet.</p>
-      )}
-    </div>
-  </div>
-));
-
-TitlesSection.propTypes = {
-  titles: PropTypes.arrayOf(PropTypes.string),
-};
-
-/**
- * Particle background effect for Solo Leveling magic vibe
- * @returns {JSX.Element} Animated particles
- */
-const ParticleBackground = memo(() => {
-  const particles = Array.from({ length: 20 }).map((_, index) => (
-    <div
-      key={index}
-      className="particle"
-      style={{
-        left: `${Math.random() * 100}vw`,
-        animationDelay: `${Math.random() * 5}s`,
-        animationDuration: `${5 + Math.random() * 5}s`,
-      }}
-    />
-  ));
-
-  return <div className="fixed inset-0 z-0">{particles}</div>;
-});
-
-/**
- * Dashboard component displaying user profile and stats
- * @returns {JSX.Element} Styled dashboard with Solo Leveling theme
- */
 const Dashboard = () => {
   const user = useUserStore((state) => state.user);
-  const { loading, error } = useLoadUser();
+  const chartRef = useRef(null);
+  const [chart, setChart] = useState(null);
+  
+  // Stat thresholds for level progression
+ 
 
-  // Fake data for skills and attributes
-  const fakeSkills = {
-    strength: { value: 85, level: 6 },
-    agility: { value: 70, level: 5 },
-    intelligence: { value: 90, level: 7 },
-    endurance: { value: 65, level: 4 },
+  const getLevelProgress = (value, level) => {
+    const total = statLevelThresholds[level] || 500;
+   
+    return (value / total) * 100;
   };
 
-  // Log user data loading status
   useEffect(() => {
-    if (loading) {
-      console.log('Loading user data...');
-    } else if (error) {
-      console.error('Error loading user data:', error);
-    } else {
-      console.log('User data loaded successfully');
+    if (chartRef.current && user) {
+      const newChart = echarts.init(chartRef.current);
+      const statValues = [
+        user.stats.intelligence.level,
+        user.stats.strength.level,
+        user.stats.charisma.level,
+        user.stats.agility.level,
+        user.stats.endurance.level,
+      ];
+      const mx = Math.max(...statValues);
+      const option = {
+        animation: true,
+        radar: {
+          indicator: [
+            { name: "INTELLIGENCE", max: mx+10 },
+            { name: "STRENGTH", max: mx+10 },
+            { name: "CHARISMA", max: mx+10 },
+            { name: "AGILITY", max: mx+10 },
+            { name: "ENDURANCE", max: mx+10 },
+          ],
+          shape: "polygon",
+          splitNumber: 5,
+          axisName: {
+            color: "rgba(170, 130, 255, 0.9)",
+            fontSize: 12,
+            fontFamily: "Arial, sans-serif",
+            backgroundColor: "rgba(0, 0, 0, 0.5)",
+            padding: [3, 5],
+          },
+          splitLine: {
+            lineStyle: {
+              color: "rgba(170, 130, 255, 0.3)",
+              type: "dashed",
+            },
+          },
+          splitArea: {
+            show: true,
+            areaStyle: {
+              color: ["rgba(0, 0, 0, 0.1)", "rgba(0, 0, 0, 0.3)"],
+            },
+          },
+          axisLine: {
+            lineStyle: {
+              color: "rgba(170, 130, 255, 0.5)",
+              width: 2,
+            },
+          },
+        },
+        series: [
+          {
+            name: "Shadow Monarch Stats",
+            type: "radar",
+            data: [
+              {
+                value: statValues,
+                lineStyle: {
+                  color: "#8B5CF6",
+                  width: 2,
+                  shadowColor: "rgba(139, 92, 246, 0.5)",
+                  shadowBlur: 10,
+                },
+                areaStyle: {
+                  color: "rgba(139, 92, 246, 0.3)",
+                  shadowColor: "rgba(139, 92, 246, 0.5)",
+                  shadowBlur: 15,
+                },
+                symbol: "circle",
+                symbolSize: 6,
+                itemStyle: {
+                  color: "#8B5CF6",
+                },
+              },
+            ],
+          },
+        ],
+        backgroundColor: "rgba(0, 0, 0, 0.8)",
+      };
+      newChart.setOption(option);
+      setChart(newChart);
+      const handleResize = () => newChart.resize();
+      window.addEventListener("resize", handleResize);
+      return () => {
+        window.removeEventListener("resize", handleResize);
+        newChart.dispose();
+      };
     }
-  }, [loading, error]);
+  }, [user]);
 
-  if (loading || !user) return <LoadingState />;
-  if (error) return <ErrorState message="Error loading user data." />;
+  const stats = [
+    { name: "INTELLIGENCE", value: user?.stats?.intelligence?.value || 0, level: user?.stats?.intelligence?.level || 1 },
+    { name: "STRENGTH", value: user?.stats?.strength?.value || 0, level: user?.stats?.strength?.level || 1 },
+    { name: "CHARISMA", value: user?.stats?.charisma?.value || 0, level: user?.stats?.charisma?.level || 1 },
+    { name: "AGILITY", value: user?.stats?.agility?.value || 0, level: user?.stats?.agility?.level || 1 },
+    { name: "ENDURANCE", value: user?.stats?.endurance?.value || 0, level: user?.stats?.endurance?.level || 1 },
+  ];
+
+  const skills = user?.skills || [];
+
+  const artifacts =user?.equiments || [
+    { id: 1, name: "Demon King's Blade", icon: "fa-solid fa-khanda", description: "A cursed sword that drains enemy vitality." },
+    { id: 2, name: "Phantom Veil", icon: "fa-solid fa-hat-wizard", description: "A shadow-woven cloak for near-invisibility." },
+    { id: 3, name: "Abyssal Pendant", icon: "fa-solid fa-gem", description: "Boosts control over shadow legions." },
+    { id: 4, name: "Void Gloves", icon: "fa-solid fa-mitten", description: "Manipulate shadows from a distance." },
+    { id: 5, name: "Monarch's Diadem", icon: "fa-solid fa-crown", description: "Enhances all shadow monarch powers." },
+  ];
 
   return (
-    <div className={`min-h-screen ${theme.colors.background}`}>
-      <style>{styles}</style>
-      <ParticleBackground />
-      <div className="relative z-10 p-4">
-        <div className="max-w-7xl mx-auto w-full">
-          {/* Header Section */}
-          <div className={`mb-10 ${theme.animations.fadeInUp}`}>
-            <div className="flex items-center justify-center md:justify-start">
-              <Skull className={`w-8 h-8 mr-3 ${theme.colors.accent} drop-shadow-[0_0_8px_rgba(99,102,241,0.6)]`} />
-              <h1
-                className={`text-4xl md:text-5xl font-semibold ${theme.colors.accent} drop-shadow-[0_0_8px_rgba(99,102,241,0.6)]`}
-                style={{ fontFamily: theme.fonts.primary }}
-              >
-                Welcome, {user.username}
-              </h1>
+    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-black to-gray-800 text-white font-mono p-6 overflow-hidden relative">
+      <div className="max-w-7xl mx-auto">
+        <h1 className="text-center text-5xl font-extrabold mb-10 tracking-widest text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-pink-500 animate-pulse">
+          SHADOW MONARCH SYSTEM
+        </h1>
+        <div className="grid gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Hunter ID Card */}
+            <div className="bg-gradient-to-br from-gray-800 to-black rounded-xl p-6 shadow-[0_0_15px_rgba(139,92,246,0.3)] border-2 border-purple-900 relative overflow-hidden">
+              <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/dark-mosaic.png')] opacity-10"></div>
+              <h2 className="text-xl text-center font-semibold mb-4 border-b border-purple-700 pb-2 relative z-10">
+                HUNTER ID
+              </h2>
+              <div className="flex flex-col items-center mb-6 relative z-10">
+                <div className="w-32 h-32 rounded-full overflow-hidden border-4 border-purple-500 shadow-[0_0_10px_rgba(139,92,246,0.7)] mb-4 transform hover:scale-105 transition-transform">
+                  <img
+                    src="https://readdy.ai/api/search-image?query=Anime%20style%20portrait%20of%20a%20mysterious%20hunter%20with%20dark%20green%20hair%20and%20intense%20eyes%2C%20looking%20directly%20at%20viewer%20with%20a%20serious%20expression%2C%20dark%20atmospheric%20background%20with%20subtle%20shadows%2C%20high%20quality%20digital%20art&width=300&height=300&seq=1&orientation=squarish"
+                    alt="Shadow Monarch Avatar"
+                    className="w-full h-full object-cover object-top"
+                  />
+                </div>
+                <div className="text-center relative z-10">
+                  <p className="mb-1">
+                    <span className="text-purple-400">IDENT - </span>
+                    {user?.username || "Unknown"}
+                  </p>
+                  <p className="mb-1">
+                    <span className="text-purple-400">Title - </span>
+                    <span className="text-yellow-400">
+                      {user?.titles?.[0] || "Shadow Soldier"}
+                    </span>
+                  </p>
+                  <p className="mb-1">
+                    <span className="text-purple-400">Hunter Rank - </span>
+                    <span className="text-yellow-400 font-bold">
+                      {user?.rank || "E"}
+                    </span>
+                  </p>
+                  <p className="mb-1">
+                    <span className="text-purple-400">Hunter Level - </span>
+                    {user?.level || 1}
+                  </p>
+                  <p className="mb-1">
+                    <span className="text-purple-400">Coins - </span>
+                    {user?.coins || 0}
+                  </p>
+                </div>
+              </div>
+              <div className="mt-4 relative z-10">
+                <div className="flex justify-between items-center mb-2">
+                  <span className="text-purple-400">XP:</span>
+                  <span className="text-lg font-bold">Lv. {user?.level || 1}</span>
+                  <span className="text-xs text-purple-300">
+                    {user?.xp || 0}/{userLevelThresholds[user?.level] || 500}
+                  </span>
+                </div>
+                <div className="w-full bg-gray-700 rounded-full h-2">
+                  <div
+                    className="bg-gradient-to-r from-purple-600 to-pink-500 h-2 rounded-full shadow-[0_0_5px_rgba(139,92,246,0.7)]"
+                    style={{
+                      width: `${(user?.xp || 0) / (userLevelThresholds[user?.level] || 500) * 100}%`,
+                    }}
+                  ></div>
+                </div>
+               
+              </div>
             </div>
-            <div className="flex justify-center md:justify-start mt-2">
-              <span
-                className={`${theme.colors.statCard} ${theme.colors.border} rounded-full px-4 py-1 ${theme.colors.rank} text-sm ${theme.animations.glow}`}
-                style={{ fontFamily: theme.fonts.primary }}
-              >
-                Rank: {user.rank}
-              </span>
+            {/* Stats Section */}
+            <div className="bg-gradient-to-br from-gray-800 to-black rounded-xl p-6 shadow-[0_0_15px_rgba(139,92,246,0.3)] border-2 border-purple-900 lg:col-span-2 relative overflow-hidden">
+              <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/dark-mosaic.png')] opacity-10"></div>
+              <h2 className="text-xl text-center font-semibold mb-8 border-b border-purple-700 pb-2 relative z-10">
+                SHADOW STATS
+              </h2>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 relative z-10">
+                <div className="flex items-center justify-center">
+                  <div ref={chartRef} className="w-full h-64"></div>
+                </div>
+                <div className="space-y-6">
+                  {stats.map((stat, index) => (
+                    <div key={index} className="relative z-10">
+                      <div className="flex justify-between items-center mb-1">
+                        <span className="text-purple-400">{stat.name}</span>
+                        <span className="text-sm text-yellow-400">
+                          Lv. {stat.level}
+                        </span>
+                      </div>
+                      <div className="w-full bg-gray-700 rounded-full h-2">
+                        <div
+                          className="bg-gradient-to-r from-purple-600 to-pink-500 h-2 rounded-full shadow-[0_0_5px_rgba(139,92,246,0.7)]"
+                          style={{
+                            width: `${getLevelProgress(stat.value, stat.level)}%`,
+                          }}
+                        ></div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
             </div>
           </div>
-
-          {/* Stats Overview */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
-            <StatCard
-              title="Rank"
-              value={user.rank}
-              color={theme.colors.rank}
-              icon={Shield}
-            />
-            <StatCard
-              title="Level"
-              value={user.level}
-              color={theme.colors.level}
-              icon={Star}
-            />
-            <StatCard
-              title="Coins"
-              value={user.coins}
-              color={theme.colors.coins}
-              icon={Award}
-            />
-          </div>
-
-          {/* Skills & Attributes Grid */}
-          <SkillsGrid skills={fakeSkills} />
-
-          {/* Titles Section */}
-          <div className="mt-10">
-            <TitlesSection titles={user.titles} />
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Artifacts Section */}
+            <div className="bg-gradient-to-br from-gray-800 to-black rounded-xl p-6 shadow-[0_0_15px_rgba(139,92,246,0.3)] border-2 border-purple-900 relative overflow-hidden">
+              <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/dark-mosaic.png')] opacity-10"></div>
+              <h2 className="text-xl font-semibold mb-4 border-b border-purple-700 pb-2 relative z-10">
+                SHADOW ARTIFACTS
+              </h2>
+              <div className="relative">
+                <div className="absolute left-0 top-0 bottom-0 w-12 bg-gradient-to-r from-gray-900 to-transparent z-10"></div>
+                <div className="absolute right-0 top-0 bottom-0 w-12 bg-gradient-to-l from-gray-900 to-transparent z-10"></div>
+                <div className="overflow-x-auto scrollbar-hide">
+                  <div className="flex gap-6 min-w-max px-6 relative z-10">
+                    {artifacts.length > 0 ? (
+                      artifacts.map((skill) => (
+                        <div key={skill.id} className="group relative cursor-pointer">
+                          <div className="w-16 h-16 bg-gray-800 rounded-lg flex items-center justify-center hover:bg-gray-700 transition-colors shadow-[0_0_10px_rgba(139,92,246,0.3)] hover:shadow-[0_0_15px_rgba(139,92,246,0.5)]">
+                            <img src={skill.icon} alt={skill.name} className="w-10 h-10 text-purple-500 animate-pulse" />
+                          </div>
+                          <p className="mt-2 text-center text-sm text-yellow-400">{skill.name}</p>
+                          <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 w-48 bg-gray-800 p-2 rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-20">
+                            <p className="font-semibold text-sm text-yellow-400">{skill.name}</p>
+                            <p className="text-xs text-purple-300 mt-1">{skill.description}</p>
+                          </div>
+                        </div>
+                      ))
+                    ) : (
+                      <p className="text-purple-300 text-center">No artifacts equipped</p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+            {/* Skills Section */}
+            <div className="bg-gradient-to-br from-gray-800 to-black rounded-xl p-6 shadow-[0_0_15px_rgba(139,92,246,0.3)] border-2 border-purple-900 relative overflow-hidden">
+              <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/dark-mosaic.png')] opacity-10"></div>
+              <h2 className="text-xl font-semibold mb-4 border-b border-purple-700 pb-2 relative z-10">
+                SHADOW SKILLS
+              </h2>
+              <div className="relative">
+                <div className="absolute left-0 top-0 bottom-0 w-12 bg-gradient-to-r from-gray-900 to-transparent z-10"></div>
+                <div className="absolute right-0 top-0 bottom-0 w-12 bg-gradient-to-l from-gray-900 to-transparent z-10"></div>
+                <div className="overflow-x-auto scrollbar-hide">
+                  <div className="flex gap-6 min-w-max px-6 relative z-10">
+                    {skills.length > 0 ? skills.map((skill) => (
+                      <div
+                        key={skill.id}
+                        className="group relative cursor-pointer"
+                      >
+                        <div className="w-16 h-16 bg-gray-800 rounded-lg flex items-center justify-center hover:bg-gray-700 transition-colors shadow-[0_0_10px_rgba(139,92,246,0.3)] hover:shadow-[0_0_15px_rgba(139,92,246,0.5)]">
+                          <img
+                            src={skill.icon}
+                            alt={skill.name}
+                            className="w-10 h-10 text-purple-500 animate-pulse"
+                          />
+                        </div>
+                        <p className="mt-2 text-center text-sm text-yellow-400">
+                          {skill.name}
+                        </p>
+                        <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 w-48 bg-gray-800 p-2 rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-20">
+                          <p className="font-semibold text-sm text-yellow-400">
+                            {skill.name}
+                          </p>
+                          <p className="text-xs text-purple-300 mt-1">
+                            {skill.description}
+                          </p>
+                        </div>
+                      </div>
+                    )):  (
+                      <p className="text-purple-300 text-center">No Skills Unlocked</p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
+      </div>
+      <div className="absolute bottom-4 right-4 text-xs text-purple-400">
+        Powered by xAI - {new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" })}
       </div>
     </div>
   );

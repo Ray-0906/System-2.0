@@ -1,31 +1,30 @@
-import { useState, memo } from 'react';
-import { Wand2, Shield, CheckCircle, Star, Skull } from 'lucide-react';
+import { useState, useCallback, memo } from 'react';
+import { Wand2, Shield, CheckCircle, Star, Skull, ArrowLeft } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import axiosInstance from '../utils/axios';
 import { useNotificationStore } from '../store/notificationStore';
 import PropTypes from 'prop-types';
 
-// Centralized theme constants for Solo Leveling aesthetic
+// Centralized theme constants
 const theme = {
-  fonts: {
-    primary: "'Orbitron', sans-serif",
-  },
+  fonts: { primary: "'Rajdhani', 'Orbitron', monospace" },
   colors: {
-    background: 'bg-gradient-to-b from-black via-indigo-950 to-black',
-    card: 'bg-gradient-to-r from-gray-900 to-indigo-900',
-    input: 'bg-[#1f1c3a]',
-    border: 'border-indigo-500/50',
-    shadow: 'shadow-indigo-500/50',
-    title: 'text-indigo-300',
-    accent: 'text-indigo-400',
-    button: 'bg-purple-600 hover:bg-purple-700',
-    success: 'bg-green-600 hover:bg-green-700',
-    error: 'bg-red-600',
-    rank: 'text-yellow-300',
-    reward: 'text-green-400',
+    background: 'bg-gradient-to-br from-gray-900 via-black to-gray-800',
+    card: 'bg-gradient-to-br from-gray-800 to-black',
+    input: 'bg-gray-800/70',
+    border: 'border-purple-500/50',
+    shadow: 'shadow-[0_0_15px_rgba(139,92,246,0.3)]',
+    title: 'text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-pink-500',
+    accent: 'text-purple-400',
+    button: 'bg-gradient-to-r from-purple-600 to-pink-500 hover:from-purple-500 hover:to-pink-400',
+    success: 'bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-500 hover:to-emerald-500',
+    error: 'bg-gradient-to-r from-red-600 to-rose-600',
+    rank: 'text-yellow-400',
+    reward: 'text-emerald-400',
     penalty: 'text-red-400',
-    text: 'text-gray-300',
-    muted: 'text-gray-400',
-    loading: 'text-indigo-400',
+    text: 'text-white',
+    muted: 'text-purple-300',
+    loading: 'text-purple-400',
   },
   animations: {
     fadeInUp: 'animate-fade-in-up',
@@ -35,6 +34,8 @@ const theme = {
 
 // CSS-in-JS for animations and hover effects
 const styles = `
+  @import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@300;400;500;600;700&display=swap');
+  
   @keyframes fadeInUp {
     from { opacity: 0; transform: translateY(20px); }
     to { opacity: 1; transform: translateY(0); }
@@ -47,19 +48,19 @@ const styles = `
   }
   .hover-glow:hover {
     transform: translateY(-2px);
-    box-shadow: 0 0 20px rgba(99, 102, 241, 0.6);
-    border-color: rgba(165, 180, 252, 0.8);
+    box-shadow: 0 0 20px rgba(139, 92, 246, 0.6);
+    border-color: rgba(139, 92, 246, 0.8);
   }
 `;
 
 /**
  * Loading state component
- * @returns {JSX.Element} Animated loading text
  */
 const LoadingState = memo(() => (
   <p
     className={`text-center text-lg ${theme.colors.loading} ${theme.animations.pulse}`}
     style={{ fontFamily: theme.fonts.primary }}
+    aria-live="polite"
   >
     Generating mission...
   </p>
@@ -67,12 +68,11 @@ const LoadingState = memo(() => (
 
 /**
  * Message component for success/error feedback
- * @param {Object} props
- * @param {Object} props.message - Message object with type and text
- * @returns {JSX.Element} Styled message
  */
 const Message = memo(({ message }) => (
   <div
+    role="alert"
+    aria-live="polite"
     className={`text-sm px-4 py-2 rounded-md ${message.type === 'success' ? theme.colors.success : theme.colors.error} ${theme.animations.fadeInUp}`}
     style={{ fontFamily: theme.fonts.primary }}
   >
@@ -88,24 +88,18 @@ Message.propTypes = {
 };
 
 /**
- * Mission form component for inputting goal and duration
- * @param {Object} props
- * @param {Object} props.formState - Goal and duration state
- * @param {Function} props.setFormState - Update form state
- * @param {Function} props.handleGenerate - Generate mission handler
- * @param {boolean} props.isLoading - Loading state
- * @returns {JSX.Element} Styled form
+ * Mission form component
  */
 const MissionForm = memo(({ formState, setFormState, handleGenerate, isLoading }) => (
   <div
     className={`${theme.colors.card} rounded-2xl p-8 ${theme.colors.border} ${theme.colors.shadow} space-y-6 ${theme.animations.fadeInUp}`}
     style={{ fontFamily: theme.fonts.primary }}
   >
-    <h2 className={`text-2xl font-semibold ${theme.colors.accent} drop-shadow-[0_0_4px_rgba(99,102,241,0.4)]`}>
+    <h2 className={`${theme.colors.title} text-2xl font-semibold drop-shadow-[0_0_4px_rgba(139,92,246,0.4)]`}>
       Create New Mission
     </h2>
     <div>
-      <h3 className={`text-xl font-bold flex items-center gap-2 ${theme.colors.title}`}>
+      <h3 className={`text-xl font-bold flex items-center gap-2 ${theme.colors.accent}`}>
         <Wand2 size={20} className="text-purple-300" /> AI Mission Generator
       </h3>
       <p className={`text-sm ${theme.colors.muted} mt-1`}>
@@ -116,7 +110,8 @@ const MissionForm = memo(({ formState, setFormState, handleGenerate, isLoading }
       <label className={`block text-sm mb-1 ${theme.colors.text}`}>Mission Goal</label>
       <textarea
         rows={3}
-        className={`w-full px-4 py-2 rounded-md ${theme.colors.input} border border-[#2a264d] focus:outline-none focus:ring-2 focus:ring-purple-500 resize-none ${theme.colors.text}`}
+        aria-label="Mission goal"
+        className={`w-full px-4 py-2 rounded-md ${theme.colors.input} ${theme.colors.border} focus:outline-none focus:ring-2 focus:ring-purple-500 resize-none ${theme.colors.text}`}
         placeholder="e.g., 'Learn to cook healthy meals', 'Improve my coding skills', 'Run a 5k'"
         value={formState.goal}
         onChange={(e) => setFormState({ ...formState, goal: e.target.value })}
@@ -128,7 +123,8 @@ const MissionForm = memo(({ formState, setFormState, handleGenerate, isLoading }
       <input
         type="number"
         min={1}
-        className={`w-full px-4 py-2 rounded-md ${theme.colors.input} border border-[#2a264d] focus:outline-none focus:ring-2 focus:ring-purple-500 ${theme.colors.text}`}
+        aria-label="Mission duration"
+        className={`w-full px-4 py-2 rounded-md ${theme.colors.input} ${theme.colors.border} focus:outline-none focus:ring-2 focus:ring-purple-500 ${theme.colors.text}`}
         value={formState.duration}
         onChange={(e) => setFormState({ ...formState, duration: Number(e.target.value) })}
       />
@@ -137,6 +133,7 @@ const MissionForm = memo(({ formState, setFormState, handleGenerate, isLoading }
       onClick={handleGenerate}
       disabled={isLoading}
       className={`w-full py-3 ${theme.colors.button} text-white font-semibold rounded-md flex items-center justify-center gap-2 transition-all disabled:opacity-60 hover-glow`}
+      aria-label="Generate mission"
     >
       <Wand2 size={18} className={isLoading ? 'animate-spin' : ''} />
       {isLoading ? 'Generating...' : 'Generate Mission'}
@@ -155,25 +152,18 @@ MissionForm.propTypes = {
 };
 
 /**
- * Mission details component for displaying created mission
- * @param {Object} props
- * @param {Object} props.mission - Mission data from API
- * @param {Array} props.quests - Quest data from API
- * @param {Function} props.handleAccept - Accept mission handler
- * @param {boolean} props.isAccepting - Accepting state
- * @param {Function} props.handleBack - Back to form handler
- * @returns {JSX.Element} Styled mission details
+ * Mission details component
  */
 const MissionDetails = memo(({ mission, quests, handleAccept, isAccepting, handleBack }) => (
   <div
     className={`${theme.colors.card} rounded-2xl p-8 ${theme.colors.border} ${theme.colors.shadow} space-y-6 ${theme.animations.fadeInUp}`}
     style={{ fontFamily: theme.fonts.primary }}
   >
-    <h2 className={`text-2xl font-semibold ${theme.colors.accent} drop-shadow-[0_0_4px_rgba(99,102,241,0.4)]`}>
+    <h2 className={`${theme.colors.title} text-2xl font-semibold drop-shadow-[0_0_4px_rgba(139,92,246,0.4)]`}>
       Mission Details
     </h2>
     <div>
-      <h3 className={`text-lg font-medium ${theme.colors.title}`}>{mission.title}</h3>
+      <h3 className={`text-lg font-medium ${theme.colors.accent}`}>{mission.title}</h3>
       <p className={`text-sm ${theme.colors.text} mt-1`}>{mission.description}</p>
       <p className={`text-sm ${theme.colors.muted} flex items-center gap-1 mt-2`}>
         <Shield className={`w-4 h-4 ${theme.colors.rank}`} /> Rank: <span className={theme.colors.rank}>{mission.rank}</span>
@@ -202,7 +192,7 @@ const MissionDetails = memo(({ mission, quests, handleAccept, isAccepting, handl
       </p>
     </div>
     <div>
-      <h4 className={`text-md font-medium ${theme.colors.title}`}>Quests</h4>
+      <h4 className={`text-md font-medium ${theme.colors.accent}`}>Quests</h4>
       <ul className={`list-disc list-inside ${theme.colors.text} text-sm space-y-1`}>
         {quests?.length ? (
           quests.map((quest, index) => (
@@ -220,6 +210,7 @@ const MissionDetails = memo(({ mission, quests, handleAccept, isAccepting, handl
         onClick={handleAccept}
         disabled={isAccepting}
         className={`flex-1 py-3 ${theme.colors.success} text-white font-semibold rounded-md flex items-center justify-center gap-2 transition-all disabled:opacity-60 hover-glow`}
+        aria-label="Accept mission"
       >
         <CheckCircle size={18} className={isAccepting ? 'animate-spin' : ''} />
         {isAccepting ? 'Accepting...' : 'Accept Mission'}
@@ -227,7 +218,8 @@ const MissionDetails = memo(({ mission, quests, handleAccept, isAccepting, handl
       <button
         onClick={handleBack}
         disabled={isAccepting}
-        className={`flex-1 py-3 bg-gray-600 hover:bg-gray-700 text-white font-semibold rounded-md flex items-center justify-center transition-all disabled:opacity-60 hover-glow`}
+        className={`flex-1 py-3 ${theme.colors.button} text-white font-semibold rounded-md flex items-center justify-center transition-all disabled:opacity-60 hover-glow`}
+        aria-label="Back to form"
       >
         Back to Form
       </button>
@@ -271,8 +263,7 @@ MissionDetails.propTypes = {
 };
 
 /**
- * AddMission component for creating and accepting missions
- * @returns {JSX.Element} Styled mission creation interface
+ * Main AddMission Component
  */
 const AddMission = () => {
   const [formState, setFormState] = useState({ goal: '', duration: 7 });
@@ -282,8 +273,7 @@ const AddMission = () => {
   const [missionData, setMissionData] = useState(null);
   const pushNotification = useNotificationStore((state) => state.push);
 
-  // Handle mission generation
-  const handleGenerate = async () => {
+  const handleGenerate = useCallback(async () => {
     if (!formState.goal || formState.duration < 1) {
       setMessage({ type: 'error', text: 'Please provide a valid goal and duration.' });
       pushNotification({
@@ -324,10 +314,9 @@ const AddMission = () => {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [formState.goal, formState.duration, pushNotification]);
 
-  // Handle mission acceptance
-  const handleAccept = async () => {
+  const handleAccept = useCallback(async () => {
     if (!missionData?.mission?._id) return;
 
     setIsAccepting(true);
@@ -342,7 +331,6 @@ const AddMission = () => {
         delta: 0,
         newValue: missionData.mission.title,
       });
-      // Reset form and mission
       setFormState({ goal: '', duration: 7 });
       setMissionData(null);
     } catch (error) {
@@ -357,18 +345,38 @@ const AddMission = () => {
     } finally {
       setIsAccepting(false);
     }
-  };
+  }, [missionData, pushNotification]);
 
-  // Handle back to form
-  const handleBack = () => {
+  const handleBack = useCallback(() => {
     setMissionData(null);
     setMessage(null);
-  };
+  }, []);
 
   return (
     <div className={`min-h-screen ${theme.colors.background} flex items-center justify-center p-6`}>
       <style>{styles}</style>
       <div className="w-full max-w-xl space-y-6">
+        <div className="text-center mb-6">
+          <h1
+            className={`${theme.colors.title} text-4xl font-bold mb-2 text-glow`}
+            style={{ fontFamily: theme.fonts.primary, textShadow: '0 0 20px rgba(139, 92, 246, 0.5)' }}
+          >
+            AI MISSION CRAFT
+          </h1>
+          <p
+            className={`${theme.colors.accent} text-lg font-semibold tracking-wide`}
+            style={{ fontFamily: theme.fonts.primary }}
+          >
+            Unleash your destiny! Describe your goal and set the days—let the AI weave a bespoke mission to conquer your ambitions.
+          </p>
+          <Link
+            to="/missions"
+            className={`mt-4 inline-flex items-center px-4 py-2 ${theme.colors.button} text-white rounded-md hover-glow transition-all`}
+            aria-label="Back to missions"
+          >
+            <ArrowLeft size={18} className="mr-2" /> Back to Missions
+          </Link>
+        </div>
         {isLoading && <LoadingState />}
         {message && <Message message={message} />}
         {!missionData ? (

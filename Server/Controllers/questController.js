@@ -1,22 +1,23 @@
 import { Tracker } from "../Models/tracker.js";
-import { Quest } from "../Models/quest.js";
 import { User } from "../Models/user.js";
 import mongoose from "mongoose";
+import { upgradeQuests } from "../libs/adaptiveQuest.js";
+import { statLevelThresholds, userLevelThresholds } from "../libs/levelling.js";
 
-export const statLevelThresholds = {
-  1: 10,
-  2: 25,
-  3: 45,
-  4: 70,
-  5: 100,
-};
+// export const statLevelThresholds = {
+//   1: 10,
+//   2: 25,
+//   3: 45,
+//   4: 70,
+//   5: 100,
+// };
 
-export const userLevelThresholds = {
-  1: 40,
-  2: 100,
-  3: 200,
-  4: 400,
-};
+// export const userLevelThresholds = {
+//   1: 40,
+//   2: 100,
+//   3: 200,
+//   4: 400,
+// };
 
 export const completeQuest = async (req, res) => {
   const { questId, trackerid, statAffected, xp } = req.body;
@@ -78,9 +79,13 @@ tracker.questCompletion[new Date().toISOString()] = [new mongoose.Types.ObjectId
       const gainedXP = tracker.daycount >= tracker.duration
         ? rewardXP
         : Math.floor(rewardXP / 4);
+      const rewardCoin=tracker.reward?.coins || 0;
+     const gainCoin=tracker.daycount >= tracker.duration
+        ? rewardCoin
+        : Math.floor(rewardCoin / 4);
 
       user.xp += gainedXP;
-
+     user.coins+=gainCoin;
       // 7. User level-up (multi-level support)
       while (
         userLevelThresholds[user.level] &&
@@ -93,6 +98,7 @@ tracker.questCompletion[new Date().toISOString()] = [new mongoose.Types.ObjectId
       // 8. Mark mission as completed
       if (tracker.daycount >= tracker.duration) {
         missionCompleted = true;
+        user.completed_trackers.push(trackerid);
         // Optionally update user.achievements, titles, coins, etc.
       }
     }
@@ -113,11 +119,12 @@ tracker.questCompletion[new Date().toISOString()] = [new mongoose.Types.ObjectId
         level: user.stats[stat].level,
       },
       xp: user.xp,
+      coins:user.coins,
       userLevel: user.level,
       streak: tracker.streak,
       missionCompleted,
     });
-
+    
   } catch (err) {
     await session.abortTransaction();
     session.endSession();
@@ -125,3 +132,24 @@ tracker.questCompletion[new Date().toISOString()] = [new mongoose.Types.ObjectId
     return res.status(500).json({ message: "Server error" });
   }
 };
+
+export const upgradeTracker= async(req,res)=>{
+const {trackerId} = req.body;
+const userId = req.user.id;
+  try {
+    const  {updatedTracker}= await upgradeQuests(userId, trackerId);
+    // console.log("Updated Tracker:", updatedTracker);
+    if (!updatedTracker) {
+      return res.status(404).json({ message: "Tracker not found" });
+    }  
+    return res.status(200).json({
+      message: "Quests upgraded successfully",
+      updatedTracker,
+    });
+
+  }catch (err) {  
+    console.error("Upgrade Tracker Error:", err);
+    return res.status(500).json({ message: "Failed to upgrade Quests" });
+  }
+
+}

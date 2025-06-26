@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+
 const userSchema = new mongoose.Schema({
   username: String,
   email: String,
@@ -29,10 +30,15 @@ const userSchema = new mongoose.Schema({
     }
   },
   coins: { type: Number, default: 0 },
+  totalMission: { type: Number, default: 0 },
   titles: [String],
   achievements: [String],
+  skills: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Skill' }],
+  equiments: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Equipment' }],
   current_missions: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Mission' }],
   trackers: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Tracker' }],
+  completed_trackers: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Tracker' }],
   sidequests: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Sidequest' }]
 });
+
 export const User = mongoose.model('User', userSchema);

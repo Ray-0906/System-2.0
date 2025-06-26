@@ -5,10 +5,11 @@
 // - checkAndApplyRewards
 // - upgradeQuestInTracker
 
+import { userLevelThresholds } from "../libs/levelling.js";
 import { Mission } from "../Models/mission.js";
 import { Tracker } from "../Models/tracker.js";
 import { User } from "../Models/user.js";
-import { userLevelThresholds } from "./questController.js";
+// import { userLevelThresholds } from "./questController.js";
 
 /**
  * Creates a tracker for a given user and mission.
@@ -60,6 +61,7 @@ export const createTrackerForUser = async (userId, mission) => {
     if (user && !user.current_missions.includes(mission._id)) {
       user.current_missions.push(mission._id);
       user.trackers.push(tracker._id);
+      user.totalMission+=1;
       await user.save();
     }
 
@@ -173,7 +175,7 @@ const pentaltyEffects = async (penaltyType, trackerId, userId, xp, coin) => {
   uxp = Math.max(0, uxp);
 
   if (penaltyType === "missionFail") {
-    user.current_missions.pull(trackerId);
+    user.trackers.pull(trackerId);
   }
 
   user.level = lv;

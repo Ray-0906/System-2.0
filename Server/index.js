@@ -11,10 +11,13 @@ import './config/passport.js'
 import { startGraphQLServer } from './graphql/index.js';
 import questRoutes from './Routes/questRoute.js'
 import trackerRoutes from './Routes/trackerRoutes.js';
-
-
+import { addSkills } from './addjs.js';
+import { addEquipments } from './addEqui.js';
+import skillRoutes from './Routes/skillRoutes.js'
+import equimentRoutes from './Routes/equimentRoutes.js'
+import { evaluateRankAscension } from './Controllers/equimentController.js';
 const app=express();
-
+ 
 
 // Middleware
 app.use(cors({
@@ -35,10 +38,13 @@ app.use(passport.session());
 app.get('/', (req, res) => {
     res.send('Welcome to the server!');
 });
+app.get('/user/rankAscension', isAuthenticated, evaluateRankAscension);
 app.use('/mission',isAuthenticated,missionRoutes);
 app.use('/auth',authRoutes);
 app.use('/quest',isAuthenticated,questRoutes);
 app.use('/tracker',isAuthenticated,trackerRoutes);
+app.use('/skill',isAuthenticated,skillRoutes);
+app.use('/inventory',isAuthenticated,equimentRoutes);
 
 // GraphQL server
 startGraphQLServer(app).catch(err => {
@@ -47,6 +53,8 @@ startGraphQLServer(app).catch(err => {
 
 app.listen(3000, () => {
     conectDB();
+    // addEquipments();
+    // addSkills();
     console.log('Server is running on port 3000');
 });
 export default app;

@@ -14,7 +14,6 @@ export const  useLoadUser = () => {
       if (data?.getUser) {
         setUser(data.getUser);
         setTrackers(data.getUser.trackers);
-
         for (const tracker of data.getUser.trackers) {
           await handleTrackerRefresh(tracker, updateTracker);
         }
@@ -23,6 +22,7 @@ export const  useLoadUser = () => {
     fetchPolicy: 'network-only'
   });
   console.log('User data loaded:', data?.getUser);
+  localStorage.setItem('user',JSON.stringify(data?.getUser))
   
   return { loading, error };
 };

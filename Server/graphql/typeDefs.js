@@ -81,10 +81,46 @@ export const typeDefs = gql`
     rank: String
     stats: Stats
     coins: Int
+    totalMission: Int
     titles: [String]
     achievements: [String]
     current_missions: [ID]
+    completed_trackers:[Tracker]
     trackers: [Tracker]
+    skills:[Skill]
+    equiments: [Equipment]
+  }
+  type StatRequirement {
+    stat: String!
+    value: Int!
+  }
+
+  type Skill {
+    id: ID!
+    name: String!
+    description: String!
+    rank: String!
+    icon: String
+    statRequired: [StatRequirement!]!
+    minLevel: Int!
+  }  
+    type StatBonuses {
+    strength: Int
+    endurance: Int
+    intelligence: Int
+    agility:Int
+  }
+
+  type Equipment {
+    id: ID!
+    name: String!
+    type: String!
+    description: String
+    icon: String
+    cost: Int
+    statBonuses: StatBonuses
+    effect: String
+    rarity: String
   }
 
 
@@ -93,5 +129,9 @@ export const typeDefs = gql`
     getUserTrackers: [Tracker]
     getPublicMissions: [Mission!]!
      getTrackerById(id: ID!): Tracker
+     getAllSkills: [Skill!]!
+    getSkillById(id: ID!): Skill
+    getAllEquipment: [Equipment!]!
+    getEquipmentById(id: ID!): Equipment
   }
 `;

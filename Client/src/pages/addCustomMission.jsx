@@ -5,6 +5,7 @@ import axiosInstance from '../utils/axios';
 import { useNotificationStore } from '../store/notificationStore';
 import PropTypes from 'prop-types';
 import debounce from 'lodash/debounce';
+import AuthLayout from '../components/AuthLayout';
 
 // Centralized theme constants
 const theme = {
@@ -315,6 +316,7 @@ const AddCustomMission = () => {
   const handleDismiss = () => setMessage(null);
 
   return (
+    <><AuthLayout>
     <div className={`min-h-screen ${theme.colors.background} flex items-center justify-center p-6`}>
       <style>{styles}</style>
       <div className="w-full max-w-xl space-y-6">
@@ -360,7 +362,7 @@ const AddCustomMission = () => {
           />
         )}
       </div>
-    </div>
+    </div></AuthLayout></>
   );
 };
 

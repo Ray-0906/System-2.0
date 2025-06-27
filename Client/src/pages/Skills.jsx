@@ -3,6 +3,9 @@ import { useQuery } from '@apollo/client';
 import { getAllSkills } from '../graphql/query';
 import { useUserStore } from '../store/userStore';
 import { cn } from '../utils/cn';
+import AuthLayout from '../components/AuthLayout';
+import SoloLoading from '../components/Loading'; // Assuming this is the correct import path
+import axiosInstance from '../utils/axios';
 
 // Error Boundary Component
 class ErrorBoundary extends React.Component {
@@ -232,21 +235,15 @@ const SkillsPage = () => {
 
   const handleUnlock = async (skillId) => {
     try {
-      const res = await fetch(`http://localhost:3000/skill/unlock`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ skillId }),
+      const res = await axiosInstance.post(`/skill/unlock`, {skillId
       });
 
-      const result = await res.json();
-
-      if (res.ok) {
-        console.log('Skill Unlocked:', result);
+      if (res?.data) {
+        console.log('Skill Unlocked:', res.data);
         // Optional: Refetch user if you have GraphQL for user
         // Or update zustand store manually if you're syncing
       } else {
-        setMessage({ type: 'error', text: result.message || 'Failed to unlock skill' });
+        setMessage({ type: 'error', text: res.message || 'Failed to unlock skill' });
       }
     } catch (err) {
       console.error('Error unlocking skill:', err);
@@ -258,60 +255,60 @@ const SkillsPage = () => {
 
   return (
     <ErrorBoundary>
-      <div className={`min-h-screen ${theme.colors.background} px-8 py-10 ${theme.colors.text}`}>
-        <style>{styles}</style>
-        <div className="w-full mx-auto space-y-6">
-          <div className="text-center mb-6">
-            <h1
-              className={`${theme.colors.title} text-4xl font-bold mb-2 text-glow`}
-              style={{ fontFamily: theme.fonts.primary, textShadow: '0 0 20px rgba(139, 92, 246, 0.5)' }}
-            >
-              SKILL FORGE
-            </h1>
-            <p
-              className={`${theme.colors.accent} text-lg font-semibold tracking-wide`}
-              style={{ fontFamily: theme.fonts.primary }}
-            >
-              Master your path! Unlock powerful skills by meeting stat thresholds and filter your arsenal with ease.
-            </p>
-          </div>
-
-          {message && <Alert message={message} onDismiss={handleDismiss} />}
-          <div className='flex justify-center'>
-          <div className="flex justify-between items-center mb-6">
-            <div className="space-x-2">
-              {['all', 'unlocked', 'locked'].map((type) => (
-                <button
-                  key={type}
-                  className={`px-3 py-1 rounded ${
-                    filter === type
-                      ? 'bg-gradient-to-r from-purple-600 to-pink-500 text-white'
-                      : 'bg-gray-700 text-purple-300'
-                  } hover-glow`}
-                  onClick={() => setFilter(type)}
-                  aria-label={`Filter by ${type} skills`}
-                  aria-pressed={filter === type}
+      <AuthLayout>
+        <SoloLoading loading={loadingSkills} message="Loading Skill Forge..." />
+        {!loadingSkills && (
+          <div className={`min-h-screen ${theme.colors.background} px-8 py-10 ${theme.colors.text}`}>
+            <style>{styles}</style>
+            <div className="w-full mx-auto space-y-6">
+              <div className="text-center mb-6">
+                <h1
+                  className={`${theme.colors.title} text-4xl font-bold mb-2 text-glow`}
+                  style={{ fontFamily: theme.fonts.primary, textShadow: '0 0 20px rgba(139, 92, 246, 0.5)' }}
                 >
-                  {type.charAt(0).toUpperCase() + type.slice(1)}
-                </button>
-              ))}
-            </div>
-          </div></div>
+                  SKILL FORGE
+                </h1>
+                <p
+                  className={`${theme.colors.accent} text-lg font-semibold tracking-wide`}
+                  style={{ fontFamily: theme.fonts.primary }}
+                >
+                  Master your path! Unlock powerful skills by meeting stat thresholds and filter your arsenal with ease.
+                </p>
+              </div>
 
-          {loadingSkills ? (
-            <p className={`text-center ${theme.colors.loading}`}>Loading...</p>
-          ) : error ? (
-            <p className={`text-center ${theme.colors.error}`}>Error loading skills.</p>
-          ) : (
-            <SkillGrid
-              skills={filterSkills()}
-              userStats={userStats}
-              unlockedSkills={unlockedSkillIds}
-              onUnlock={handleUnlock}
-            />
-          )}
-        </div>
-      </div>
+              {message && <Alert message={message} onDismiss={handleDismiss} />}
+              <div className='flex justify-center'>
+                <div className="flex justify-between items-center mb-6">
+                  <div className="space-x-2">
+                    {['all', 'unlocked', 'locked'].map((type) => (
+                      <button
+                        key={type}
+                        className={`px-3 py-1 rounded ${
+                          filter === type
+                            ? 'bg-gradient-to-r from-purple-600 to-pink-500 text-white'
+                            : 'bg-gray-700 text-purple-300'
+                        } hover-glow`}
+                        onClick={() => setFilter(type)}
+                        aria-label={`Filter by ${type} skills`}
+                        aria-pressed={filter === type}
+                      >
+                        {type.charAt(0).toUpperCase() + type.slice(1)}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              <SkillGrid
+                skills={filterSkills()}
+                userStats={userStats}
+                unlockedSkills={unlockedSkillIds}
+                onUnlock={handleUnlock}
+              />
+            </div>
+          </div>
+        )}
+      </AuthLayout>
     </ErrorBoundary>
   );
 };

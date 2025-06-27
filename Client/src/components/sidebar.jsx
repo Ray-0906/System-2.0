@@ -3,6 +3,7 @@ import axiosInstance from '../utils/axios';
 import { Menu, X } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import React from 'react';
+import { useUserStore } from '../store/userStore';
 
 // Error Boundary Component
 class ErrorBoundary extends React.Component {
@@ -94,14 +95,15 @@ const Sidebar = memo(() => {
   // Handle logout
   const handleLogout = useCallback(async () => {
     setIsLoggingOut(true);
-  
+    setIsOpen(false);
     setError(null);
     try {
       await axiosInstance.get('/auth/logout'); // this clears the cookie on backend
 
-      localStorage.removeItem('user');
+       localStorage.removeItem('user');
+       useUserStore.getState().reset(); 
        // clear Zustand user state
-      navigate('/');
+      navigate('/login');
     } catch (err) {
       console.error('Logout error:', err);
       setError(err.response?.data?.message || 'Server error during logout');
@@ -154,6 +156,7 @@ const Sidebar = memo(() => {
               { to: '/dashboard', label: 'Dashboard' },
               { to: '/missions', label: 'Missions' },
               { to: '/add-mission', label: 'Add Mission' },
+              { to: '/report', label: 'Ascension Room' },
               { to: '/inventory', label: 'Inventory' },
               { to: '/skills', label: 'Skills' },
             ].map((item) => (
@@ -169,7 +172,7 @@ const Sidebar = memo(() => {
             <button
               onClick={handleLogout}
               disabled={isLoggingOut}
-              className={`${theme.colors.button} w-full text-left py-2 text-lg font-medium rounded transition-all duration-300 ease-out hover:scale-105 ${theme.colors.shadow} ${
+              className={`${theme.colors.button} w-full  py-2 text-lg text-center font-medium rounded transition-all duration-300 ease-out hover:scale-105 ${theme.colors.shadow} ${
                 isLoggingOut ? 'opacity-50 cursor-not-allowed' : ''
               }`}
               aria-label="Logout"

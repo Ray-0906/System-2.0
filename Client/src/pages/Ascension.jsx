@@ -3,6 +3,8 @@ import axiosInstance from '../utils/axios';
 import { Loader2, ArrowLeft, TrendingUp, BadgeCheck, Award } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import React from 'react';
+import AuthLayout from '../components/AuthLayout';
+import SoloLoading from '../components/Loading';
 
 // Error Boundary Component
 class ErrorBoundary extends React.Component {
@@ -105,9 +107,7 @@ const AscensionTrial = () => {
 
   if (loading) {
     return (
-      <div className={`h-screen flex items-center justify-center ${theme.colors.background}`} aria-live="polite">
-        <Loader2 className="w-10 h-10 text-purple-400 animate-spin drop-shadow-[0_0_8px_rgba(139,92,246,0.6)]" />
-      </div>
+     <SoloLoading/>
     );
   }
 
@@ -132,6 +132,7 @@ const AscensionTrial = () => {
 
   return (
     <ErrorBoundary>
+      <AuthLayout>
       <style>{styles}</style>
       <div className={`min-h-screen ${theme.colors.background} px-8 py-10 text-white`} style={{ fontFamily: theme.fonts.primary }}>
         <div className="max-w-screen-lg mx-auto space-y-8">
@@ -207,7 +208,7 @@ const AscensionTrial = () => {
             </p>
           </div>
         </div>
-      </div>
+      </div></AuthLayout>
     </ErrorBoundary>
   );
 };

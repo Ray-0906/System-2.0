@@ -2,6 +2,7 @@ import { useEffect, useState, memo } from 'react';
 import { Shield, Flame, Star, Skull } from 'lucide-react';
 import { useTrackerStore } from '../store/trackerStore';
 import { Link } from 'react-router-dom';
+import AuthLayout from '../components/AuthLayout';
 
 // Centralized theme constants for Solo Leveling aesthetic
 const theme = {
@@ -264,6 +265,7 @@ const ActiveMissions = () => {
   if (isLoading) return <LoadingState />;
 
   return (
+    <><AuthLayout>
     <div className={`min-h-screen ${theme.colors.background} text-white p-6`}>
       <style>{styles}</style>
       
@@ -330,7 +332,7 @@ const ActiveMissions = () => {
           </Link>
         </div>
       </div>
-    </div>
+    </div></AuthLayout></>
   );
 };
 

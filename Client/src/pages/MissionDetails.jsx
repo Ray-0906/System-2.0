@@ -6,6 +6,8 @@ import { useTrackerStore } from '../store/trackerStore';
 import { processQuestResponse } from '../utils/processQuestres';
 import { useState } from 'react';
 import { theme } from './Ineventory';
+import AuthLayout from '../components/AuthLayout';
+import SoloLoading from '../components/Loading'; // Assuming this is the correct import path
 
 // GraphQL Query
 const GET_TRACKER = gql`
@@ -53,13 +55,6 @@ const QuestItem = ({ quest, isRemaining, handleComplete }) => (
   </div>
 );
 
-// Sub-component for Loading State
-const LoadingState = () => (
-  <div className="flex justify-center items-center h-screen bg-gradient-to-br from-gray-900 via-black to-gray-800">
-    <Loader2 className="w-10 h-10 animate-spin text-purple-400 drop-shadow-[0_0_8px_rgba(139,92,246,0.6)]" />
-  </div>
-);
-
 // Sub-component for Error State
 const ErrorState = ({ error, navigate }) => (
   <div className="flex flex-col items-center justify-center h-screen bg-gradient-to-br from-gray-900 via-black to-gray-800 text-red-400" style={{ fontFamily: "'Rajdhani', 'Orbitron', monospace" }}>
@@ -77,7 +72,7 @@ const ErrorState = ({ error, navigate }) => (
 const MissionDetails = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const updateTracker = useTrackerStore((s) => s.updateTracker);
+  const updateStreak = useTrackerStore((s) => s.updateStreak);
   const [isUpgrading, setIsUpgrading] = useState(false);
 
   const handleUpgrade = async () => {
@@ -111,88 +106,96 @@ const MissionDetails = () => {
       processQuestResponse(res.data, quest.xp);
       // Optimistic update
       const updatedRemaining = tracker.remainingQuests.filter((q) => q.id !== quest.id);
-      updateTracker(id, { ...tracker, remainingQuests: updatedRemaining });
+      if(updatedRemaining.length==0){
+        updateStreak(id);
+        //increase streak and daycount in tracker store
+      }
+      // updateTracker(id, { ...tracker, remainingQuests: updatedRemaining });
       refetch(); // Ensure backend sync
     } catch (err) {
       console.error('Quest completion failed:', err);
     }
   };
 
-  if (loading) return <LoadingState />;
   if (error) return <ErrorState error={error} navigate={navigate} />;
 
-  const remainingIds = tracker.remainingQuests?.map((q) => q.id) || [];
+  const remainingIds = tracker?.remainingQuests?.map((q) => q.id) || [];
 
   return (
-    <div className={`min-h-screen ${theme.colors.background} py-8 px-8 text-white`} style={{ fontFamily: "'Rajdhani', 'Orbitron', monospace" }}>
-      <div className="w-full mx-auto max-w-screen-lg">
-        {/* Back Button */}
-        <button
-          onClick={() => navigate(-1)}
-          className="text-purple-400 mb-6 hover:text-purple-300 flex items-center transition-colors duration-300"
-        >
-          <ArrowLeft className="w-5 h-5 mr-2" />
-          Back to Missions
-        </button>
-
-        {/* Mission Header */}
-        <div className="mb-8">
-          <h1 className="text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-pink-500 tracking-wider drop-shadow-[0_0_8px_rgba(139,92,246,0.6)]">
-            {tracker.title || 'Unnamed Mission'}
-          </h1>
-          <p className="text-purple-300 mt-2 text-lg">
-            {tracker.description || 'Embark on a thrilling quest to conquer the shadows and rise as the ultimate hunter.'}
-          </p>
-          <p className="text-sm text-purple-400 mt-2">
-            Day {tracker.daycount + 1} • Streak: {tracker.streak || 0}
-          </p>
-        </div>
-
-        {tracker.streak >= 5 && (
-          <div className="mb-6">
+    <AuthLayout>
+      <SoloLoading loading={loading} message="Loading Mission Details..." />
+      {!loading && (
+        <div className={`min-h-screen ${theme.colors.background} py-8 px-8 text-white`} style={{ fontFamily: "'Rajdhani', 'Orbitron', monospace" }}>
+          <div className="w-full mx-auto max-w-screen-lg">
+            {/* Back Button */}
             <button
-              onClick={handleUpgrade}
-              disabled={isUpgrading}
-              className="bg-gradient-to-r from-purple-600 to-pink-500 hover:from-purple-500 hover:to-pink-400 text-white px-6 py-2 rounded-md font-semibold transition-all shadow-md shadow-purple-700/30 disabled:opacity-50 flex items-center gap-2 hover:shadow-lg"
+              onClick={() => navigate(-1)}
+              className="text-purple-400 mb-6 hover:text-purple-300 flex items-center transition-colors duration-300"
             >
-              {isUpgrading ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  Upgrading...
-                </>
-              ) : (
-                <>
-                  <CheckCircle className="w-4 h-4" />
-                  Upgrade Quests
-                </>
-              )}
+              <ArrowLeft className="w-5 h-5 mr-2" />
+              Back to Missions
             </button>
-            <p className="text-sm text-purple-300 mt-2">
-              You’ve reached a streak of {tracker.streak}. Ready for tougher challenges?
-            </p>
-          </div>
-        )}
 
-        {/* Quests Section */}
-        <div className="bg-gradient-to-br from-gray-800 to-black border border-purple-500/50 rounded-xl p-6 shadow-lg shadow-purple-500/20">
-          <h2 className="text-2xl font-semibold text-purple-300 mb-6 drop-shadow-[0_0_4px_rgba(139,92,246,0.4)]">
-            Today’s Quests
-          </h2>
-          {tracker.currentQuests?.length > 0 ? (
-            tracker.currentQuests.map((quest) => (
-              <QuestItem
-                key={quest.id}
-                quest={quest}
-                isRemaining={remainingIds.includes(quest.id)}
-                handleComplete={handleComplete}
-              />
-            ))
-          ) : (
-            <p className="text-purple-500 text-center">No quests available for this mission.</p>
-          )}
+            {/* Mission Header */}
+            <div className="mb-8">
+              <h1 className="text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-pink-500 tracking-wider drop-shadow-[0_0_8px_rgba(139,92,246,0.6)]">
+                {tracker.title || 'Unnamed Mission'}
+              </h1>
+              <p className="text-purple-300 mt-2 text-lg">
+                {tracker.description || 'Embark on a thrilling quest to conquer the shadows and rise as the ultimate hunter.'}
+              </p>
+              <p className="text-sm text-purple-400 mt-2">
+                Day {tracker.daycount + 1} • Streak: {tracker.streak || 0}
+              </p>
+            </div>
+
+            {tracker.streak >= 5 && (
+              <div className="mb-6">
+                <button
+                  onClick={handleUpgrade}
+                  disabled={isUpgrading}
+                  className="bg-gradient-to-r from-purple-600 to-pink-500 hover:from-purple-500 hover:to-pink-400 text-white px-6 py-2 rounded-md font-semibold transition-all shadow-md shadow-purple-700/30 disabled:opacity-50 flex items-center gap-2 hover:shadow-lg"
+                >
+                  {isUpgrading ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      Upgrading...
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle className="w-4 h-4" />
+                      Upgrade Quests
+                    </>
+                  )}
+                </button>
+                <p className="text-sm text-purple-300 mt-2">
+                  You’ve reached a streak of {tracker.streak}. Ready for tougher challenges?
+                </p>
+              </div>
+            )}
+
+            {/* Quests Section */}
+            <div className="bg-gradient-to-br from-gray-800 to-black border border-purple-500/50 rounded-xl p-6 shadow-lg shadow-purple-500/20">
+              <h2 className="text-2xl font-semibold text-purple-300 mb-6 drop-shadow-[0_0_4px_rgba(139,92,246,0.4)]">
+                Today’s Quests
+              </h2>
+              {tracker.currentQuests?.length > 0 ? (
+                tracker.currentQuests.map((quest) => (
+                  <QuestItem
+                    key={quest.id}
+                    quest={quest}
+                    isRemaining={remainingIds.includes(quest.id)}
+                    handleComplete={handleComplete}
+                  />
+                ))
+              ) : (
+                <p className="text-purple-500 text-center">No quests available for this mission.</p>
+              )}
+            </div>
+          </div>
         </div>
-      </div>
-    </div>
+      )}
+    </AuthLayout>
   );
 };
 

@@ -87,7 +87,7 @@ const model = new ChatMistralAI({
   model: 'mistral-large-latest',
   temperature: 0.6,
   maxTokens: 1500,
-  apiKey: process.env.MISTRAL_API_KEY || '1dz5N2ntr0pxk1UDIQGbTyzAp8xilXb6',
+  apiKey: process.env.MISTRAL_API_KEY ,
 });
 
 const chain = RunnableSequence.from([

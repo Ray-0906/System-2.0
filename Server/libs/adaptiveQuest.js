@@ -11,7 +11,7 @@ const model = new ChatMistralAI({
   model: 'mistral-large-latest',
   temperature: 0.6,
   maxTokens: 500,
-  apiKey: process.env.MISTRAL_API_KEY || '1dz5N2ntr0pxk1UDIQGbTyzAp8xilXb6',
+  apiKey: process.env.MISTRAL_API_KEY ,
 });
 
 export async function upgradeQuests(userId, trackerId) {
@@ -24,7 +24,7 @@ export async function upgradeQuests(userId, trackerId) {
   }
 
   // Check streak threshold
-  if (tracker.streak < 3) {
+  if (tracker.streak < 5) {
     return { message: 'Streak must be 5 or higher to upgrade quests' };
   }
 

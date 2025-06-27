@@ -1,9 +1,10 @@
 import { useState, useCallback, memo } from 'react';
-import { Wand2, Shield, CheckCircle, Star, Skull, ArrowLeft } from 'lucide-react';
+import { Wand2, Shield, CheckCircle, Star, Skull, ArrowLeft, FilePenLine } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import axiosInstance from '../utils/axios';
 import { useNotificationStore } from '../store/notificationStore';
 import PropTypes from 'prop-types';
+import AuthLayout from '../components/AuthLayout';
 
 // Centralized theme constants
 const theme = {
@@ -353,6 +354,7 @@ const AddMission = () => {
   }, []);
 
   return (
+    <><AuthLayout>
     <div className={`min-h-screen ${theme.colors.background} flex items-center justify-center p-6`}>
       <style>{styles}</style>
       <div className="w-full max-w-xl space-y-6">
@@ -374,7 +376,7 @@ const AddMission = () => {
             className={`mt-4 inline-flex items-center px-4 py-2 ${theme.colors.button} text-white rounded-md hover-glow transition-all`}
             aria-label="Back to missions"
           >
-            <ArrowLeft size={18} className="mr-2" /> Back to Missions
+            <FilePenLine size={18} className="mr-2" /> Custom Mission
           </Link>
         </div>
         {isLoading && <LoadingState />}
@@ -396,7 +398,7 @@ const AddMission = () => {
           />
         )}
       </div>
-    </div>
+    </div></AuthLayout></>
   );
 };
 

@@ -21,7 +21,7 @@ router.get('/google/callback',
     });
 
     // Redirect to frontend
-    res.redirect(`${process.env.CLIENT_URL}`);
+    res.redirect(`${process.env.CLIENT_URL}/oauth-success`);
   }
 );
 

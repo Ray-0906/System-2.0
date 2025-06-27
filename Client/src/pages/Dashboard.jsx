@@ -2,18 +2,23 @@ import React, { useState, useEffect, useRef } from "react";
 import * as echarts from "echarts";
 import { useUserStore } from "../store/userStore";
 import { statLevelThresholds, userLevelThresholds } from "../utils/levelling";
+import SoloLoading from "../components/Loading";
+import { useLoadUser } from "../utils/userLoader";
+import AuthLayout from "../components/AuthLayout";
 
 const Dashboard = () => {
-  const user = useUserStore((state) => state.user);
-  const chartRef = useRef(null);
-  const [chart, setChart] = useState(null);
   
-  // Stat thresholds for level progression
  
+  const user = useUserStore((state) => state.user);
+
+  const chartRef = useRef(null);
+ // 1. Check for error first!
+ 
+
+
 
   const getLevelProgress = (value, level) => {
     const total = statLevelThresholds[level] || 500;
-   
     return (value / total) * 100;
   };
 
@@ -32,11 +37,11 @@ const Dashboard = () => {
         animation: true,
         radar: {
           indicator: [
-            { name: "INTELLIGENCE", max: mx+10 },
-            { name: "STRENGTH", max: mx+10 },
-            { name: "CHARISMA", max: mx+10 },
-            { name: "AGILITY", max: mx+10 },
-            { name: "ENDURANCE", max: mx+10 },
+            { name: "INTELLIGENCE", max: mx + 10 },
+            { name: "STRENGTH", max: mx + 10 },
+            { name: "CHARISMA", max: mx + 10 },
+            { name: "AGILITY", max: mx + 10 },
+            { name: "ENDURANCE", max: mx + 10 },
           ],
           shape: "polygon",
           splitNumber: 5,
@@ -96,7 +101,6 @@ const Dashboard = () => {
         backgroundColor: "rgba(0, 0, 0, 0.8)",
       };
       newChart.setOption(option);
-      setChart(newChart);
       const handleResize = () => newChart.resize();
       window.addEventListener("resize", handleResize);
       return () => {
@@ -107,24 +111,38 @@ const Dashboard = () => {
   }, [user]);
 
   const stats = [
-    { name: "INTELLIGENCE", value: user?.stats?.intelligence?.value || 0, level: user?.stats?.intelligence?.level || 1 },
-    { name: "STRENGTH", value: user?.stats?.strength?.value || 0, level: user?.stats?.strength?.level || 1 },
-    { name: "CHARISMA", value: user?.stats?.charisma?.value || 0, level: user?.stats?.charisma?.level || 1 },
-    { name: "AGILITY", value: user?.stats?.agility?.value || 0, level: user?.stats?.agility?.level || 1 },
-    { name: "ENDURANCE", value: user?.stats?.endurance?.value || 0, level: user?.stats?.endurance?.level || 1 },
+    {
+      name: "INTELLIGENCE",
+      value: user?.stats?.intelligence?.value || 0,
+      level: user?.stats?.intelligence?.level || 1,
+    },
+    {
+      name: "STRENGTH",
+      value: user?.stats?.strength?.value || 0,
+      level: user?.stats?.strength?.level || 1,
+    },
+    {
+      name: "CHARISMA",
+      value: user?.stats?.charisma?.value || 0,
+      level: user?.stats?.charisma?.level || 1,
+    },
+    {
+      name: "AGILITY",
+      value: user?.stats?.agility?.value || 0,
+      level: user?.stats?.agility?.level || 1,
+    },
+    {
+      name: "ENDURANCE",
+      value: user?.stats?.endurance?.value || 0,
+      level: user?.stats?.endurance?.level || 1,
+    },
   ];
 
   const skills = user?.skills || [];
-
-  const artifacts =user?.equiments || [
-    { id: 1, name: "Demon King's Blade", icon: "fa-solid fa-khanda", description: "A cursed sword that drains enemy vitality." },
-    { id: 2, name: "Phantom Veil", icon: "fa-solid fa-hat-wizard", description: "A shadow-woven cloak for near-invisibility." },
-    { id: 3, name: "Abyssal Pendant", icon: "fa-solid fa-gem", description: "Boosts control over shadow legions." },
-    { id: 4, name: "Void Gloves", icon: "fa-solid fa-mitten", description: "Manipulate shadows from a distance." },
-    { id: 5, name: "Monarch's Diadem", icon: "fa-solid fa-crown", description: "Enhances all shadow monarch powers." },
-  ];
+  const artifacts = user?.equipments || user?.equiments || [];
 
   return (
+    <><AuthLayout>
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-black to-gray-800 text-white font-mono p-6 overflow-hidden relative">
       <div className="max-w-7xl mx-auto">
         <h1 className="text-center text-5xl font-extrabold mb-10 tracking-widest text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-pink-500 animate-pulse">
@@ -176,7 +194,9 @@ const Dashboard = () => {
               <div className="mt-4 relative z-10">
                 <div className="flex justify-between items-center mb-2">
                   <span className="text-purple-400">XP:</span>
-                  <span className="text-lg font-bold">Lv. {user?.level || 1}</span>
+                  <span className="text-lg font-bold">
+                    Lv. {user?.level || 1}
+                  </span>
                   <span className="text-xs text-purple-300">
                     {user?.xp || 0}/{userLevelThresholds[user?.level] || 500}
                   </span>
@@ -185,11 +205,14 @@ const Dashboard = () => {
                   <div
                     className="bg-gradient-to-r from-purple-600 to-pink-500 h-2 rounded-full shadow-[0_0_5px_rgba(139,92,246,0.7)]"
                     style={{
-                      width: `${(user?.xp || 0) / (userLevelThresholds[user?.level] || 500) * 100}%`,
+                      width: `${
+                        ((user?.xp || 0) /
+                          (userLevelThresholds[user?.level] || 500)) *
+                        100
+                      }%`,
                     }}
                   ></div>
                 </div>
-               
               </div>
             </div>
             {/* Stats Section */}
@@ -215,7 +238,10 @@ const Dashboard = () => {
                         <div
                           className="bg-gradient-to-r from-purple-600 to-pink-500 h-2 rounded-full shadow-[0_0_5px_rgba(139,92,246,0.7)]"
                           style={{
-                            width: `${getLevelProgress(stat.value, stat.level)}%`,
+                            width: `${getLevelProgress(
+                              stat.value,
+                              stat.level
+                            )}%`,
                           }}
                         ></div>
                       </div>
@@ -238,20 +264,35 @@ const Dashboard = () => {
                 <div className="overflow-x-auto scrollbar-hide">
                   <div className="flex gap-6 min-w-max px-6 relative z-10">
                     {artifacts.length > 0 ? (
-                      artifacts.map((skill) => (
-                        <div key={skill.id} className="group relative cursor-pointer">
+                      artifacts.map((artifact) => (
+                        <div
+                          key={artifact.id}
+                          className="group relative cursor-pointer"
+                        >
                           <div className="w-16 h-16 bg-gray-800 rounded-lg flex items-center justify-center hover:bg-gray-700 transition-colors shadow-[0_0_10px_rgba(139,92,246,0.3)] hover:shadow-[0_0_15px_rgba(139,92,246,0.5)]">
-                            <img src={skill.icon} alt={skill.name} className="w-10 h-10 text-purple-500 animate-pulse" />
+                            <img
+                              src={artifact.icon}
+                              alt={artifact.name}
+                              className="w-10 h-10 text-purple-500 animate-pulse"
+                            />
                           </div>
-                          <p className="mt-2 text-center text-sm text-yellow-400">{skill.name}</p>
+                          <p className="mt-2 text-center text-sm text-yellow-400">
+                            {artifact.name}
+                          </p>
                           <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 w-48 bg-gray-800 p-2 rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-20">
-                            <p className="font-semibold text-sm text-yellow-400">{skill.name}</p>
-                            <p className="text-xs text-purple-300 mt-1">{skill.description}</p>
+                            <p className="font-semibold text-sm text-yellow-400">
+                              {artifact.name}
+                            </p>
+                            <p className="text-xs text-purple-300 mt-1">
+                              {artifact.description}
+                            </p>
                           </div>
                         </div>
                       ))
                     ) : (
-                      <p className="text-purple-300 text-center">No artifacts equipped</p>
+                      <p className="text-purple-300 text-center">
+                        No artifacts equipped
+                      </p>
                     )}
                   </div>
                 </div>
@@ -268,32 +309,36 @@ const Dashboard = () => {
                 <div className="absolute right-0 top-0 bottom-0 w-12 bg-gradient-to-l from-gray-900 to-transparent z-10"></div>
                 <div className="overflow-x-auto scrollbar-hide">
                   <div className="flex gap-6 min-w-max px-6 relative z-10">
-                    {skills.length > 0 ? skills.map((skill) => (
-                      <div
-                        key={skill.id}
-                        className="group relative cursor-pointer"
-                      >
-                        <div className="w-16 h-16 bg-gray-800 rounded-lg flex items-center justify-center hover:bg-gray-700 transition-colors shadow-[0_0_10px_rgba(139,92,246,0.3)] hover:shadow-[0_0_15px_rgba(139,92,246,0.5)]">
-                          <img
-                            src={skill.icon}
-                            alt={skill.name}
-                            className="w-10 h-10 text-purple-500 animate-pulse"
-                          />
-                        </div>
-                        <p className="mt-2 text-center text-sm text-yellow-400">
-                          {skill.name}
-                        </p>
-                        <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 w-48 bg-gray-800 p-2 rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-20">
-                          <p className="font-semibold text-sm text-yellow-400">
+                    {skills.length > 0 ? (
+                      skills.map((skill) => (
+                        <div
+                          key={skill.id}
+                          className="group relative cursor-pointer"
+                        >
+                          <div className="w-16 h-16 bg-gray-800 rounded-lg flex items-center justify-center hover:bg-gray-700 transition-colors shadow-[0_0_10px_rgba(139,92,246,0.3)] hover:shadow-[0_0_15px_rgba(139,92,246,0.5)]">
+                            <img
+                              src={skill.icon}
+                              alt={skill.name}
+                              className="w-10 h-10 text-purple-500 animate-pulse"
+                            />
+                          </div>
+                          <p className="mt-2 text-center text-sm text-yellow-400">
                             {skill.name}
                           </p>
-                          <p className="text-xs text-purple-300 mt-1">
-                            {skill.description}
-                          </p>
+                          <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 w-48 bg-gray-800 p-2 rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-20">
+                            <p className="font-semibold text-sm text-yellow-400">
+                              {skill.name}
+                            </p>
+                            <p className="text-xs text-purple-300 mt-1">
+                              {skill.description}
+                            </p>
+                          </div>
                         </div>
-                      </div>
-                    )):  (
-                      <p className="text-purple-300 text-center">No Skills Unlocked</p>
+                      ))
+                    ) : (
+                      <p className="text-purple-300 text-center">
+                        No Skills Unlocked
+                      </p>
                     )}
                   </div>
                 </div>
@@ -302,10 +347,7 @@ const Dashboard = () => {
           </div>
         </div>
       </div>
-      <div className="absolute bottom-4 right-4 text-xs text-purple-400">
-        Powered by xAI - {new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" })}
-      </div>
-    </div>
+    </div></AuthLayout></>
   );
 };
 

@@ -1,26 +1,26 @@
-import { useEffect, useState } from 'react';
-import { useUserStore } from '../store/userStore';
+import { useActionState, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useUserStore } from '../store/userStore';
 
 const AuthLayout = ({ children }) => {
-  const user = useUserStore((s) => s.user);
- 
+ const user=useUserStore((s)=>s.user);
   const [checked, setChecked] = useState(false); // prevent premature redirect
   const navigate = useNavigate();
-
+   
   useEffect(() => {
-    if (!user) {
-      const storedUser = localStorage.getItem('user');
-      console.log('status check',storedUser);
-      if (![![!storedUser]]){
+    setTimeout(()=>{
+      const storedUser = localStorage.getItem('user');   
+      if (!storedUser){
         navigate('/login', { replace: true });
-      }
+      
     }
-    setChecked(true);
-  }, [user, navigate]);
+    },1000)
+      
+  
+  }, [useNavigate,user]);
 
   // fallback in case redirect fails
-
+   
   return <>{children}</>;
 };
 

@@ -4,25 +4,38 @@
 import { useNotificationStore } from "../store/notificationStore";
 import { useUserStore } from "../store/userStore";
 
-
-
-export const processQuestResponse = (res,qxp) => {
+export const processQuestResponse = (res, qxp) => {
   if (!res) return;
 
-  const { statUpdated, xp: newXP, userLevel: newLevel } = res;
+  const { statUpdated, xp: newXP, userLevel: newLevel,coins:newCoins } = res;
 
   const user = useUserStore.getState().user;
   const push = useNotificationStore.getState().push;
+  const updateStats = useUserStore.getState().updateStats;
+  const updateXP = useUserStore.getState().updateXP;
+  const updateCoin = useUserStore.getState().updateCoin;
+  const updateLevel = useUserStore.getState().updateLevel;
 
-  //XP Change
+  // XP Change
   const xpDelta = newXP - user.xp;
-  console.log('XP Delta:', xpDelta, 'New XP:', newXP, 'User XP:', user.xp);
   if (xpDelta !== 0) {
     push({
       type: 'xp',
       delta: xpDelta,
       newValue: newXP,
     });
+    updateXP(newXP);
+  }
+
+  const delCoin=newCoins-user.coins;
+  if(delCoin!=0){
+   push({
+      type: 'coins',
+      delta: delCoin,
+      newValue: newCoins,
+      isPenalty: false,
+    });
+    updateCoin(newCoins);
   }
 
   // Level Change
@@ -33,24 +46,21 @@ export const processQuestResponse = (res,qxp) => {
       delta: levelDelta,
       newValue: newLevel,
     });
+    updateLevel(newLevel);
   }
-  console.log('Processing quest response:', user);
+
   // Stat Change
   if (statUpdated) {
     const { stat, value: newVal, level: newStatLevel } = statUpdated;
     const prevStat = user.stats[stat];
-    
-    // const valDelta = newVal - prevStat.value;
     const lvlDelta = newStatLevel - prevStat.level;
-;
-    
-      push({
-        type: 'stat',
-        key: stat,
-        delta: qxp,
-        newValue: newVal,
-      });
-    
+
+    push({
+      type: 'stat',
+      key: stat,
+      delta: qxp,
+      newValue: newVal,
+    });
 
     if (lvlDelta > 0) {
       push({
@@ -61,26 +71,8 @@ export const processQuestResponse = (res,qxp) => {
       });
     }
 
-    // update user's stat in Zustand
-    useUserStore.setState((s) => ({
-      ...s,
-      xp: newXP,
-      level: newLevel,
-      stats: {
-        ...s.stats,
-        [stat]: {
-          value: newVal,
-          level: newStatLevel,
-        },
-      },
-    }));
-  } else {
-    // No stat change? Just update XP/Level
-    useUserStore.setState((s) => ({
-      ...s,
-      xp: newXP,
-      level: newLevel,
-    }));
+    // use your update method
+    updateStats(stat, newVal, newStatLevel);
   }
 };
 
@@ -96,6 +88,9 @@ export const processQuestResponse = (res,qxp) => {
 export function processPenaltyResponse(updated, xpDelta) {
   const push = useNotificationStore.getState().push;
   const user = useUserStore.getState().user;
+    const updateXP = useUserStore.getState().updateXP;
+  const updateCoin = useUserStore.getState().updateCoin;
+  const updateLevel = useUserStore.getState().updateLevel;
   const previous = {
     xp: user.xp || 0,
     level: user.level || 0,
@@ -111,6 +106,7 @@ export function processPenaltyResponse(updated, xpDelta) {
       newValue: updated.xp,
       isPenalty: true,
     });
+    updateXP(updated.xp);
   }
 
   // --- Handle Level change ---
@@ -121,6 +117,7 @@ export function processPenaltyResponse(updated, xpDelta) {
       newValue: updated.level,
       isPenalty: true,
     });
+    updateLevel(updated.level);
   }
 
   // --- Handle Coin change ---
@@ -132,6 +129,7 @@ export function processPenaltyResponse(updated, xpDelta) {
       newValue: updated.coins,
       isPenalty: true,
     });
+    updateCoin(updated.coins);
   }
 
   // --- Handle Stats changes ---

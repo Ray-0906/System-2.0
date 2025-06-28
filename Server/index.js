@@ -28,7 +28,17 @@ app.use(cors({
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
-app.use(session({ secret: 'keyboard cat', resave: false, saveUninitialized: false }));
+app.use(session({
+  secret: 'keyboard cat', // Replace with real secret or env var
+  resave: false,
+  saveUninitialized: false,
+  cookie: {
+    httpOnly: true,
+    secure: true,           // ✅ ensures it's HTTPS-only
+    sameSite: "none"        // ✅ allows cross-origin (Vercel → Render)
+  }
+}));
+
 app.use(passport.initialize());
 app.use(passport.session());
 

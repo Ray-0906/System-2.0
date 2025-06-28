@@ -51,3 +51,15 @@ export const logout = (req, res) => {
 };
 
 
+// controllers/authController.js
+export const testAuth = (req, res) => {
+ 
+  if (req.user) {        
+    // Return minimal user data (extend as needed)
+    return res.status(200).json({
+      success: true,
+    });
+  } else {
+    return res.status(401).json({ success: false, message: 'Not authenticated' });
+  }
+};

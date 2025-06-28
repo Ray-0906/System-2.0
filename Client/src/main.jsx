@@ -9,6 +9,7 @@ import App from './App.jsx';
 import OAuthSuccess from './components/OathSuccess.jsx';
 import HomePage from './pages/Home.jsx';
 
+
 // Lazy load pages
 const Login = lazy(() => import('./pages/Login'));
 const Signup = lazy(() => import('./pages/Signup'));
@@ -31,7 +32,7 @@ const router = createBrowserRouter([
       { path: '/login', element: <Login /> },
       { path: '/home', element: <HomePage /> },
       { path: '/signup', element: <Signup /> },
-      { path: '/dashboard', element: <Dashboard /> },
+      { path: '/dashboard', element:<Dashboard /> },
       { path: '/demo', element: <DemoDash /> },
       { path: '/oauth-success', element: <OAuthSuccess /> },
       { path: '/report', element: <AscensionTrial /> },

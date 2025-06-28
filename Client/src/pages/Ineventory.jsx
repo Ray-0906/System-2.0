@@ -174,7 +174,7 @@ const Inventory = () => {
         equipmentId,
         price: cost,
       });
-    
+
       if (res.data) {
         useUserStore.getState().updateCoin(userCoins - cost);
         useUserStore.getState().updateBuy(equipmentId, name, icon, desc);
@@ -212,12 +212,22 @@ const Inventory = () => {
                   GEAR VAULT
                 </h1>
                 <p
-                  className={`${theme.colors.accent} text-lg font-semibold tracking-wide`}
+                  className={`${theme.colors.accent} text-lg font-semibold tracking-wide mb-2`}
                   style={{ fontFamily: theme.fonts.primary }}
                 >
                   Arm yourself for glory! Explore and acquire legendary gear,
                   filtered by rarity, to enhance your questing prowess.
                 </p>
+
+                <div className="inline-flex items-center justify-center gap-2 bg-gray-800 border border-yellow-400/40 px-4 py-2 rounded-full shadow-lg mx-auto w-fit">
+                  <span className="text-yellow-300 text-lg">🪙</span>
+                  <span
+                    className="text-yellow-400 font-semibold tracking-wider"
+                    style={{ fontFamily: theme.fonts.primary }}
+                  >
+                    {userCoins} Coins
+                  </span>
+                </div>
               </div>
 
               {message && <Alert message={message} onDismiss={handleDismiss} />}

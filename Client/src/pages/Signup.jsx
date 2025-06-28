@@ -14,7 +14,7 @@ const Signup = () => {
     e.preventDefault();
     try {
       await axios.post('/auth/register', form);
-      navigate('/dashboard');
+      navigate('/oauth-success');
     } catch (err) {
       setError(err.response?.data?.message || 'Signup failed');
     }

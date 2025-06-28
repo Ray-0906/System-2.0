@@ -14,7 +14,7 @@ const AuthLayout = ({ children }) => {
         navigate('/login', { replace: true });
       
     }
-    },1000)
+    },50);
       
   
   }, [useNavigate,user]);

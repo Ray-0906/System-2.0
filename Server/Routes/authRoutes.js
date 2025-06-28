@@ -1,7 +1,8 @@
 import express from 'express';
 import passport from 'passport';
-import { login, logout, signup } from '../Controllers/userController.js';
+import { login, logout, signup, testAuth } from '../Controllers/userController.js';
 import jwt from 'jsonwebtoken';
+import { isAuthenticated } from '../Middlewares/authMiddleware.js';
 const router = express.Router();
 
 // Google OAuth
@@ -29,5 +30,7 @@ router.get('/google/callback',
 router.post('/register', signup);
 router.post('/login', login);
 router.get('/logout', logout);
+router.get('/test', isAuthenticated,testAuth);
+
 
 export default router;

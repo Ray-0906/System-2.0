@@ -142,7 +142,7 @@ const Dashboard = () => {
   const artifacts = user?.equipments || user?.equiments || [];
 
   return (
-    <><AuthLayout>
+    <>
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-black to-gray-800 text-white font-mono p-6 overflow-hidden relative">
       <div className="max-w-7xl mx-auto">
         <h1 className="text-center text-5xl font-extrabold mb-10 tracking-widest text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-pink-500 animate-pulse">
@@ -347,7 +347,7 @@ const Dashboard = () => {
           </div>
         </div>
       </div>
-    </div></AuthLayout></>
+    </div></>
   );
 };
 

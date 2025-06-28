@@ -23,7 +23,7 @@ export const buyEquipment = async(req, res) => {
     }       
     // Deduct the price from user's coins
     user.coins -= price; 
-    user.equipment.push(equipmentId); // Add the equipment to user's equipment list   
+    user.equiments.push(equipmentId); // Add the equipment to user's equipment list   
     await user.save();
      return res.status(200).json({ message: 'Equipment purchased successfully.' });    
   }

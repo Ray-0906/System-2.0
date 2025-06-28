@@ -1,11 +1,11 @@
-import React, { useState } from 'react';
-import { useQuery } from '@apollo/client';
-import { getAllSkills } from '../graphql/query';
-import { useUserStore } from '../store/userStore';
-import { cn } from '../utils/cn';
-import AuthLayout from '../components/AuthLayout';
-import SoloLoading from '../components/Loading'; // Assuming this is the correct import path
-import axiosInstance from '../utils/axios';
+import React, { useState } from "react";
+import { useQuery } from "@apollo/client";
+import { getAllSkills } from "../graphql/query";
+import { useUserStore } from "../store/userStore";
+import { cn } from "../utils/cn";
+import AuthLayout from "../components/AuthLayout";
+import SoloLoading from "../components/Loading"; // Assuming this is the correct import path
+import axiosInstance from "../utils/axios";
 
 // Error Boundary Component
 class ErrorBoundary extends React.Component {
@@ -24,7 +24,9 @@ class ErrorBoundary extends React.Component {
       return (
         <div className="min-h-screen bg-gradient-to-br from-gray-900 via-black to-gray-800 flex items-center justify-center p-6 text-white">
           <div className="text-center max-w-xl mx-auto space-y-4">
-            <h1 className="text-2xl font-bold text-red-500">Oops! Something Went Wrong</h1>
+            <h1 className="text-2xl font-bold text-red-500">
+              Oops! Something Went Wrong
+            </h1>
             <p className="text-purple-300">Error: {this.state.error.message}</p>
             <button
               onClick={this.handleRetry}
@@ -52,7 +54,11 @@ const Alert = ({ message, onDismiss }) => (
   >
     <div className="flex justify-between items-center">
       <span className="text-white">{message.text}</span>
-      <button onClick={onDismiss} aria-label="Dismiss alert" className="text-white ml-4">
+      <button
+        onClick={onDismiss}
+        aria-label="Dismiss alert"
+        className="text-white ml-4"
+      >
         ✕
       </button>
     </div>
@@ -63,22 +69,24 @@ const Alert = ({ message, onDismiss }) => (
 const theme = {
   fonts: { primary: "'Rajdhani', 'Orbitron', monospace" },
   colors: {
-    background: 'bg-gradient-to-br from-gray-900 via-black to-gray-800',
-    card: 'bg-gradient-to-br from-[#1a1e2a] to-[#0f141f]',
-    border: 'border-purple-500/50',
-    shadow: 'shadow-[0_0_15px_rgba(139,92,246,0.3)]',
-    title: 'text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-pink-500',
-    accent: 'text-purple-400',
-    button: 'bg-gradient-to-r from-purple-600 to-pink-500 hover:from-purple-500 hover:to-pink-400',
-    success: 'bg-gradient-to-r from-green-600 to-emerald-600',
-    error: 'bg-gradient-to-r from-red-600 to-rose-600',
-    text: 'text-white',
-    muted: 'text-purple-300',
-    loading: 'text-purple-400',
+    background: "bg-gradient-to-br from-gray-900 via-black to-gray-800",
+    card: "bg-gradient-to-br from-[#1a1e2a] to-[#0f141f]",
+    border: "border-purple-500/50",
+    shadow: "shadow-[0_0_15px_rgba(139,92,246,0.3)]",
+    title:
+      "text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-pink-500",
+    accent: "text-purple-400",
+    button:
+      "bg-gradient-to-r from-purple-600 to-pink-500 hover:from-purple-500 hover:to-pink-400",
+    success: "bg-gradient-to-r from-green-600 to-emerald-600",
+    error: "bg-gradient-to-r from-red-600 to-rose-600",
+    text: "text-white",
+    muted: "text-purple-300",
+    loading: "text-purple-400",
   },
   animations: {
-    fadeInUp: 'animate-fade-in-up',
-    pulse: 'animate-pulse',
+    fadeInUp: "animate-fade-in-up",
+    pulse: "animate-pulse",
   },
 };
 
@@ -103,14 +111,33 @@ const styles = `
   .alert {
     animation: fadeInUp 0.3s ease-out;
   }
+    .loader {
+  border-radius: 50%;
+  display: inline-block;
+  border: 2px solid rgba(255, 255, 255, 0.5);
+  border-top-color: white;
+  animation: spin 0.6s linear infinite;
+}
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 `;
 
-const SkillCard = ({ skill, userStats = {}, unlockedSkills = [], onUnlock }) => {
+const SkillCard = ({
+  skill,
+  userStats = {},
+  unlockedSkills = [],
+  onUnlock,
+  loadingSkillId,
+}) => {
   const isUnlocked = unlockedSkills.includes(skill.id);
-  
+
   // Progress calculation
   const totalRequired = skill.statRequired.length;
-  const fulfilled = skill.statRequired.filter(req => {
+  const fulfilled = skill.statRequired.filter((req) => {
     return (userStats?.[req.stat]?.level || 0) >= req.value;
   }).length;
 
@@ -118,25 +145,27 @@ const SkillCard = ({ skill, userStats = {}, unlockedSkills = [], onUnlock }) => 
   const unlockable = !isUnlocked && progressPercent === 100;
 
   // Determine button state
-  let buttonText = 'Locked';
-  let buttonClass = 'bg-gray-700 text-gray-400 cursor-not-allowed';
+  let buttonText = "Locked";
+  let buttonClass = "bg-gray-700 text-gray-400 cursor-not-allowed";
   let buttonDisabled = true;
 
   if (isUnlocked) {
-    buttonText = 'Unlocked';
-    buttonClass = 'bg-gray-700 text-gray-500 cursor-default';
+    buttonText = "Unlocked";
+    buttonClass = "bg-gray-700 text-gray-500 cursor-default";
   } else if (unlockable) {
-    buttonText = 'Obtain';
-    buttonClass = 'bg-gradient-to-r from-purple-600 to-pink-500 hover:from-purple-500 hover:to-pink-400 text-white';
+    buttonText = "Obtain";
+    buttonClass =
+      "bg-gradient-to-r from-purple-600 to-pink-500 hover:from-purple-500 hover:to-pink-400 text-white";
     buttonDisabled = false;
   }
 
   return (
     <div
       className={cn(
-        'relative bg-gradient-to-br from-[#1a1e2a] to-[#0f141f] rounded-lg p-5 text-white shadow-lg shadow-black/40 border-2 border-purple-500/50 min-w-0',
-        'transition-all duration-300 hover:shadow-[0_0_10px_rgba(255,255,255,0.1)]',
-        isUnlocked && 'ring-2 ring-opacity-50 ring-offset-2 ring-offset-[#0f141f] ring-gray-600'
+        "relative bg-gradient-to-br from-[#1a1e2a] to-[#0f141f] rounded-lg p-5 text-white shadow-lg shadow-black/40 border-2 border-purple-500/50 min-w-0",
+        "transition-all duration-300 hover:shadow-[0_0_10px_rgba(255,255,255,0.1)]",
+        isUnlocked &&
+          "ring-2 ring-opacity-50 ring-offset-2 ring-offset-[#0f141f] ring-gray-600"
       )}
       style={{ fontFamily: theme.fonts.primary }}
     >
@@ -147,20 +176,35 @@ const SkillCard = ({ skill, userStats = {}, unlockedSkills = [], onUnlock }) => 
       <div className="absolute bottom-0 right-0 w-2 h-2 border-b-2 border-r-2 border-gray-600" />
 
       <img
-        src={skill.icon}
+        src={`/pic/skill/${skill.icon}`}
         alt={skill.name}
         className="w-16 h-16 mx-auto rounded-md mb-3 border border-gray-600"
       />
-      <h3 className="text-lg font-bold text-center uppercase tracking-wider mb-1">{skill.name}</h3>
-      <p className="text-sm text-purple-300 text-center mb-2">{skill.description}</p>
+
+      <h3 className="text-lg font-bold text-center uppercase tracking-wider mb-1">
+        {skill.name}
+      </h3>
+      <p className="text-sm text-purple-300 text-center mb-2">
+        {skill.description}
+      </p>
 
       <div className="mb-2 text-xs text-purple-400 space-y-1">
-        <p><span className="font-semibold">Rank:</span> {skill.rank}</p>
-        <p><span className="font-semibold">Min Level:</span> {skill.minLevel}</p>
-        {skill.statRequired.map(req => (
+        <p>
+          <span className="font-semibold">Rank:</span> {skill.rank}
+        </p>
+        <p>
+          <span className="font-semibold">Min Level:</span> {skill.minLevel}
+        </p>
+        {skill.statRequired.map((req) => (
           <p key={req.stat}>
             <span className="capitalize">{req.stat}:</span>{" "}
-            <span className={userStats?.[req.stat]?.level >= req.value ? "text-green-500" : "text-red-500"}>
+            <span
+              className={
+                userStats?.[req.stat]?.level >= req.value
+                  ? "text-green-500"
+                  : "text-red-500"
+              }
+            >
               {userStats?.[req.stat]?.level || 0}/{req.value}
             </span>
           </p>
@@ -180,25 +224,37 @@ const SkillCard = ({ skill, userStats = {}, unlockedSkills = [], onUnlock }) => 
       </div>
 
       <button
-        disabled={buttonDisabled}
-        onClick={() => onUnlock && onUnlock(skill.id)}
+        disabled={buttonDisabled || loadingSkillId === skill.id}
+        onClick={() => onUnlock && onUnlock(skill.id,skill.name,skill.icon,skill.description)}
         className={cn(
-          'w-full py-2 mt-2 rounded text-sm font-semibold uppercase transition hover-glow',
+          "w-full py-2 mt-2 rounded text-sm font-semibold uppercase transition hover-glow flex items-center justify-center",
           buttonClass
         )}
         aria-label={buttonText.toLowerCase()}
       >
-        {buttonText}
+        {loadingSkillId === skill.id ? (
+          <span className="flex items-center gap-2">
+            <span className="loader w-4 h-4 border-2 border-t-transparent border-white rounded-full animate-spin"></span>
+            Obtaining...
+          </span>
+        ) : (
+          buttonText
+        )}
       </button>
     </div>
   );
 };
 
-const SkillGrid = ({ skills, userStats = {}, unlockedSkills = [], onUnlock }) => {
+const SkillGrid = ({
+  skills,
+  userStats = {},
+  unlockedSkills = [],
+  onUnlock,
+}) => {
   return (
     <div className="w-full mx-auto max-w-screen-xl">
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5  gap-4">
-        {skills.map(skill => (
+        {skills.map((skill) => (
           <SkillCard
             key={skill.id}
             skill={skill}
@@ -213,41 +269,52 @@ const SkillGrid = ({ skills, userStats = {}, unlockedSkills = [], onUnlock }) =>
 };
 
 const SkillsPage = () => {
-  const { data: skillData, loading: loadingSkills, error } = useQuery(getAllSkills);
+  const {
+    data: skillData,
+    loading: loadingSkills,
+    error,
+  } = useQuery(getAllSkills);
   const userData = useUserStore((state) => state.user);
-  const [filter, setFilter] = useState('all');
+  const [filter, setFilter] = useState("all");
   const [message, setMessage] = useState(null);
+  const [loadingSkillId, setLoadingSkillId] = useState(null);
 
   const skills = skillData?.getAllSkills || [];
   const userStats = userData?.stats || {};
 
   // Ensure unlockedSkills is an array of IDs
-  const unlockedSkillIds = (userData?.skills || []).map(skill => skill.id);
+  const unlockedSkillIds = (userData?.skills || []).map((skill) => skill.id);
 
   const filterSkills = () => {
-    if (filter === 'unlocked') {
+    if (filter === "unlocked") {
       return skills.filter((s) => unlockedSkillIds.includes(s.id));
-    } else if (filter === 'locked') {
+    } else if (filter === "locked") {
       return skills.filter((s) => !unlockedSkillIds.includes(s.id));
     }
     return skills;
   };
 
-  const handleUnlock = async (skillId) => {
+  const handleUnlock = async (skillId,name,icon,desc) => {
+    setLoadingSkillId(skillId); // Start loading
+
     try {
-      const res = await axiosInstance.post(`/skill/unlock`, {skillId
-      });
+      const res = await axiosInstance.post(`/skill/unlock`, { skillId });
 
       if (res?.data) {
-        console.log('Skill Unlocked:', res.data);
-        // Optional: Refetch user if you have GraphQL for user
-        // Or update zustand store manually if you're syncing
+        console.log("Skill Unlocked:", res.data);
+        useUserStore.getState().unlockSkill(skillId, name, icon, desc);
+        // Update Zustand or refetch user info if needed
       } else {
-        setMessage({ type: 'error', text: res.message || 'Failed to unlock skill' });
+        setMessage({
+          type: "error",
+          text: res.message || "Failed to unlock skill",
+        });
       }
     } catch (err) {
-      console.error('Error unlocking skill:', err);
-      setMessage({ type: 'error', text: 'Server error' });
+      console.error("Error unlocking skill:", err);
+      setMessage({ type: "error", text: "Server error" });
+    } finally {
+      setLoadingSkillId(null); // Done loading
     }
   };
 
@@ -258,13 +325,18 @@ const SkillsPage = () => {
       <AuthLayout>
         <SoloLoading loading={loadingSkills} message="Loading Skill Forge..." />
         {!loadingSkills && (
-          <div className={`min-h-screen ${theme.colors.background} px-8 py-10 ${theme.colors.text}`}>
+          <div
+            className={`min-h-screen ${theme.colors.background} px-8 py-10 ${theme.colors.text}`}
+          >
             <style>{styles}</style>
             <div className="w-full mx-auto space-y-6">
               <div className="text-center mb-6">
                 <h1
                   className={`${theme.colors.title} text-4xl font-bold mb-2 text-glow`}
-                  style={{ fontFamily: theme.fonts.primary, textShadow: '0 0 20px rgba(139, 92, 246, 0.5)' }}
+                  style={{
+                    fontFamily: theme.fonts.primary,
+                    textShadow: "0 0 20px rgba(139, 92, 246, 0.5)",
+                  }}
                 >
                   SKILL FORGE
                 </h1>
@@ -272,21 +344,22 @@ const SkillsPage = () => {
                   className={`${theme.colors.accent} text-lg font-semibold tracking-wide`}
                   style={{ fontFamily: theme.fonts.primary }}
                 >
-                  Master your path! Unlock powerful skills by meeting stat thresholds and filter your arsenal with ease.
+                  Master your path! Unlock powerful skills by meeting stat
+                  thresholds and filter your arsenal with ease.
                 </p>
               </div>
 
               {message && <Alert message={message} onDismiss={handleDismiss} />}
-              <div className='flex justify-center'>
+              <div className="flex justify-center">
                 <div className="flex justify-between items-center mb-6">
                   <div className="space-x-2">
-                    {['all', 'unlocked', 'locked'].map((type) => (
+                    {["all", "unlocked", "locked"].map((type) => (
                       <button
                         key={type}
                         className={`px-3 py-1 rounded ${
                           filter === type
-                            ? 'bg-gradient-to-r from-purple-600 to-pink-500 text-white'
-                            : 'bg-gray-700 text-purple-300'
+                            ? "bg-gradient-to-r from-purple-600 to-pink-500 text-white"
+                            : "bg-gray-700 text-purple-300"
                         } hover-glow`}
                         onClick={() => setFilter(type)}
                         aria-label={`Filter by ${type} skills`}
@@ -304,6 +377,7 @@ const SkillsPage = () => {
                 userStats={userStats}
                 unlockedSkills={unlockedSkillIds}
                 onUnlock={handleUnlock}
+                loadingSkillId={loadingSkillId}
               />
             </div>
           </div>

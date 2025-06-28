@@ -1,10 +1,11 @@
 import React from 'react'
+import HowItWorks from '../components/HowItWorks'
 
 const DemoDash = () => {
   return (
-    <div>
-      
-    </div>
+    <>
+   
+    </>
   )
 }
 

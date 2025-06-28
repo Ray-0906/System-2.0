@@ -137,7 +137,7 @@ const Sidebar = memo(() => {
           {/* Header with Solo Leveling Logo/Title and Close Button */}
           <div className="flex justify-between items-center mb-8">
             <h2 className={`${theme.colors.title} text-2xl font-bold tracking-wider drop-shadow-[0_0_8px_rgba(139,92,246,0.6)]`}>
-              Solo Leveling
+             <Link to={'/home'} onClick={()=>{setIsOpen(false);}}>SYSTEM 2.0</Link> 
             </h2>
             {isOpen && (
               <button

@@ -271,7 +271,7 @@ const Dashboard = () => {
                         >
                           <div className="w-16 h-16 bg-gray-800 rounded-lg flex items-center justify-center hover:bg-gray-700 transition-colors shadow-[0_0_10px_rgba(139,92,246,0.3)] hover:shadow-[0_0_15px_rgba(139,92,246,0.5)]">
                             <img
-                              src={artifact.icon}
+                              src={`/pic/arti/${artifact.icon}`}
                               alt={artifact.name}
                               className="w-10 h-10 text-purple-500 animate-pulse"
                             />
@@ -317,7 +317,7 @@ const Dashboard = () => {
                         >
                           <div className="w-16 h-16 bg-gray-800 rounded-lg flex items-center justify-center hover:bg-gray-700 transition-colors shadow-[0_0_10px_rgba(139,92,246,0.3)] hover:shadow-[0_0_15px_rgba(139,92,246,0.5)]">
                             <img
-                              src={skill.icon}
+                              src={`/pic/skill/${skill.icon}`}
                               alt={skill.name}
                               className="w-10 h-10 text-purple-500 animate-pulse"
                             />

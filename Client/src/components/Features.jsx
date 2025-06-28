@@ -136,11 +136,17 @@ const Features = () => {
   );
 
   const features = [
+     {
+    icon: "🗺️",
+    title: "Mission Creation",
+    description:
+      " Create custom missions or simply enter a goal — our AI generates quests for you instantly.",
+  },
     {
       icon: "🧠",
       title: "Adaptive Quests Engine",
       description:
-        "AI analyzes your habits, streaks & failures to craft personalized missions daily.",
+        "Get AI-driven quests evolve daily based on your consistency, progress, and past struggles.",
     },
     {
       icon: "📈",
@@ -151,7 +157,7 @@ const Features = () => {
     {
       icon: "👑",
       title: "Rank Ascension Trials",
-      description: "Face periodic evaluations to ascend from E-Rank to S-Rank.",
+      description: "Trigger AI-powered rank trials to ascend from E-Rank to S-Rank.",
     },
     {
       icon: "🎯",
@@ -165,12 +171,8 @@ const Features = () => {
       description:
         "Unlock rare titles and cosmetic flair for your accomplishments.",
     },
-    {
-      icon: "👥",
-      title: "Community Challenges",
-      description:
-        "Compete with other hunters in global events and seasonal competitions.",
-    },
+    
+   
   ];
 
   const aiSystems = [

@@ -82,7 +82,7 @@ tracker.questCompletion[new Date().toISOString()] = [new mongoose.Types.ObjectId
       const rewardCoin=tracker.reward?.coins || 0;
      const gainCoin=tracker.daycount >= tracker.duration
         ? rewardCoin
-        : Math.floor(rewardCoin / 4);
+        : Math.floor(rewardCoin / 3);
 
       user.xp += gainedXP;
      user.coins+=gainCoin;

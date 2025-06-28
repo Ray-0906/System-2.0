@@ -84,7 +84,7 @@ const Hero = () => {
 
   return (
     <div className="relative min-h-screen flex items-center overflow-hidden bg-black">
-      <style jsx>{`
+      <style >{`
         @keyframes float {
           0%,
           100% {
@@ -321,7 +321,7 @@ const Hero = () => {
         </div>
       </div>
 
-      <style jsx>{`
+      <style>{`
         @keyframes orbit {
           from {
             transform: rotate(0deg) translateX(200px) rotate(0deg);

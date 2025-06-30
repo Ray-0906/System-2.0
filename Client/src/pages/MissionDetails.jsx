@@ -37,7 +37,7 @@ const QuestItem = ({ quest, isRemaining, handleComplete }) => (
     <div>
       <p className="font-medium text-white text-lg">{quest.title}</p>
       <p className="text-sm text-purple-300">
-        Stat: {quest.statAffected} • XP: +{quest.xp}
+        Stat: <span className='text-purple-500'>{quest.statAffected}</span>  <span className='text-green-400'>• XP: +{quest.xp}</span>
       </p>
     </div>
     {isRemaining ? (

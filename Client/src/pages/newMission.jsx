@@ -372,7 +372,7 @@ const AddMission = () => {
             Unleash your destiny! Describe your goal and set the days—let the AI weave a bespoke mission to conquer your ambitions.
           </p>
           <Link
-            to="/missions"
+            to="/add-custom"
             className={`mt-4 inline-flex items-center px-4 py-2 ${theme.colors.button} text-white rounded-md hover-glow transition-all`}
             aria-label="Back to missions"
           >

@@ -184,43 +184,39 @@ const Hero = () => {
           </div>
 
           {/* Main Heading */}
-    <h1 className="text-5xl md:text-7xl lg:text-8xl font-bold mb-6 leading-tight tracking-tight">
-  {/* Wrapping block to stabilize height */}
-  <div className="relative">
-    {/* Invisible placeholder that wraps naturally */}
-    <span className="invisible block">
-      Be the Monarch.
-    </span>
+          <h1 className="text-5xl md:text-7xl lg:text-8xl font-bold mb-6 leading-tight tracking-tight">
+            {/* Wrapping block to stabilize height */}
+            <div className="relative">
+              {/* Invisible placeholder that wraps naturally */}
+              <span className="invisible block">Be the Monarch.</span>
 
-    {/* Animated text */}
-    <span className="absolute top-0 left-0 w-full text-transparent bg-clip-text bg-gradient-to-r from-purple-400 via-pink-400 to-purple-600">
-      <TypeAnimation
-        sequence={[
-          "Rise as a Hunter.",
-          1000,
-          "Be the Monarch.",
-          1000,
-        ]}
-        wrapper="span"
-        speed={50}
-        repeat={Infinity}
-      />
-    </span>
-  </div>
+              {/* Animated text */}
+              <span className="absolute top-0 left-0 w-full text-transparent bg-clip-text bg-gradient-to-r from-purple-400 via-pink-400 to-purple-600">
+                <TypeAnimation
+                  sequence={[
+                    "Rise as a Hunter.",
+                    1000,
+                    "Be the Monarch.",
+                    1000,
+                  ]}
+                  wrapper="span"
+                  speed={50}
+                  repeat={Infinity}
+                />
+              </span>
+            </div>
 
-  {/* Static line */}
-  <span className="block mt-2 text-white">
-    Level Up Your
-    <span className="relative inline-block ml-4">
-      <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-400">
-        Life.
-      </span>
-      <div className="absolute -inset-1 bg-gradient-to-r from-cyan-400/20 to-blue-400/20 blur-lg -z-10 animate-pulse" />
-    </span>
-  </span>
-</h1>
-
-
+            {/* Static line */}
+            <span className="block mt-2 text-white">
+              Level Up Your
+              <span className="relative inline-block ml-4">
+                <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-400">
+                  Life.
+                </span>
+                <div className="absolute -inset-1 bg-gradient-to-r from-cyan-400/20 to-blue-400/20 blur-lg -z-10 animate-pulse" />
+              </span>
+            </span>
+          </h1>
 
           {/* Description */}
           <p className="text-xl md:text-2xl text-gray-300 mb-10 leading-relaxed max-w-2xl">
@@ -235,7 +231,7 @@ const Hero = () => {
           <div className="flex flex-col sm:flex-row gap-6 mb-12">
             <button
               onClick={() => {
-                navigate("/login");
+                navigate("/signup");
               }}
               className="group relative px-8 py-4 bg-gradient-to-r from-purple-600 to-indigo-600 rounded-xl text-lg font-medium transition-all duration-300 transform hover:scale-105 glow-button overflow-hidden"
             >
@@ -245,7 +241,7 @@ const Hero = () => {
 
             <button
               onClick={() => {
-                navigate("/dashboard");
+                navigate("/login");
               }}
               className="group px-8 py-4 glass rounded-xl text-lg font-medium transition-all duration-300 hover:bg-purple-500/20 border border-purple-500/30 hover:border-purple-400 relative overflow-hidden"
             >

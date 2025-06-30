@@ -1,9 +1,9 @@
-import { useState, memo, useCallback } from 'react';
-import axiosInstance from '../utils/axios';
-import { Menu, X } from 'lucide-react';
-import { Link, useNavigate } from 'react-router-dom';
-import React from 'react';
-import { useUserStore } from '../store/userStore';
+import { useState, memo, useCallback } from "react";
+import axiosInstance from "../utils/axios";
+import { Menu, X } from "lucide-react";
+import { Link, useNavigate } from "react-router-dom";
+import React from "react";
+import { useUserStore } from "../store/userStore";
 
 // Error Boundary Component
 class ErrorBoundary extends React.Component {
@@ -23,7 +23,9 @@ class ErrorBoundary extends React.Component {
         <div className="flex items-center justify-center h-screen bg-gradient-to-br from-gray-900 via-black to-gray-800 text-white">
           <div className="text-center space-y-4">
             <h1 className="text-2xl font-bold text-red-400">Sidebar Error</h1>
-            <p className="text-purple-300">Something went wrong: {this.state.error.message}</p>
+            <p className="text-purple-300">
+              Something went wrong: {this.state.error.message}
+            </p>
             <button
               onClick={this.handleRetry}
               className="px-4 py-2 bg-gradient-to-r from-purple-600 to-pink-500 text-white rounded-md hover:from-purple-500 hover:to-pink-400 transition-all"
@@ -42,21 +44,23 @@ class ErrorBoundary extends React.Component {
 const theme = {
   fonts: { primary: "'Rajdhani', 'Orbitron', monospace" },
   colors: {
-    background: 'bg-gradient-to-br from-gray-900 via-black to-gray-800',
-    card: 'bg-gradient-to-br from-gray-800 to-black',
-    border: 'border-purple-500/50',
-    shadow: 'shadow-[0_0_15px_rgba(139,92,246,0.3)]',
-    title: 'text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-pink-500',
-    accent: 'text-purple-400',
-    button: 'bg-gradient-to-r from-purple-600 to-pink-500 hover:from-purple-500 hover:to-pink-400',
-    success: 'bg-gradient-to-r from-green-600 to-emerald-600',
-    error: 'bg-gradient-to-r from-red-600 to-rose-600',
-    text: 'text-white',
-    muted: 'text-purple-300',
+    background: "bg-gradient-to-br from-gray-900 via-black to-gray-800",
+    card: "bg-gradient-to-br from-gray-800 to-black",
+    border: "border-purple-500/50",
+    shadow: "shadow-[0_0_15px_rgba(139,92,246,0.3)]",
+    title:
+      "text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-pink-500",
+    accent: "text-purple-400",
+    button:
+      "bg-gradient-to-r from-purple-600 to-pink-500 hover:from-purple-500 hover:to-pink-400",
+    success: "bg-gradient-to-r from-green-600 to-emerald-600",
+    error: "bg-gradient-to-r from-red-600 to-rose-600",
+    text: "text-white",
+    muted: "text-purple-300",
   },
   animations: {
-    fadeInUp: 'animate-fade-in-up',
-    pulse: 'animate-pulse',
+    fadeInUp: "animate-fade-in-up",
+    pulse: "animate-pulse",
   },
 };
 
@@ -98,19 +102,21 @@ const Sidebar = memo(() => {
     setIsOpen(false);
     setError(null);
     try {
-      await axiosInstance.get('/auth/logout'); // this clears the cookie on backend
+      await axiosInstance.get("/auth/logout"); // this clears the cookie on backend
 
-       localStorage.removeItem('user');
-       useUserStore.getState().reset(); 
-       // clear Zustand user state
-      navigate('/login');
+      localStorage.removeItem("user");
+      useUserStore.getState().reset();
+      // clear Zustand user state
+      navigate("/login");
     } catch (err) {
-      console.error('Logout error:', err);
-      setError(err.response?.data?.message || 'Server error during logout');
+      console.error("Logout error:", err);
+      setError(err.response?.data?.message || "Server error during logout");
     } finally {
       setIsLoggingOut(false);
     }
   }, [navigate]);
+
+  const isLoggedIn = localStorage.getItem("user") !== null;
 
   return (
     <ErrorBoundary>
@@ -119,7 +125,7 @@ const Sidebar = memo(() => {
       <button
         onClick={toggleSidebar}
         className={`${theme.colors.button} fixed top-4 right-4 z-50 p-2 rounded-full text-white transition-all duration-300 ${theme.colors.shadow}`}
-        aria-label={isOpen ? 'Close sidebar' : 'Open sidebar'}
+        aria-label={isOpen ? "Close sidebar" : "Open sidebar"}
         disabled={isLoggingOut}
         aria-disabled={isLoggingOut}
       >
@@ -128,16 +134,29 @@ const Sidebar = memo(() => {
 
       {/* Sidebar (slides in from right) */}
       <div
-        className={`fixed top-0 right-0 h-full w-72 ${theme.colors.background} border-l ${theme.colors.border} z-40 transition-transform duration-500 ease-in-out ${
-          isOpen ? 'translate-x-0' : 'translate-x-full'
+        className={`fixed top-0 right-0 h-full w-72 ${
+          theme.colors.background
+        } border-l ${
+          theme.colors.border
+        } z-40 transition-transform duration-500 ease-in-out ${
+          isOpen ? "translate-x-0" : "translate-x-full"
         }`}
         style={{ fontFamily: theme.fonts.primary }}
       >
         <div className="p-6">
           {/* Header with Solo Leveling Logo/Title and Close Button */}
           <div className="flex justify-between items-center mb-8">
-            <h2 className={`${theme.colors.title} text-2xl font-bold tracking-wider drop-shadow-[0_0_8px_rgba(139,92,246,0.6)]`}>
-             <Link to={'/'} onClick={()=>{setIsOpen(false);}}>SYSTEM 2.0</Link> 
+            <h2
+              className={`${theme.colors.title} text-2xl font-bold tracking-wider drop-shadow-[0_0_8px_rgba(139,92,246,0.6)]`}
+            >
+              <Link
+                to={"/"}
+                onClick={() => {
+                  setIsOpen(false);
+                }}
+              >
+                SYSTEM 2.0
+              </Link>
             </h2>
             {isOpen && (
               <button
@@ -152,36 +171,52 @@ const Sidebar = memo(() => {
 
           {/* Navigation Links */}
           <nav className="space-y-6">
-            {[
-              { to: '/dashboard', label: 'Dashboard' },
-              { to: '/missions', label: 'Missions' },
-              { to: '/add-mission', label: 'Add Mission' },
-              { to: '/report', label: 'Ascension Room' },
-              { to: '/inventory', label: 'Inventory' },
-              { to: '/skills', label: 'Skills' },
-            ].map((item) => (
+            {isLoggedIn ? (
+              <>
+                {[
+                  { to: "/dashboard", label: "Dashboard" },
+                  { to: "/missions", label: "Missions" },
+                  { to: "/add-mission", label: "Add Mission" },
+                  { to: "/report", label: "Ascension Room" },
+                  { to: "/inventory", label: "Inventory" },
+                  { to: "/skills", label: "Skills" },
+                ].map((item) => (
+                  <Link
+                    key={item.to}
+                    to={item.to}
+                    onClick={() => setIsOpen(false)}
+                    className="block text-purple-300 text-lg font-medium hover:text-purple-200 hover:scale-105 transition-all duration-300 ease-out drop-shadow-[0_0_4px_rgba(139,92,246,0.4)]"
+                  >
+                    {item.label}
+                  </Link>
+                ))}
+
+                {/* Logout button */}
+                <button
+                  onClick={handleLogout}
+                  disabled={isLoggingOut}
+                  className={`${
+                    theme.colors.button
+                  } w-full py-2 text-lg text-center font-medium rounded transition-all duration-300 ease-out hover:scale-105 ${
+                    theme.colors.shadow
+                  } ${isLoggingOut ? "opacity-50 cursor-not-allowed" : ""}`}
+                  aria-label="Logout"
+                  aria-disabled={isLoggingOut}
+                >
+                  {isLoggingOut ? "Logging out..." : "Logout"}
+                </button>
+
+                {error && <p className="text-red-400 text-sm mt-2">{error}</p>}
+              </>
+            ) : (
+              // Show only login if not logged in
               <Link
-                key={item.to}
-                to={item.to}
-                onClick={() => setIsOpen(false)} // Close sidebar on link click
-                className="block text-purple-300 text-lg font-medium hover:text-purple-200 hover:scale-105 transition-all duration-300 ease-out drop-shadow-[0_0_4px_rgba(139,92,246,0.4)]"
+                to="/login"
+                onClick={() => setIsOpen(false)}
+                className={`${theme.colors.button} block text-center w-full py-2 text-lg font-medium rounded transition-all duration-300 ease-out hover:scale-105 ${theme.colors.shadow}`}
               >
-                {item.label}
+                Login
               </Link>
-            ))}
-            <button
-              onClick={handleLogout}
-              disabled={isLoggingOut}
-              className={`${theme.colors.button} w-full  py-2 text-lg text-center font-medium rounded transition-all duration-300 ease-out hover:scale-105 ${theme.colors.shadow} ${
-                isLoggingOut ? 'opacity-50 cursor-not-allowed' : ''
-              }`}
-              aria-label="Logout"
-              aria-disabled={isLoggingOut}
-            >
-              {isLoggingOut ? 'Logging out...' : 'Logout'}
-            </button>
-            {error && (
-              <p className="text-red-400 text-sm mt-2">{error}</p>
             )}
           </nav>
 
@@ -208,6 +243,6 @@ const Sidebar = memo(() => {
 });
 
 // Display name for debugging
-Sidebar.displayName = 'Sidebar';
+Sidebar.displayName = "Sidebar";
 
 export default Sidebar;

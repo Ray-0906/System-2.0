@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from "react";
 import { TypeAnimation } from "react-type-animation";
-import { useNavigate } from 'react-router-dom';
+import { useNavigate } from "react-router-dom";
 const Hero = () => {
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
   const [isVisible, setIsVisible] = useState(false);
-  const navigate=useNavigate();
+  const navigate = useNavigate();
   useEffect(() => {
     setIsVisible(true);
 
@@ -84,7 +84,7 @@ const Hero = () => {
 
   return (
     <div className="relative min-h-screen flex items-center overflow-hidden bg-black">
-      <style >{`
+      <style>{`
         @keyframes float {
           0%,
           100% {
@@ -184,32 +184,43 @@ const Hero = () => {
           </div>
 
           {/* Main Heading */}
-          <h1 className="text-5xl md:text-7xl lg:text-8xl font-bold mb-6 leading-tight tracking-tight">
-            <span className="block md:text-6xl text-transparent bg-clip-text bg-gradient-to-r from-purple-400 via-pink-400 to-purple-600 ">
-              <TypeAnimation
-                sequence={[
-                  // Same substring at the start will only be typed out once, initially
-                  "Rise as a Hunter.",
-                  1000, // wait 1s before replacing "Mice" with "Hamsters"
-                  "Be the Monarch.",
-                  1000,
-                ]}
-                wrapper="span"
-                speed={50}
-                
-                repeat={Infinity}
-              />
-            </span>
-            <span className="block mt-2 text-white">
-              Level Up Your
-              <span className="relative inline-block ml-4">
-                <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-400">
-                  Life.
-                </span>
-                <div className="absolute -inset-1 bg-gradient-to-r from-cyan-400/20 to-blue-400/20 blur-lg -z-10 animate-pulse" />
-              </span>
-            </span>
-          </h1>
+    <h1 className="text-5xl md:text-7xl lg:text-8xl font-bold mb-6 leading-tight tracking-tight">
+  {/* Wrapping block to stabilize height */}
+  <div className="relative">
+    {/* Invisible placeholder that wraps naturally */}
+    <span className="invisible block">
+      Be the Monarch.
+    </span>
+
+    {/* Animated text */}
+    <span className="absolute top-0 left-0 w-full text-transparent bg-clip-text bg-gradient-to-r from-purple-400 via-pink-400 to-purple-600">
+      <TypeAnimation
+        sequence={[
+          "Rise as a Hunter.",
+          1000,
+          "Be the Monarch.",
+          1000,
+        ]}
+        wrapper="span"
+        speed={50}
+        repeat={Infinity}
+      />
+    </span>
+  </div>
+
+  {/* Static line */}
+  <span className="block mt-2 text-white">
+    Level Up Your
+    <span className="relative inline-block ml-4">
+      <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-400">
+        Life.
+      </span>
+      <div className="absolute -inset-1 bg-gradient-to-r from-cyan-400/20 to-blue-400/20 blur-lg -z-10 animate-pulse" />
+    </span>
+  </span>
+</h1>
+
+
 
           {/* Description */}
           <p className="text-xl md:text-2xl text-gray-300 mb-10 leading-relaxed max-w-2xl">
@@ -222,12 +233,22 @@ const Hero = () => {
 
           {/* CTA Buttons */}
           <div className="flex flex-col sm:flex-row gap-6 mb-12">
-            <button onClick={()=>{ navigate('/login');}} className="group relative px-8 py-4 bg-gradient-to-r from-purple-600 to-indigo-600 rounded-xl text-lg font-medium transition-all duration-300 transform hover:scale-105 glow-button overflow-hidden">
+            <button
+              onClick={() => {
+                navigate("/login");
+              }}
+              className="group relative px-8 py-4 bg-gradient-to-r from-purple-600 to-indigo-600 rounded-xl text-lg font-medium transition-all duration-300 transform hover:scale-105 glow-button overflow-hidden"
+            >
               <span className="relative z-10">Start Your Awakening</span>
               <div className="absolute inset-0 bg-gradient-to-r from-purple-700 to-indigo-700 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
             </button>
 
-            <button onClick={()=>{navigate('/dashboard');}} className="group px-8 py-4 glass rounded-xl text-lg font-medium transition-all duration-300 hover:bg-purple-500/20 border border-purple-500/30 hover:border-purple-400 relative overflow-hidden">
+            <button
+              onClick={() => {
+                navigate("/dashboard");
+              }}
+              className="group px-8 py-4 glass rounded-xl text-lg font-medium transition-all duration-300 hover:bg-purple-500/20 border border-purple-500/30 hover:border-purple-400 relative overflow-hidden"
+            >
               <span className="relative z-10">Watch the System</span>
               <div className="absolute inset-0 bg-gradient-to-r from-transparent via-purple-500/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
             </button>

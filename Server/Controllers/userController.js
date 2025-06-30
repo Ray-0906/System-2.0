@@ -9,6 +9,13 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { User } from "../Models/user.js";
 
+const cookieOptions = {
+  httpOnly: true,
+  secure: true, // Required for SameSite: 'none' and HTTPS
+  sameSite: "none",
+  maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+};
+
 export const signup = async (req, res) => {
   try {
     const { username, email, password } = req.body;
@@ -22,7 +29,7 @@ export const signup = async (req, res) => {
       expiresIn: "7d",
     });
     res
-      .cookie("token", token, { httpOnly: true, sameSite: "Lax" })
+      .cookie("token", token, cookieOptions)
       .status(201)
       .json({ msg: "Registered successfully", user });
   } catch (err) {
@@ -42,19 +49,22 @@ export const login = async (req, res) => {
     const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
       expiresIn: "7d",
     });
-    res.cookie("token", token, {
-        httpOnly: true,
-        secure: true, // ✅ cookie only sent over HTTPS
-        sameSite: "none", // ✅ allow cross-origin requests
-      }).json({ msg: "Login successful", user });
-      
+    res
+      .cookie("token", token, cookieOptions)
+      .json({ msg: "Login successful", user });
   } catch (err) {
     res.status(500).json({ msg: err.message });
   }
 };
 
 export const logout = (req, res) => {
-  res.clearCookie("token").json({ msg: "Logged out successfully" });
+  res
+    .clearCookie("token", {
+      httpOnly: true,
+      secure: true,
+      sameSite: "none",
+    })
+    .json({ msg: "Logged out successfully" });
 };
 
 // controllers/authController.js

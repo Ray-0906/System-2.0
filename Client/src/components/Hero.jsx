@@ -178,8 +178,8 @@ const Hero = () => {
           }`}
         >
           {/* Status Badge */}
-          <div className="inline-flex items-center px-4 py-2 mb-8 glass rounded-full text-sm font-medium text-purple-300 border border-purple-500/30">
-            <div className="w-2 h-2 bg-green-400 rounded-full mr-2 animate-pulse" />
+          <div className="inline-flex items-center px-4 py-2 my-4 mb-8 glass rounded-full text-sm font-medium text-purple-300 border border-purple-500/30">
+            <div className="w-2 h-2 bg-green-400 rounded-full  mr-2 animate-pulse" />
             System Status: Online
           </div>
 

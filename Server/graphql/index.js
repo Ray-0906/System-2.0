@@ -8,7 +8,7 @@ import { User } from '../Models/user.js';
 import jwt from 'jsonwebtoken';
 import { typeDefs } from './typeDefs.js';
 import { resolvers } from './resolvers.js';
-
+import 'dotenv/config';
 // Sample typeDefs and resolvers
 // const typeDefs = `#graphql
 //   type Query {
@@ -34,7 +34,7 @@ export const startGraphQLServer = async (app) => {
   app.use(
     '/graphql',
     cors({
-      origin: true,
+      origin: `${process.env.CLIENT_URL}`,
       credentials: true,
     }),
     expressMiddleware(server, {

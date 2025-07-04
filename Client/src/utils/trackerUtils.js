@@ -55,10 +55,11 @@ export const handleTrackerRefresh = async (tracker, updateTrackerInStore) => {
       //notification push for failed to maintain streak in queue
       // streak-00
     }
-  } else if (!lastCompleted) {
+  } else if (!lastCompleted && !isCompletedYesterday) {
     // Handle case where lastCompleted is null (new tracker)
     penaltyType = 'skip';
   }
+ 
 
   // 3. Send update to backend (daily refresh API will handle resetting quests, penalty effects, etc.)
   try {

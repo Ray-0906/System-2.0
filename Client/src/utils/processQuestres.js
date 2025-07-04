@@ -86,6 +86,7 @@ export const processQuestResponse = (res, qxp) => {
  * @param {number} xpDelta - XP change from API
  */
 export function processPenaltyResponse(updated, xpDelta) {
+  if(!updated) return;
   const push = useNotificationStore.getState().push;
   const user = useUserStore.getState().user;
     const updateXP = useUserStore.getState().updateXP;

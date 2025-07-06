@@ -56,6 +56,15 @@ app.use('/tracker',isAuthenticated,trackerRoutes);
 app.use('/skill',isAuthenticated,skillRoutes);
 app.use('/inventory',isAuthenticated,equimentRoutes);
 
+app.post('/set-cookie', (req, res) => {
+    res.cookie('token', req.body.token, {
+        httpOnly: true,
+        secure: true, // Use true if your site is served over HTTPS
+        sameSite: 'none' // Allows cross-origin requests
+    });
+    res.status(200).send('Cookie set');
+});
+
 // GraphQL server
 startGraphQLServer(app).catch(err => {
     console.error('Error starting GraphQL server:', err);

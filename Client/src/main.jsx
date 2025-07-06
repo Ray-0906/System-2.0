@@ -8,6 +8,7 @@ import { createBrowserRouter, RouterProvider } from 'react-router-dom';
 import App from './App.jsx';
 import OAuthSuccess from './components/OathSuccess.jsx';
 import HomePage from './pages/Home.jsx';
+import OAuthTransfer from './pages/SetCookie.jsx';
 
 
 // Lazy load pages
@@ -35,6 +36,7 @@ const router = createBrowserRouter([
       { path: '/dashboard', element:<Dashboard /> },
       { path: '/demo', element: <DemoDash /> },
       { path: '/oauth-success', element: <OAuthSuccess /> },
+      { path: '/oauth-transfer', element: <OAuthTransfer /> },
       { path: '/report', element: <AscensionTrial /> },
       { path: '/skills', element: <SkillPage /> },
       { path: '/inventory', element: <Inventory /> },

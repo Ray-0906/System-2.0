@@ -56,13 +56,10 @@ A full-stack productivity platform that transforms your real-life goals into an 
 
 ## 🖼️ UI Showcase
 
-| Dashboard | Inventory | Rank Trial | AI Quest |
-|----------|-----------|------------|----------|
-| ![dash](![image](https://github.com/user-attachments/assets/f1e3be5f-3d73-46d4-8327-1de68be32950)
-) | ![gear](![image](https://github.com/user-attachments/assets/cb51db55-5eeb-41d2-ac8b-2e2d7ffd715e)
-) | ![trial](![image](https://github.com/user-attachments/assets/b0e20e7e-2cf2-4baf-8020-6495ad6d6060)
-) | ![ai](![image](https://github.com/user-attachments/assets/49b0a232-b89c-423e-b1c3-f17cc9911968)
-) |
+| Dashboard                                                                                     | Inventory                                                                                     | Rank Trial                                                                                     | AI Quest                                                                                     |
+| --------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
+| ![Dashboard](https://github.com/user-attachments/assets/f1e3be5f-3d73-46d4-8327-1de68be32950) | ![Inventory](https://github.com/user-attachments/assets/cb51db55-5eeb-41d2-ac8b-2e2d7ffd715e) | ![Rank Trial](https://github.com/user-attachments/assets/b0e20e7e-2cf2-4baf-8020-6495ad6d6060) | ![AI Quest](https://github.com/user-attachments/assets/49b0a232-b89c-423e-b1c3-f17cc9911968) |
+
 
 ---
 

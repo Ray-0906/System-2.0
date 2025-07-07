@@ -1,4 +1,4 @@
-# 🧿 SoloRank – AI-Powered Life Gamification System
+# 🧿 System-2.0 – AI-Powered Life Gamification System
 
 A full-stack productivity platform that transforms your real-life goals into an RPG-style quest system inspired by *Solo Leveling*. Track daily missions, unlock skills, earn coins, equip artifacts, and level up your stats – all powered by an AI-based quest generation and evaluation engine.
 
@@ -58,7 +58,11 @@ A full-stack productivity platform that transforms your real-life goals into an 
 
 | Dashboard | Inventory | Rank Trial | AI Quest |
 |----------|-----------|------------|----------|
-| ![dash](./screenshots/dashboard.png) | ![gear](./screenshots/inventory.png) | ![trial](./screenshots/rank.png) | ![ai](./screenshots/aiquest.png) |
+| ![dash](![image](https://github.com/user-attachments/assets/f1e3be5f-3d73-46d4-8327-1de68be32950)
+) | ![gear](![image](https://github.com/user-attachments/assets/cb51db55-5eeb-41d2-ac8b-2e2d7ffd715e)
+) | ![trial](![image](https://github.com/user-attachments/assets/b0e20e7e-2cf2-4baf-8020-6495ad6d6060)
+) | ![ai](![image](https://github.com/user-attachments/assets/49b0a232-b89c-423e-b1c3-f17cc9911968)
+) |
 
 ---
 
@@ -67,19 +71,19 @@ A full-stack productivity platform that transforms your real-life goals into an 
 ### 🔑 Prerequisites
 - Node.js v18+
 - MongoDB Atlas or local MongoDB
-- OpenAI API Key (for quest generation)
+- Google Client ID and Secret
+- MistralAi API Key (for quest generation)
 
 ### 🔧 Clone & Install
 
 ```bash
 # Clone both frontend and backend
 git clone https://github.com/yourusername/solo-rank-frontend
-git clone https://github.com/yourusername/solo-rank-backend
-
+cd System-2.0
 # Install frontend
-cd solo-rank-frontend
+cd Client
 npm install
 
 # Install backend
-cd ../solo-rank-backend
+cd Server
 npm install

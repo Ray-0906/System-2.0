@@ -9,6 +9,10 @@ import { userLevelThresholds } from "../libs/levelling.js";
 import { Mission } from "../Models/mission.js";
 import { Tracker } from "../Models/tracker.js";
 import { User } from "../Models/user.js";
+import mongoose from 'mongoose';
+
+import { Quest } from '../Models/quest.js'; // Adjust path as needed
+
 // import { userLevelThresholds } from "./questController.js";
 
 /**
@@ -191,3 +195,64 @@ const pentaltyEffects = async (penaltyType, trackerId, userId, xp, coin) => {
   };
 };
 
+
+
+/**
+ * @description Delete a mission (tracker) and all associated data.
+ * @route DELETE /api/mission/:id
+ * @access Private
+ */
+export const deleteMissionTracker = async (req, res) => {
+  const { id } = req.params;
+  const userId = req.user.id; // Assuming user ID is available from auth middleware
+
+  // 1. Validate the Mission ID
+  // ✅ FIX: Use the correct variable 'id' instead of the undefined 'missionId'
+  if (!mongoose.Types.ObjectId.isValid(id)) {
+    return res.status(400).json({ message: 'Invalid mission ID.' });
+  }
+
+  const session = await mongoose.startSession();
+
+  try {
+    session.startTransaction();
+
+    // 2. Find the tracker, ensuring it belongs to the authenticated user
+    // 🛡️ SECURITY: Added 'user: userId' to ensure the user owns this mission.
+    const tracker = await Tracker.findOne({ _id: id, userId: userId }).session(session);
+
+    if (!tracker) {
+      await session.abortTransaction();
+      session.endSession();
+      // This message is intentionally generic for security.
+      return res.status(404).json({ message: 'Mission not found.' });
+    }
+
+    // 3. Delete all associated quests from the Quest collection
+    if (tracker.currentQuests && tracker.currentQuests.length > 0) {
+      await Quest.deleteMany({ _id: { $in: tracker.currentQuests } }).session(session);
+    }
+    
+    // 4. Pull the tracker ID from the user's `trackers` array
+    await User.updateOne(
+      { _id: userId },
+      { $pull: { trackers: id } }
+    ).session(session);
+
+    // 5. Delete the tracker document itself
+    await Tracker.deleteOne({ _id: id }).session(session);
+
+    // 6. Commit the transaction
+    await session.commitTransaction();
+    
+    res.status(200).json({ message: 'Mission deleted successfully.' });
+
+  } catch (error) {
+    await session.abortTransaction();
+    console.error('Error deleting mission:', error);
+    res.status(500).json({ message: 'Server error while deleting mission.' });
+
+  } finally {
+    session.endSession();
+  }
+};

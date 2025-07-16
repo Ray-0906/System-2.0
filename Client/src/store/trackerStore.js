@@ -22,7 +22,12 @@ export const useTrackerStore = create((set) => ({
           }
         : t
     ),
-  }))
+  })),
+  
+   deleteTracker: (trackerId) =>
+    set((state) => ({
+      trackers: state.trackers.filter((t) => t.id !== trackerId),
+    })),
 
 
 }));

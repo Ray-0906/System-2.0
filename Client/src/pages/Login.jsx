@@ -78,11 +78,8 @@ const Login = () => {
       const response = await axios.post("/auth/login", data, {
         timeout: 10000, // Add timeout to prevent hanging
       });
-      if (response.data.redirectUrl) {
-        navigate(response.data.redirectUrl);
-      } else {
-        navigate("/oauth-success");
-      }
+      
+      navigate('/oauth-success')
     } catch (err) {
       const errorMessage =
         err.response?.data?.message ||

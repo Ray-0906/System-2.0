@@ -326,7 +326,7 @@ const Dashboard = () => {
   };
 
   return (
-    <AuthLayout>
+    
       <div className="min-h-screen bg-gray-900 text-white p-4 sm:p-6 relative overflow-x-hidden" style={{ fontFamily: "'Rajdhani', 'Orbitron', monospace" }}>
         <AnimatedBackground />
         <div className="max-w-7xl mx-auto relative z-10">
@@ -352,7 +352,7 @@ const Dashboard = () => {
           </AnimatePresence>
         </div>
       </div>
-    </AuthLayout>
+   
   );
 };
 

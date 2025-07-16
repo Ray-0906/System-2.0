@@ -196,7 +196,7 @@ const MissionDetails = () => {
                 className="text-red-400 hover:text-red-300 flex items-center transition-colors duration-300 bg-red-900/50 hover:bg-red-800/50 px-3 py-2 rounded-lg border border-red-500/50 hover:shadow-[0_0_10px_rgba(239,68,68,0.4)]"
               >
                 <Trash2 className="w-5 h-5 mr-2" />
-                Delete Mission
+                Abandon
               </button>
             </div>
 
@@ -256,6 +256,7 @@ const MissionDetails = () => {
                 <p className="text-purple-500 text-center">No quests available for this mission.</p>
               )}
             </div>
+            
           </div>
         </div>
       )}

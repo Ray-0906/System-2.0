@@ -334,6 +334,8 @@ const AddMission = () => {
       });
       setFormState({ goal: '', duration: 7 });
       setMissionData(null);
+      window.location.replace('/missions');
+
     } catch (error) {
       console.error('Error accepting mission:', error);
       setMessage({ type: 'error', text: 'Failed to accept mission. Please try again.' });

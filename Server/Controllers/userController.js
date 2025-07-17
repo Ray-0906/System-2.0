@@ -57,14 +57,14 @@ export const login = async (req, res) => {
   }
 };
 
+// This is likely to fail in production because it's missing the 'domain'
 export const logout = (req, res) => {
-  res
-    .clearCookie("token", {
-      httpOnly: true,
-      secure: true,
-      sameSite: "none",
-    })
-    .json({ msg: "Logged out successfully" });
+  res.clearCookie("token", {
+     httpOnly: true,
+     secure: true,
+     sameSite: "none",
+   })
+   .json({ msg: "Logged out successfully" });
 };
 
 // controllers/authController.js

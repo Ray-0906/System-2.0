@@ -1,42 +1,13 @@
+
 import { useState, memo, useCallback, useEffect } from "react";
 import { Menu, X, LogOut, Home, Compass, PlusSquare, BarChart, Package, Sparkles } from "lucide-react";
-import { Link, useNavigate } from "react-router-dom";
 import React from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { Link, useNavigate } from "react-router-dom";
 
-// --- Mock Dependencies to Fix Compilation Errors ---
+import axiosInstance from "../utils/axios";
 
-// 1. Mock for "../utils/axios"
-const axiosInstance = {
-  get: (url) => {
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        console.log(`Mock axios GET request to: ${url}`);
-        resolve({ data: { message: "Success" } });
-      }, 500);
-    });
-  },
-};
-
-// 2. Mock for "../store/userStore"
-const useUserStore = (() => {
-  let state = {
-    user: { name: "Shadow Monarch", email: "monarch@shadow.com" },
-    reset: () => {
-      state.user = null;
-      // In a real scenario, this would trigger a re-render.
-      // For this mock, we'll rely on component state to manage UI changes.
-      console.log("Zustand store reset.");
-    },
-  };
-  
-  // This is a simplified hook that returns the current state.
-  // A real implementation would involve listeners for state changes.
-  return (selector) => selector(state);
-})();
-
-
-// Error Boundary Component (remains unchanged, good practice)
+// --- Error Boundary Component (Good Practice) ---
 class ErrorBoundary extends React.Component {
   state = { hasError: false, error: null };
 
@@ -59,7 +30,7 @@ class ErrorBoundary extends React.Component {
           <div className="text-center space-y-4 p-4">
             <h1 className="text-2xl font-bold text-red-400">Sidebar Error</h1>
             <p className="text-purple-300">
-              Something went wrong: {this.state.error.message}
+              Something went wrong: {this.state.error?.message || 'An unknown error occurred'}
             </p>
             <button
               onClick={this.handleRetry}
@@ -75,9 +46,9 @@ class ErrorBoundary extends React.Component {
   }
 }
 
-// --- Sub-Components for better structure ---
+// --- Sub-Components for Better Structure ---
 
-const NavLinks = ({ user, onLinkClick, onLogout, isLoggingOut, error }) => {
+const NavLinks = memo(({ user, onLinkClick, onLogout, isLoggingOut, error }) => {
   const navItems = [
     { to: "/dashboard", label: "Dashboard", icon: Home },
     { to: "/missions", label: "Missions", icon: Compass },
@@ -91,23 +62,13 @@ const NavLinks = ({ user, onLinkClick, onLogout, isLoggingOut, error }) => {
     hidden: { opacity: 0 },
     visible: {
       opacity: 1,
-      transition: {
-        staggerChildren: 0.07,
-        delayChildren: 0.2,
-      },
+      transition: { staggerChildren: 0.07, delayChildren: 0.2 },
     },
   };
 
   const itemVariants = {
     hidden: { y: 20, opacity: 0 },
-    visible: {
-      y: 0,
-      opacity: 1,
-      transition: {
-        type: "spring",
-        stiffness: 100,
-      },
-    },
+    visible: { y: 0, opacity: 1, transition: { type: "spring", stiffness: 100 } },
   };
 
   return (
@@ -119,20 +80,18 @@ const NavLinks = ({ user, onLinkClick, onLogout, isLoggingOut, error }) => {
     >
       <div className="flex-grow space-y-2">
         {user ? (
-          <>
-            {navItems.map((item) => (
-              <motion.div key={item.to} variants={itemVariants}>
-                <Link
-                  to={item.to}
-                  onClick={onLinkClick}
-                  className="flex items-center gap-4 text-purple-300 text-lg font-medium p-3 rounded-lg hover:bg-purple-500/10 hover:text-purple-100 transition-all duration-200 ease-out"
-                >
-                  <item.icon className="w-5 h-5" />
-                  <span>{item.label}</span>
-                </Link>
-              </motion.div>
-            ))}
-          </>
+          navItems.map((item) => (
+            <motion.div key={item.to} variants={itemVariants}>
+              <Link
+                to={item.to}
+                onClick={onLinkClick}
+                className="flex items-center gap-4 text-purple-300 text-lg font-medium p-3 rounded-lg hover:bg-purple-500/10 hover:text-purple-100 transition-all duration-200 ease-out"
+              >
+                <item.icon className="w-5 h-5" />
+                <span>{item.label}</span>
+              </Link>
+            </motion.div>
+          ))
         ) : (
           <motion.div variants={itemVariants}>
             <Link
@@ -162,56 +121,75 @@ const NavLinks = ({ user, onLinkClick, onLogout, isLoggingOut, error }) => {
       )}
     </motion.nav>
   );
-};
+});
+NavLinks.displayName = 'NavLinks';
 
-
-// Memoized Sidebar Component
+// --- Main Sidebar Component ---
 const Sidebar = memo(() => {
   const [isOpen, setIsOpen] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [error, setError] = useState(null);
   const navigate = useNavigate();
-  // We now use a local state to simulate the user state change on logout
-  const [localUser, setLocalUser] = useState(useUserStore(state => state.user));
+  
+  const [localUser, setLocalUser] = useState(null);
+ 
 
-  const { reset } = useUserStore((state) => ({ reset: state.reset }));
+  // This effect runs only once on mount to set the initial user state.
+  useEffect(() => {
+    try {
+      const userInStorage = localStorage.getItem("user");
+      setLocalUser(userInStorage ? JSON.parse(userInStorage) : null);
+    } catch (e) {
+      console.error("Failed to parse user from localStorage", e);
+      setLocalUser(null);
+    }
+  }, []);
 
+  // ✅ FIX: The toggle function is now stable and has no dependencies.
   const toggleSidebar = useCallback(() => {
     setIsOpen((prev) => !prev);
   }, []);
 
-  const handleLogout = useCallback(async () => {
-    setIsLoggingOut(true);
-    setError(null);
-    try {
-      await axiosInstance.get("/auth/logout");
-      localStorage.removeItem("user");
-      reset(); // Call the mock reset
-      setLocalUser(null); // Update local state to reflect logout
-      toggleSidebar(); // Close sidebar on logout
-      navigate("/login");
-    } catch (err) {
-      console.error("Logout error:", err);
-      setError(err.response?.data?.message || "Server error during logout");
-    } finally {
-      setIsLoggingOut(false);
+  // ✅ FIX: This effect now handles the logic of re-syncing the user state when the sidebar opens.
+  // This prevents the infinite loop.
+  useEffect(() => {
+    if (isOpen) {
+        try {
+            const userInStorage = localStorage.getItem("user");
+            setLocalUser(userInStorage ? JSON.parse(userInStorage) : null);
+        } catch (e) {
+            console.error("Failed to parse user from localStorage", e);
+            setLocalUser(null);
+        }
     }
-  }, [navigate, reset, toggleSidebar]);
+  }, [isOpen]);
+
+  const handleLogout = useCallback(async () => {
+  setIsLoggingOut(true);
+  setError(null);
+  try {
+    await axiosInstance.get("/auth/logout");
+    localStorage.removeItem("user");
+    setLocalUser(null);
+    setIsOpen(false); // ✅ safely close sidebar
+    navigate("/login");
+  } catch (err) {
+    console.error("Logout error:", err);
+    const errorMessage = err.response?.data?.message || "Server error during logout";
+    setError(errorMessage);
+  } finally {
+    setIsLoggingOut(false);
+  }
+}, [navigate]);
+
 
   const sidebarVariants = {
-    open: {
-      x: 0,
-      transition: { type: "spring", stiffness: 300, damping: 30 },
-    },
-    closed: {
-      x: "100%",
-      transition: { type: "spring", stiffness: 300, damping: 30 },
-    },
+    open: { x: 0, transition: { type: "spring", stiffness: 300, damping: 30 } },
+    closed: { x: "100%", transition: { type: "spring", stiffness: 300, damping: 30 } },
   };
 
   return (
     <ErrorBoundary>
-      {/* Toggle Button */}
       <motion.button
         onClick={toggleSidebar}
         className="fixed top-4 right-4 z-50 p-3 rounded-full text-white transition-colors duration-300 bg-black/30 backdrop-blur-md border border-white/10 hover:bg-black/50"
@@ -236,7 +214,6 @@ const Sidebar = memo(() => {
       <AnimatePresence>
         {isOpen && (
           <>
-            {/* Overlay */}
             <motion.div
               className="fixed inset-0 bg-black/60 z-30"
               onClick={toggleSidebar}
@@ -245,8 +222,6 @@ const Sidebar = memo(() => {
               exit={{ opacity: 0 }}
               aria-hidden="true"
             />
-
-            {/* Sidebar Panel */}
             <motion.aside
               variants={sidebarVariants}
               initial="closed"
@@ -256,16 +231,11 @@ const Sidebar = memo(() => {
               style={{ fontFamily: "'Rajdhani', 'Orbitron', monospace" }}
             >
               <div className="p-6 flex flex-col h-full">
-                {/* Header */}
                 <div className="flex justify-between items-center mb-10">
                   <h2 className="text-transparent bg-clip-text bg-gradient-to-r from-purple-500 to-pink-500 text-2xl font-bold tracking-wider drop-shadow-[0_0_8px_rgba(139,92,246,0.4)]">
-                    <Link to="/" onClick={toggleSidebar}>
-                      SYSTEM 2.0
-                    </Link>
+                    <Link to="/" onClick={toggleSidebar}>SYSTEM 2.0</Link>
                   </h2>
                 </div>
-
-                {/* Navigation */}
                 <NavLinks
                   user={localUser}
                   onLinkClick={toggleSidebar}
@@ -273,12 +243,10 @@ const Sidebar = memo(() => {
                   isLoggingOut={isLoggingOut}
                   error={error}
                 />
-                
-                {/* Footer */}
                 <div className="mt-6 pt-6 border-t border-purple-500/20">
-                    <p className="text-xs text-purple-500/80 tracking-wide text-center">
-                      Shadow Monarch System
-                    </p>
+                  <p className="text-xs text-purple-500/80 tracking-wide text-center">
+                    Shadow Monarch System
+                  </p>
                 </div>
               </div>
             </motion.aside>
@@ -288,7 +256,6 @@ const Sidebar = memo(() => {
     </ErrorBoundary>
   );
 });
-
 Sidebar.displayName = "Sidebar";
 
 export default Sidebar;

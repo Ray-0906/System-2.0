@@ -1,5 +1,5 @@
 // App.jsx
-import { Outlet } from "react-router-dom";
+import { Outlet, useLocation } from "react-router-dom";
 
 import Sidebar from "./components/sidebar";
 import NotificationPopup from "./utils/Notification";
@@ -9,7 +9,7 @@ import SoloLoading from "./components/Loading";
 
 export default function App() {
   const { loading, error } = useLoadUser();
-
+    const location = useLocation();
   if (loading) {
     return (
       <SoloLoading/>
@@ -26,7 +26,7 @@ export default function App() {
 
   return (
     <div className="relative min-h-screen bg-gradient-to-r from-black via-gray-900 to-black text-white font-sans">
-      <Sidebar />
+      <Sidebar loc={location} />
       <main>
         <NotificationPopup />
         <Outlet />

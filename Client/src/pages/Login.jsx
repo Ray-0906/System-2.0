@@ -81,11 +81,10 @@ const Login = () => {
       
       navigate('/oauth-success')
     } catch (err) {
-      const errorMessage =
-        err.response?.data?.message ||
-        err.message === "timeout of 10000ms exceeded"
-          ? "Request timed out. Please try again."
-          : "An unexpected error occurred. Please try again later.";
+      const serverMsg = err.response?.data?.msg || err.response?.data?.message;
+      let errorMessage = "An unexpected error occurred. Please try again later.";
+      if (serverMsg) errorMessage = serverMsg;
+      else if (err.message === "timeout of 10000ms exceeded") errorMessage = "Request timed out. Please try again.";
       setError(errorMessage);
     } finally {
       setLoading(false);

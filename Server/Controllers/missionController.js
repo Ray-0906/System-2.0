@@ -76,10 +76,10 @@ export const createCustomMission = async (req, res) => {
   const { tasks, days } = req.body;
 
   try {
-   const generated = await generateMissionFromTasks(tasks, days);
-  
-const { title, refinedDescription, quests, reward, penalty, rank } = generated.parse;
-
+  const generated = await generateMissionFromTasks(tasks, days);
+  // generated already matches MissionSchema (zod validated)
+  const { title, refinedDescription, quests, reward, penalty, rank } = generated;
+ console.log("Generated Mission:", { title, refinedDescription, quests, reward, penalty, rank });
 // 2. Create Quest documents
 const questDocs = await Promise.all(
   quests.map(async (quest) => {

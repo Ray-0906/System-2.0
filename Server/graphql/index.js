@@ -38,16 +38,17 @@ export const startGraphQLServer = async (app) => {
       credentials: true,
     }),
     expressMiddleware(server, {
-     context: async ({ req }) => {
+  context: async ({ req }) => {
   const token = req.cookies?.token; // cookie-parser must be used
   if (!token) return { user: null };
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     const user = await User.findById(decoded.id).select('-password');
     req.user=user;
-    return { user };
+    // Expose req for resolvers that expect it (e.g., getUserTrackers)
+    return { req, user };
   } catch (err) {
-    return { user: null };
+    return { req, user: null };
   }
 }
     })

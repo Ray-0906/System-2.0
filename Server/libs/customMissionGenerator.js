@@ -126,8 +126,10 @@ export async function generateMissionFromTasks(quests = [], days = 7) {
   }
 
   try {
-    const mission = await chain.invoke({ quests, days });
-    return mission;
+  const mission = await chain.invoke({ quests, days });
+  // The chain returns an object { parse: <validatedMission> } per last mapping.
+  // Return the validated mission directly for consumers.
+  return mission.parse;
   } catch (error) {
     throw new Error(`Failed to generate mission: ${error.message}`);
   }

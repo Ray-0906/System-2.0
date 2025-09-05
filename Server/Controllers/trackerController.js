@@ -39,7 +39,6 @@ export const createTrackerForUser = async (userId, mission) => {
       userId,
       missionId: mission._id,
       currentQuests: questIds,
-      description: mission.description,
       remainingQuests: questIds,
       questCompletion,
       streak: 0,
@@ -51,7 +50,7 @@ export const createTrackerForUser = async (userId, mission) => {
 
       // Flattened mission fields
       title: mission.title,
-      description: mission.refinedDescription,
+  description: mission.description,
       duration: mission.duration,
       reward: mission.reward,
       penalty: mission.penalty,
@@ -212,14 +211,16 @@ export const deleteMissionTracker = async (req, res) => {
     return res.status(400).json({ message: 'Invalid mission ID.' });
   }
 
-  const session = await mongoose.startSession();
+  const useTxn = process.env.MONGO_USE_TRANSACTIONS === 'true';
+  const session = useTxn ? await mongoose.startSession() : null;
 
   try {
-    session.startTransaction();
+    if (session && useTxn) session.startTransaction();
 
     // 2. Find the tracker, ensuring it belongs to the authenticated user
     // 🛡️ SECURITY: Added 'user: userId' to ensure the user owns this mission.
-    const tracker = await Tracker.findOne({ _id: id, userId: userId }).session(session);
+  const trackerQuery = Tracker.findOne({ _id: id, userId: userId });
+  const tracker = session ? await trackerQuery.session(session) : await trackerQuery;
 
     if (!tracker) {
       await session.abortTransaction();
@@ -230,29 +231,44 @@ export const deleteMissionTracker = async (req, res) => {
 
     // 3. Delete all associated quests from the Quest collection
     if (tracker.currentQuests && tracker.currentQuests.length > 0) {
-      await Quest.deleteMany({ _id: { $in: tracker.currentQuests } }).session(session);
+      if (session) {
+        await Quest.deleteMany({ _id: { $in: tracker.currentQuests } }).session(session);
+      } else {
+        await Quest.deleteMany({ _id: { $in: tracker.currentQuests } });
+      }
     }
     
     // 4. Pull the tracker ID from the user's `trackers` array
-    await User.updateOne(
-      { _id: userId },
-      { $pull: { trackers: id } }
-    ).session(session);
+    if (session) {
+      await User.updateOne(
+        { _id: userId },
+        { $pull: { trackers: id } }
+      ).session(session);
+    } else {
+      await User.updateOne(
+        { _id: userId },
+        { $pull: { trackers: id } }
+      );
+    }
 
     // 5. Delete the tracker document itself
-    await Tracker.deleteOne({ _id: id }).session(session);
+    if (session) {
+      await Tracker.deleteOne({ _id: id }).session(session);
+    } else {
+      await Tracker.deleteOne({ _id: id });
+    }
 
     // 6. Commit the transaction
-    await session.commitTransaction();
+    if (session && useTxn) await session.commitTransaction();
     
     res.status(200).json({ message: 'Mission deleted successfully.' });
 
   } catch (error) {
-    await session.abortTransaction();
+    if (session && useTxn) await session.abortTransaction();
     console.error('Error deleting mission:', error);
     res.status(500).json({ message: 'Server error while deleting mission.' });
 
   } finally {
-    session.endSession();
+    if (session) session.endSession();
   }
 };

@@ -316,8 +316,8 @@ const Dashboard = () => {
             <StatsDisplay user={user} stats={stats} />
           </div>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <InventorySection title="SHADOW ARTIFACTS" items={user.equipments || []} icon={Shield} type="arti" />
-            <InventorySection title="SHADOW SKILLS" items={user.skills || []} icon={Swords} type="skill" />
+            <InventorySection title="SHADOW ARTIFACTS" items={user?.equiments || []} icon={Shield} type="arti" />
+            <InventorySection title="SHADOW SKILLS" items={user?.skills || []} icon={Swords} type="skill" />
           </div>
         </motion.div>
       );

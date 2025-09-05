@@ -72,11 +72,14 @@ export async function upgradeQuests(userId, trackerId) {
 
   // Adjust rank, rewards, and penalties based on new difficulty
   if (newDifficulty > 40 && tracker.rank !== 'S') {
-    tracker.rank = ['E', 'D', 'C', 'B', 'A', 'S'][(rankDifficulty + 1) % 6];
+    const rankOrder = ['E', 'D', 'C', 'B', 'A', 'S'];
+    const currentRankIdx = rankOrder.indexOf(tracker.rank);
+    const nextRankIdx = Math.min(rankOrder.length - 1, currentRankIdx + 1);
+    tracker.rank = rankOrder[nextRankIdx];
     tracker.reward = {
       xp: Math.min(500, tracker.reward.xp + 50),
       coins: Math.min(100, tracker.reward.coins + 10),
-      specialReward: tracker.rank >= 'B' ? ['common', 'rare', 'epic'][Math.floor((rankDifficulty - 2) / 2)] : null,
+  specialReward: nextRankIdx >= rankOrder.indexOf('B') ? ['common', 'rare', 'epic'][Math.floor((rankDifficulty - 2) / 2)] : null,
     };
     tracker.penalty = {
       missionFail: { coins: Math.min(50, tracker.penalty.missionFail.coins + 5), stats: Math.min(5, tracker.penalty.missionFail.stats + 1) },

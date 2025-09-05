@@ -42,6 +42,13 @@ export const resolvers = {
     getEquipmentById: async (_, { id }) => {
       return await Equiment.findById(id);
     },
+    leaderboard: async (_,{ limit = 20, sortBy = 'xp' }) => {
+      const allowed = ['xp','level','coins','totalMission'];
+      if(!allowed.includes(sortBy)) sortBy = 'xp';
+      const lim = Math.min(Math.max(limit,1),100);
+      const projection = 'username level xp coins rank totalMission titles';
+      return await User.find({}, projection).sort({ [sortBy]: -1 }).limit(lim);
+    }
   },
   User: {
     trackers: async (parent) => {
@@ -65,6 +72,8 @@ export const resolvers = {
     remainingQuests: async (parent) => {
       return await Quest.find({ _id: { $in: parent.remainingQuests } });
     },
+  lastStreakReset: (parent) => parent.lastStreakReset ? parent.lastStreakReset.toISOString() : null,
+  completedDays: (parent) => (parent.completedDays || []).map(d => (d instanceof Date ? d.toISOString() : d)),
   },
   Mission: {
     id: (parent) => parent._id.toString(),

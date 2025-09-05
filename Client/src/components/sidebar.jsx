@@ -1,11 +1,13 @@
 
 import { useState, memo, useCallback, useEffect } from "react";
-import { Menu, X, LogOut, Home, Compass, PlusSquare, BarChart, Package, Sparkles } from "lucide-react";
+import { Menu, X, LogOut, Home, Compass, PlusSquare, BarChart, Package, Sparkles, Trophy } from "lucide-react";
 import React from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Link, useNavigate } from "react-router-dom";
 
-import axiosInstance from "../utils/axios";
+import axiosInstance, { performClientLogout } from "../utils/axios";
+import { useUserStore } from '../store/userStore';
+import { useTrackerStore } from '../store/trackerStore';
 
 // --- Error Boundary Component (Good Practice) ---
 class ErrorBoundary extends React.Component {
@@ -56,6 +58,7 @@ const NavLinks = memo(({ user, onLinkClick, onLogout, isLoggingOut, error }) => 
     { to: "/report", label: "Ascension Room", icon: BarChart },
     { to: "/inventory", label: "Inventory", icon: Package },
     { to: "/skills", label: "Skills", icon: Sparkles },
+    { to: "/leaderboard", label: "Leaderboard", icon: Trophy },
   ];
 
   const listVariants = {
@@ -130,47 +133,26 @@ const Sidebar = memo(() => {
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [error, setError] = useState(null);
   const navigate = useNavigate();
-  
-  const [localUser, setLocalUser] = useState(null);
- 
 
-  // This effect runs only once on mount to set the initial user state.
-  useEffect(() => {
-    try {
-      const userInStorage = localStorage.getItem("user");
-      setLocalUser(userInStorage ? JSON.parse(userInStorage) : null);
-    } catch (e) {
-      console.error("Failed to parse user from localStorage", e);
-      setLocalUser(null);
-    }
-  }, []);
+  // Global user state (reactive)
+  const user = useUserStore(s => s.user);
+  const resetUser = useUserStore(s => s.reset);
+  const resetTrackers = useTrackerStore(s => s.reset);
 
   // ✅ FIX: The toggle function is now stable and has no dependencies.
   const toggleSidebar = useCallback(() => {
     setIsOpen((prev) => !prev);
   }, []);
 
-  // ✅ FIX: This effect now handles the logic of re-syncing the user state when the sidebar opens.
-  // This prevents the infinite loop.
-  useEffect(() => {
-    if (isOpen) {
-        try {
-            const userInStorage = localStorage.getItem("user");
-            setLocalUser(userInStorage ? JSON.parse(userInStorage) : null);
-        } catch (e) {
-            console.error("Failed to parse user from localStorage", e);
-            setLocalUser(null);
-        }
-    }
-  }, [isOpen]);
-
   const handleLogout = useCallback(async () => {
   setIsLoggingOut(true);
   setError(null);
   try {
     await axiosInstance.get("/auth/logout");
-    localStorage.removeItem("user");
-    setLocalUser(null);
+    performClientLogout();
+    // Additional explicit resets (defensive in case helper shape changes)
+    resetUser();
+    resetTrackers();
     setIsOpen(false); // ✅ safely close sidebar
     navigate("/login");
   } catch (err) {
@@ -180,7 +162,7 @@ const Sidebar = memo(() => {
   } finally {
     setIsLoggingOut(false);
   }
-}, [navigate]);
+}, [navigate, resetUser, resetTrackers]);
 
 
   const sidebarVariants = {
@@ -237,7 +219,7 @@ const Sidebar = memo(() => {
                   </h2>
                 </div>
                 <NavLinks
-                  user={localUser}
+                  user={user}
                   onLinkClick={toggleSidebar}
                   onLogout={handleLogout}
                   isLoggingOut={isLoggingOut}

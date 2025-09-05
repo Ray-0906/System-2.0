@@ -81,6 +81,13 @@ export const completeQuest = async (req, res) => {
       tracker.streak += 1;
       tracker.daycount += 1;
       tracker.lastCompleted = new Date();
+      const dayISO = tracker.lastCompleted.toISOString().split('T')[0];
+      if (!tracker.completedDays) tracker.completedDays = [];
+      if (!tracker.completedDays.includes(dayISO)) tracker.completedDays.push(dayISO);
+      // If this is the first day of a (new) streak, set/reset lastStreakReset
+      if (tracker.streak === 1) {
+        tracker.lastStreakReset = tracker.lastCompleted;
+      }
 
       const rewardXP = tracker.reward?.xp || 0;
       const gainedXP = tracker.daycount >= tracker.duration

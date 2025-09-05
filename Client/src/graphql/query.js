@@ -160,6 +160,20 @@ export const GET_ALL_EQUIPMENT = gql`
     }
   }
 `;
+export const GET_LEADERBOARD = gql`
+  query Leaderboard($limit: Int, $sortBy: String) {
+    leaderboard(limit: $limit, sortBy: $sortBy) {
+      id
+      username
+      level
+      xp
+      coins
+      rank
+      totalMission
+      titles
+    }
+  }
+`;
 const EquipmentById = gql`
   query {
     getEquipmentById(id: "EQUIPMENT_ID_HERE") {

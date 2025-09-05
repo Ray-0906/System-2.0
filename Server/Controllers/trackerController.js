@@ -47,6 +47,7 @@ export const createTrackerForUser = async (userId, mission) => {
       lastUpdated: new Date(),
       penaltiesApplied: [],
       rewardsClaimed: false,
+  completedDays: [],
 
       // Flattened mission fields
       title: mission.title,
@@ -121,7 +122,9 @@ export const dailyRefresh = async (req, res) => {
     if (!tracker) return res.status(404).json({ message: "Tracker not found" });
 
     let updatedStats = {};
+    let deleted = false;
     if (penaltyType === "missionFail") {
+      // Apply penalty first
       tracker.failed = true;
       const penalty = tracker.penalty.missionFail;
       updatedStats = await pentaltyEffects(
@@ -131,6 +134,16 @@ export const dailyRefresh = async (req, res) => {
         penalty.stats,
         penalty.coins
       );
+      // Auto delete mechanism: remove tracker entirely
+      await Tracker.deleteOne({ _id: trackerId });
+      // Remove tracker reference from user
+      await User.updateOne({ _id: userId }, { $pull: { trackers: trackerId } });
+      deleted = true;
+      return res.status(200).json({
+        message: "Tracker failed and deleted after inactivity.",
+        updatedStats,
+        deleted,
+      });
     } else if (penaltyType === "skip") {
       tracker.penaltiesApplied.push(new Date());
       tracker.failed = false;
@@ -144,15 +157,16 @@ export const dailyRefresh = async (req, res) => {
       );
     }
 
-    tracker.remainingQuests = tracker.currentQuests;
-    tracker.lastUpdated = new Date();
-
-    await tracker.save();
-
-    return res.status(200).json({
-      message: "Tracker refreshed successfully",
-      updatedStats,
-    });
+    if (!deleted) {
+      tracker.remainingQuests = tracker.currentQuests;
+      tracker.lastUpdated = new Date();
+      await tracker.save();
+      return res.status(200).json({
+        message: "Tracker refreshed successfully",
+        updatedStats,
+        deleted,
+      });
+    }
   } catch (err) {
     console.error("Daily Refresh Error:", err);
     return res.status(500).json({ message: "Internal Server Error" });

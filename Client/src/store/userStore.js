@@ -2,7 +2,9 @@ import { create } from "zustand";
 
 export const useUserStore = create((set) => ({
   user: null,
+  initialized: false,
   setUser: (userData) => set({ user: userData }),
+  setInitialized: () => set({ initialized: true }),
   reset: () => set({ user: null }),
   updateStats: (stat, value, level) =>
     set((state) => ({

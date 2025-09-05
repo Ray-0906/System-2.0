@@ -4,7 +4,7 @@ import { ArrowLeft, CheckCircle, Loader2, Trash2 } from 'lucide-react'; // Added
 import axiosInstance from '../utils/axios';
 import { useTrackerStore } from '../store/trackerStore';
 import { processQuestResponse } from '../utils/processQuestres';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { theme } from './Ineventory';
 import AuthLayout from '../components/AuthLayout';
 import SoloLoading from '../components/Loading';
@@ -17,6 +17,10 @@ const GET_TRACKER = gql`
       title
       streak
       daycount
+  lastUpdated
+  lastCompleted
+  lastStreakReset
+  completedDays
       description
       currentQuests {
         id
@@ -100,6 +104,105 @@ const ConfirmationModal = ({ isOpen, onClose, onConfirm, isConfirming, title, ch
           </button>
         </div>
       </div>
+    </div>
+  );
+};
+
+// ================= Time Left + Calendar Component =================
+const CountdownAndCalendar = ({ tracker }) => {
+  const [now, setNow] = useState(Date.now());
+  const [monthCursor, setMonthCursor] = useState(() => {
+    const d = new Date();
+    d.setDate(1);
+    d.setHours(0,0,0,0);
+    return d;
+  });
+  const [open, setOpen] = useState(false);
+
+  useEffect(() => {
+    const i = setInterval(() => setNow(Date.now()), 1000); // second-level countdown
+    return () => clearInterval(i);
+  }, []);
+
+  const endOfDay = (() => {
+    const d = new Date();
+    d.setHours(23,59,59,999);
+    return d.getTime();
+  })();
+  const msLeft = endOfDay - now;
+  const totalSeconds = Math.max(0, Math.floor(msLeft / 1000));
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+  const allDoneToday = tracker.remainingQuests?.length === 0;
+
+  // Build month grid
+  const year = monthCursor.getFullYear();
+  const month = monthCursor.getMonth();
+  const firstDayIndex = new Date(year, month, 1).getDay(); // 0=Sun
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const today = new Date(); today.setHours(0,0,0,0);
+  const completedSet = new Set((tracker.completedDays || []).map(d => d.split('T')[0]));
+
+  const cells = [];
+  for (let i=0;i<firstDayIndex;i++) cells.push(null);
+  for (let d=1; d<=daysInMonth; d++) {
+    const dateObj = new Date(year, month, d); dateObj.setHours(0,0,0,0);
+    const iso = dateObj.toISOString().split('T')[0];
+    const isToday = dateObj.getTime() === today.getTime();
+    const completed = completedSet.has(iso) || (isToday && allDoneToday);
+    cells.push({ d, iso, isToday, completed });
+  }
+
+  return (
+    <div className="mt-3">
+      <div className="flex items-center gap-4 text-sm">
+        <div className="font-mono text-pink-400 bg-gray-900/60 px-3 py-1 rounded border border-pink-500/30">
+          {allDoneToday ? 'Daily complete' : `${String(hours).padStart(2,'0')}:${String(minutes).padStart(2,'0')}:${String(seconds).padStart(2,'0')}`}
+        </div>
+        <button
+          onClick={() => setOpen(true)}
+          className="text-xs uppercase tracking-wide px-3 py-1 rounded bg-gradient-to-r from-purple-600 to-pink-500 hover:from-purple-500 hover:to-pink-400 text-white shadow-md shadow-purple-600/30"
+        >View Calendar</button>
+      </div>
+      {open && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+          <div className="w-full max-w-lg bg-gray-950/90 border border-purple-500/40 rounded-xl p-5 relative">
+            <button
+              onClick={() => setOpen(false)}
+              className="absolute top-2 right-2 text-purple-300 hover:text-white text-sm"
+            >✕</button>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-purple-200 font-semibold tracking-wide text-sm">Progress Calendar</h3>
+              <div className="font-mono text-pink-400 text-sm">
+                {allDoneToday ? 'Done' : `${String(hours).padStart(2,'0')}:${String(minutes).padStart(2,'0')}:${String(seconds).padStart(2,'0')}`}
+              </div>
+            </div>
+            <div className="flex items-center justify-between mb-2">
+              <button onClick={() => setMonthCursor(new Date(year, month - 1, 1))} className="text-xs text-purple-400 hover:text-purple-200">&lt;</button>
+              <span className="text-sm text-purple-200 font-semibold">{monthCursor.toLocaleString(undefined,{ month:'long', year:'numeric'})}</span>
+              <button onClick={() => setMonthCursor(new Date(year, month + 1, 1))} className="text-xs text-purple-400 hover:text-purple-200">&gt;</button>
+            </div>
+            <div className="grid grid-cols-7 gap-1 text-[10px] uppercase tracking-wider text-purple-400 mb-1">
+              {['S','M','T','W','T','F','S'].map(d => <div key={d} className="text-center py-1">{d}</div>)}
+            </div>
+            <div className="grid grid-cols-7 gap-1">
+              {cells.map((c,i) => c ? (
+                <div key={i} className={`relative h-10 flex flex-col items-center justify-center rounded-md border text-[11px] font-semibold transition-all duration-300
+                  ${c.completed ? 'bg-gradient-to-br from-blue-600 to-cyan-500 border-cyan-300 text-white shadow-[0_0_6px_rgba(34,211,238,0.6)]' : 'bg-gray-800/60 border-purple-500/20 text-purple-300'}
+                  ${!c.completed && c.isToday ? 'ring-2 ring-pink-500/60' : ''}`}
+                  title={`${c.iso}${c.completed ? ' - Completed' : c.isToday ? ' - Today' : ''}`}
+                >
+                  {c.d}
+                  {c.completed && <CheckCircle className="w-3 h-3 mt-1" />}
+                  {c.isToday && !c.completed && <div className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-pink-500 animate-pulse" />}
+                </div>
+              ) : <div key={i} />)}
+            </div>
+            <p className="mt-3 text-[10px] text-purple-500 tracking-wide">Blue ticks = completed days. Countdown resets at local midnight.</p>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
@@ -211,6 +314,7 @@ const MissionDetails = () => {
               <p className="text-sm text-purple-400 mt-2">
                 Day {tracker.daycount + 1} • Streak: {tracker.streak || 0}
               </p>
+              <CountdownAndCalendar tracker={tracker} />
             </div>
 
             {tracker.streak >= 5 && (

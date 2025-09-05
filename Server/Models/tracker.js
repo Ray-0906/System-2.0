@@ -13,6 +13,8 @@ const trackerSchema = new mongoose.Schema({
   daycount: { type: Number, default: 0 },
   lastUpdated: Date,
   lastCompleted: Date,
+  lastStreakReset: Date,
+  completedDays: [Date],
   penaltiesApplied: [Date],
   rewardsClaimed: { type: Boolean, default: false },
   failed:{ type: Boolean, default: false },

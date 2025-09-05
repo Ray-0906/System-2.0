@@ -54,6 +54,8 @@ export const typeDefs = gql`
   daycount: Int
   lastUpdated: String
   lastCompleted: String
+  lastStreakReset: String
+  completedDays: [String]
   penaltiesApplied: [String]
   rewardsClaimed: Boolean
 
@@ -133,5 +135,6 @@ export const typeDefs = gql`
     getSkillById(id: ID!): Skill
     getAllEquipment: [Equipment!]!
     getEquipmentById(id: ID!): Equipment
+  leaderboard(limit: Int = 20, sortBy: String = "xp"): [User]
   }
 `;

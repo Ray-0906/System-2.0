@@ -1,6 +1,8 @@
 import { isSameDay, subDays, differenceInCalendarDays } from 'date-fns';
 import axiosInstance from './axios';
 import { processPenaltyResponse } from './processQuestres';
+import { useTrackerStore } from '../store/trackerStore';
+import { useNotificationStore } from '../store/notificationStore';
 
 /**
  * Refreshes a tracker's state if it's outdated, applies penalties, and updates the backend.
@@ -68,11 +70,22 @@ export const handleTrackerRefresh = async (tracker, updateTrackerInStore) => {
       penaltyType,
     });
     console.log('Daily refresh response:', data);
-   processPenaltyResponse(data.updatedStats,delxp);
-    
-    // 4. Update in Zustand store (UI gets fresh state)
-    updatedTracker.lastUpdated = today.toISOString(); // Store as ISO string for consistency
-    updateTrackerInStore(tracker.id, updatedTracker);
+   // Pass negative delta to show penalty reduction
+   processPenaltyResponse(data.updatedStats, -delxp);
+    if (data.deleted) {
+      const deleteTracker = useTrackerStore.getState().deleteTracker;
+      const push = useNotificationStore.getState().push;
+      push({
+        type: 'mission',
+        key: 'deleted',
+        newValue: tracker.title || 'Unknown Mission',
+        isPenalty: true,
+      });
+      deleteTracker(tracker.id);
+    } else {
+      updatedTracker.lastUpdated = today.toISOString();
+      updateTrackerInStore(tracker.id, updatedTracker);
+    }
   } catch (err) {
     console.error('Error refreshing tracker:', err);
     // Optional: Handle error state in store/UI if needed

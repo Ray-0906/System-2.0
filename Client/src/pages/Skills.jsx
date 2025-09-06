@@ -1,5 +1,4 @@
-import React, { useState, useMemo, useCallback } from "react";
-import { List } from 'react-window';
+import React, { useState, useMemo, useCallback, useRef, useEffect } from "react";
 import { useQuery } from "@apollo/client";
 import { getAllSkills } from "../graphql/query";
 import { useUserStore } from "../store/userStore";
@@ -130,29 +129,49 @@ const SkillCard = ({ skill, userStats = {}, unlockedSkills = [], onUnlock, loadi
 };
 
 // --------------------------------------------------
-// Grid
+// Grid (custom lightweight virtualization)
 // --------------------------------------------------
 const ROW_HEIGHT = 250;
+const VIEWPORT_HEIGHT = 800; // px
+const OVERSCAN = 3; // extra items above & below
+
 const SkillGrid = ({ skills, userStats, unlockedSkills, onUnlock, loadingSkillId }) => {
-  const Row = useCallback(({ index, style }) => {
-    const skill = skills[index];
-    return (
-      <div style={{ ...style, padding: '4px 8px' }}>
+  const containerRef = useRef(null);
+  const [scrollTop, setScrollTop] = useState(0);
+
+  const onScroll = useCallback(() => {
+    if (!containerRef.current) return;
+    setScrollTop(containerRef.current.scrollTop);
+  }, []);
+
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    el.addEventListener('scroll', onScroll, { passive: true });
+    return () => el.removeEventListener('scroll', onScroll);
+  }, [onScroll]);
+
+  const total = skills.length;
+  const startIndex = Math.max(0, Math.floor(scrollTop / ROW_HEIGHT) - OVERSCAN);
+  const visibleCount = Math.ceil(VIEWPORT_HEIGHT / ROW_HEIGHT) + OVERSCAN * 2;
+  const endIndex = Math.min(total - 1, startIndex + visibleCount - 1);
+  const items = [];
+  for (let i = startIndex; i <= endIndex; i++) {
+    const skill = skills[i];
+    if (!skill) continue;
+    items.push(
+      <div key={skill.id} style={{ position: 'absolute', top: i * ROW_HEIGHT, left: 0, right: 0, height: ROW_HEIGHT, padding: '4px 8px' }}>
         <SkillCard skill={skill} userStats={userStats} unlockedSkills={unlockedSkills} onUnlock={onUnlock} loadingSkillId={loadingSkillId} />
       </div>
     );
-  }, [skills, userStats, unlockedSkills, onUnlock, loadingSkillId]);
+  }
 
   return (
-    <List
-      height={Math.min(800, skills.length * ROW_HEIGHT)}
-      itemCount={skills.length}
-      itemSize={ROW_HEIGHT}
-      width={'100%'}
-      overscanCount={4}
-    >
-      {Row}
-    </List>
+    <div ref={containerRef} style={{ height: Math.min(VIEWPORT_HEIGHT, total * ROW_HEIGHT), overflowY: 'auto', position: 'relative' }} className="rounded-lg border border-purple-500/10 bg-[#141823]/40">
+      <div style={{ height: total * ROW_HEIGHT, position: 'relative' }}>
+        {items}
+      </div>
+    </div>
   );
 };
 
@@ -169,7 +188,7 @@ const SkillsPage = () => {
   const [loadingSkillId, setLoadingSkillId] = useState(null);
 
   const skills = skillData?.getAllSkills || [];
-  const userStats = userData?.stats || {};
+  const userStats = userData?.stats ?? {};
   const unlockedSkillIds = (userData?.skills || []).map(s => s.id);
 
   const filteredSkills = useMemo(() => {

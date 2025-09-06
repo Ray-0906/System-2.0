@@ -85,6 +85,8 @@ export const typeDefs = gql`
     coins: Int
     totalMission: Int
     titles: [String]
+  activeTitle: String
+  avatar: String
     achievements: [String]
     current_missions: [ID]
     completed_trackers:[Tracker]
@@ -168,5 +170,6 @@ export const typeDefs = gql`
   type Mutation {
     createSidequest(input: CreateSidequestInput!): Sidequest
     completeSidequest(id: ID!): Sidequest
+  updateProfile(activeTitle: String, avatar: String): User
   }
 `;

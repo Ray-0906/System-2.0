@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useMemo, useState } from "react";
 import * as echarts from "echarts";
 import { motion, AnimatePresence } from "framer-motion";
-import { Loader2, AlertTriangle, User, BarChart2, Shield, Swords } from 'lucide-react';
+import { Loader2, AlertTriangle, User, BarChart2, Shield, Swords, Pencil } from 'lucide-react';
 import { statLevelThresholds, userLevelThresholds } from "../utils/levelling";
 
 import AuthLayout from "../components/AuthLayout";
@@ -89,17 +89,22 @@ const ProgressBar = ({ value, max }) => {
 };
 
 // 3. Hunter Profile Card
-const HunterProfile = ({ user }) => (
+const HunterProfile = ({ user, onEdit }) => (
   <motion.div
     variants={{ hidden: { opacity: 0, y: 50 }, visible: { opacity: 1, y: 0 } }}
     className="bg-black/30 backdrop-blur-md rounded-xl p-6 shadow-[0_0_25px_rgba(139,92,246,0.2)] border border-purple-500/30 relative overflow-hidden"
   >
     <div className="absolute -top-1/4 -right-1/4 w-1/2 h-1/2 bg-purple-600/20 rounded-full blur-3xl"></div>
-    <h2 className="text-xl text-center font-semibold mb-4 border-b border-purple-700/50 pb-2 flex items-center justify-center gap-2"><User size={20} /> HUNTER ID</h2>
+    <h2 className="text-xl text-center font-semibold mb-4 border-b border-purple-700/50 pb-2 flex items-center justify-center gap-2 relative">
+      <User size={20} /> HUNTER ID
+      <button onClick={onEdit} className="absolute right-0 top-0 text-purple-300 hover:text-white transition-colors" title="Edit Profile">
+        <Pencil size={18} />
+      </button>
+    </h2>
     <div className="flex flex-col items-center mb-6 relative z-10">
       <div className="w-32 h-32 rounded-full overflow-hidden border-4 border-purple-500 shadow-[0_0_15px_rgba(139,92,246,0.7)] mb-4 transform hover:scale-105 transition-transform duration-300">
         <img
-          src="https://readdy.ai/api/search-image?query=Anime%20style%20portrait%20of%20a%20mysterious%20hunter%20with%20dark%20green%20hair%20and%20intense%20eyes%2C%20looking%20directly%20at%20viewer%20with%20a%20serious%20expression%2C%20dark%20atmospheric%20background%20with%20subtle%20shadows%2C%20high%20quality%20digital%20art&width=300&height=300&seq=1&orientation=squarish"
+          src={user?.avatar || "https://readdy.ai/api/search-image?query=Anime%20style%20portrait%20of%20a%20mysterious%20hunter%20with%20dark%20green%20hair%20and%20intense%20eyes%2C%20looking%20directly%20at%20viewer%20with%20a%20serious%20expression%2C%20dark%20atmospheric%20background%20with%20subtle%20shadows%2C%20high%20quality%20digital%20art&width=300&height=300&seq=1&orientation=squarish"}
           alt="Shadow Monarch Avatar"
           className="w-full h-full object-cover object-top"
           onError={(e) => { e.target.onerror = null; e.target.src = 'https://placehold.co/300x300/1a1a1a/c084fc?text=Hunter'; }}
@@ -107,7 +112,7 @@ const HunterProfile = ({ user }) => (
       </div>
       <div className="text-center">
         <p><span className="text-purple-400">IDENT:</span> {user?.username || 'N/A'}</p>
-        <p><span className="text-purple-400">TITLE:</span> <span className="text-yellow-400">{user?.titles?.[0] || "Shadow Soldier"}</span></p>
+  <p><span className="text-purple-400">TITLE:</span> <span className="text-yellow-400">{user?.activeTitle || user?.titles?.[0] || "Shadow Soldier"}</span></p>
         <p><span className="text-purple-400">RANK:</span> <span className="text-yellow-400 font-bold text-lg">{user?.rank || 'E'}</span></p>
         <p><span className="text-purple-400">COINS:</span> {user?.coins || 0}</p>
       </div>
@@ -262,6 +267,51 @@ const InventorySection = ({ title, items, icon: Icon, type }) => (
 const Dashboard = () => {
   
     const user = useUserStore((state) => state.user);
+    const setUser = useUserStore(s=>s.setUser);
+    const updateCoin = useUserStore(s=>s.updateCoin);
+    const [editing,setEditing]=useState(false);
+    const [availableTitles,setAvailableTitles]=useState([]);
+    const [pendingTitle,setPendingTitle]=useState('');
+    const [uploading,setUploading]=useState(false);
+    const [tempAvatar,setTempAvatar]=useState('');
+
+    const openEdit=async()=>{
+      setEditing(true);
+      try{
+        const res = await fetch(`${import.meta.env.VITE_SERVER_URL || ''}/titles`,{ credentials:'include'});
+        const data = await res.json();
+        setAvailableTitles(data.titles||[]);
+        setPendingTitle(user?.activeTitle || user?.titles?.[0] || '');
+      }catch(e){/* ignore */}
+    };
+
+    const handleUpload = async (file)=>{
+      setUploading(true);
+      try{
+        const form = new FormData();
+        form.append('file', file);
+        form.append('upload_preset', import.meta.env.VITE_CLOUDINARY_PRESET || 'unsigned');
+        const cloud = import.meta.env.VITE_CLOUDINARY_CLOUD;
+        const resp = await fetch(`https://api.cloudinary.com/v1_1/${cloud}/image/upload`,{ method:'POST', body: form });
+        const json = await resp.json();
+        if(json.secure_url){
+          setTempAvatar(json.secure_url);
+        }
+      }catch(err){ console.error('Upload failed', err); }
+      finally{ setUploading(false);} }
+
+  const saveProfile = async()=>{
+      try{
+        const body = { activeTitle: pendingTitle };
+        if(tempAvatar) body.avatar = tempAvatar;
+    const endpoint = import.meta.env.VITE_SERVER_URL ? `${import.meta.env.VITE_SERVER_URL}/graphql` : '/graphql';
+    const res = await fetch(endpoint,{ method:'POST', headers:{'Content-Type':'application/json'}, credentials:'include', body: JSON.stringify({ query:`mutation Update($activeTitle:String, $avatar:String){ updateProfile(activeTitle:$activeTitle, avatar:$avatar){ username activeTitle titles avatar coins level xp rank } }`, variables: body })});
+        const out = await res.json();
+        if(out.data?.updateProfile){
+          setUser({ ...user, ...out.data.updateProfile });
+          setEditing(false);
+        }
+      }catch(e){ console.error(e);} }
    const isLoading=false;
    const error =false;
   // Memoize stats array to prevent re-creation on every render
@@ -315,13 +365,52 @@ const Dashboard = () => {
           animate="visible"
         >
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <HunterProfile user={user} />
+            <HunterProfile user={user} onEdit={openEdit} />
             <StatsDisplay user={user} stats={stats} />
           </div>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <InventorySection title="SHADOW ARTIFACTS" items={user?.equiments || []} icon={Shield} type="arti" />
             <InventorySection title="SHADOW SKILLS" items={user?.skills || []} icon={Swords} type="skill" />
           </div>
+          {editing && (
+            <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+              <div className="w-full max-w-lg bg-gray-950/90 border border-purple-500/40 rounded-xl p-6 space-y-4">
+                <div className="flex justify-between items-center mb-2">
+                  <h3 className="text-lg font-semibold text-purple-200 tracking-wide">Edit Hunter Profile</h3>
+                  <button onClick={()=>setEditing(false)} className="text-purple-400 hover:text-white">✕</button>
+                </div>
+                <div>
+                  <p className="text-xs uppercase tracking-wide text-purple-400 mb-1">Active Title</p>
+                  <div className="max-h-40 overflow-y-auto space-y-1 pr-1">
+                    {availableTitles.map(t=> (
+                      <button key={t.name} onClick={()=>t.unlocked && setPendingTitle(t.name)} className={`w-full text-left px-3 py-2 rounded-md text-sm border ${pendingTitle===t.name? 'border-pink-500 bg-pink-500/10':'border-purple-500/20'} ${t.unlocked? 'hover:border-pink-400':'opacity-40 cursor-not-allowed'}`}> 
+                        <span className="text-purple-200">{t.name}</span>
+                        <span className="text-[10px] ml-2 text-purple-400">Tier {t.tier}</span>
+                        {!t.unlocked && <span className="text-[10px] ml-2 text-yellow-400">LOCKED</span>}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div>
+                  <p className="text-xs uppercase tracking-wide text-purple-400 mb-1">Profile Image</p>
+                  <div className="flex items-center gap-4">
+                    <div className="w-20 h-20 rounded-full overflow-hidden border-2 border-purple-500">
+                      <img src={tempAvatar || user?.avatar || 'https://placehold.co/100x100/1a1a1a/c084fc?text=H'} className="w-full h-full object-cover" />
+                    </div>
+                    <label className="text-xs bg-gradient-to-r from-purple-600 to-pink-500 px-3 py-2 rounded-md cursor-pointer hover:from-purple-500 hover:to-pink-400 text-white shadow">
+                      {uploading? 'Uploading...' : 'Upload Image'}
+                      <input type="file" className="hidden" accept="image/*" onChange={e=> e.target.files && handleUpload(e.target.files[0])} />
+                    </label>
+                  </div>
+                  <p className="text-[10px] mt-1 text-purple-400">Uses Cloudinary unsigned upload preset.</p>
+                </div>
+                <div className="flex justify-end gap-3 pt-2">
+                  <button onClick={()=>setEditing(false)} className="px-4 py-2 text-sm rounded-md bg-gray-700 hover:bg-gray-600 text-white">Cancel</button>
+                  <button onClick={saveProfile} disabled={uploading} className="px-5 py-2 text-sm rounded-md bg-gradient-to-r from-purple-600 to-pink-500 hover:from-purple-500 hover:to-pink-400 text-white disabled:opacity-50">Save</button>
+                </div>
+              </div>
+            </div>
+          )}
         </motion.div>
       );
     }

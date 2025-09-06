@@ -1,5 +1,4 @@
 import React, { useEffect, useRef, useMemo, useState } from "react";
-import * as echarts from "echarts";
 import { motion, AnimatePresence } from "framer-motion";
 import { Loader2, AlertTriangle, User, BarChart2, Shield, Swords, Pencil } from 'lucide-react';
 import { statLevelThresholds, userLevelThresholds } from "../utils/levelling";
@@ -133,66 +132,38 @@ const StatsDisplay = ({ user, stats }) => {
   const chartRef = useRef(null);
 
   useEffect(() => {
-    if (!chartRef.current || !user) return;
-    let chart = echarts.getInstanceByDom(chartRef.current);
-    if (!chart) {
-        chart = echarts.init(chartRef.current, 'dark');
-    }
-    
-    const statValues = stats.map(s => s.level);
-    const mx = Math.max(...statValues, 10); // Ensure a minimum max value
-
-    const option = {
-      backgroundColor: 'transparent',
-      tooltip: {
-        trigger: 'item',
-        backgroundColor: 'rgba(0, 0, 0, 0.7)',
-        borderColor: '#8B5CF6',
-        textStyle: { color: '#fff' }
-      },
-      radar: {
-        indicator: stats.map(s => ({ name: s.name, max: mx + 5 })),
-        shape: 'polygon',
-        center: ['50%', '50%'],
-        radius: '75%',
-        axisName: {
-          color: 'rgba(224, 204, 255, 0.9)',
-          fontSize: 12,
-          fontFamily: "'Rajdhani', 'Orbitron', monospace",
-          textShadowColor: 'rgba(192, 132, 252, 0.5)',
-          textShadowBlur: 5,
+    let chart; let echartsLocal;
+    let disposed = false;
+    const init = async () => {
+      if (!chartRef.current || !user) return;
+      const mod = await import(/* webpackChunkName: "echarts" */'echarts');
+      echartsLocal = mod;
+      if (disposed) return;
+      chart = echartsLocal.getInstanceByDom(chartRef.current) || echartsLocal.init(chartRef.current, 'dark');
+      const statValues = stats.map(s => s.level);
+      const mx = Math.max(...statValues, 10);
+      chart.setOption({
+        backgroundColor: 'transparent',
+        tooltip: { trigger: 'item', backgroundColor: 'rgba(0,0,0,0.7)', borderColor: '#8B5CF6', textStyle:{ color:'#fff'} },
+        radar: {
+          indicator: stats.map(s => ({ name: s.name, max: mx + 5 })),
+          shape: 'polygon', center:['50%','50%'], radius:'75%',
+          axisName:{ color:'rgba(224,204,255,0.9)', fontSize:12, fontFamily:"'Rajdhani', 'Orbitron', monospace", textShadowColor:'rgba(192,132,252,0.5)', textShadowBlur:5 },
+          splitLine:{ lineStyle:{ color:'rgba(170,130,255,0.2)', type:'dashed'}},
+          splitArea:{ show:true, areaStyle:{ color:['rgba(139,92,246,0.05)','rgba(139,92,246,0.1)']}},
+          axisLine:{ lineStyle:{ color:'rgba(170,130,255,0.3)'} }
         },
-        splitLine: { lineStyle: { color: 'rgba(170, 130, 255, 0.2)', type: 'dashed' } },
-        splitArea: { show: true, areaStyle: { color: ['rgba(139, 92, 246, 0.05)', 'rgba(139, 92, 246, 0.1)'] } },
-        axisLine: { lineStyle: { color: 'rgba(170, 130, 255, 0.3)' } },
-      },
-      series: [{
-        name: 'Shadow Monarch Stats',
-        type: 'radar',
-        data: [{
-          value: statValues,
-          name: 'Current Levels',
-          symbol: 'circle',
-          symbolSize: 8,
-          itemStyle: { color: '#C084FC' },
-          lineStyle: { color: '#C084FC', width: 3, shadowColor: 'rgba(192, 132, 252, 0.8)', shadowBlur: 10 },
-          areaStyle: {
-            color: new echarts.graphic.RadialGradient(0.5, 0.5, 0.5, [{
-              offset: 0, color: 'rgba(192, 132, 252, 0.5)'
-            }, {
-              offset: 1, color: 'rgba(139, 92, 246, 0.1)'
-            }])
-          }
-        }],
-      }],
+        series:[{ type:'radar', data:[{ value: statValues, name:'Current Levels', symbol:'circle', symbolSize:8,
+          itemStyle:{ color:'#C084FC'}, lineStyle:{ color:'#C084FC', width:3, shadowColor:'rgba(192,132,252,0.8)', shadowBlur:10 },
+          areaStyle:{ color: new echartsLocal.graphic.RadialGradient(0.5,0.5,0.5,[{offset:0,color:'rgba(192,132,252,0.5)'},{offset:1,color:'rgba(139,92,246,0.1)'}]) }
+        }]}]
+      });
+      const resize = () => chart && chart.resize();
+      window.addEventListener('resize', resize);
+      return () => window.removeEventListener('resize', resize);
     };
-    chart.setOption(option);
-    const handleResize = () => chart.resize();
-    window.addEventListener("resize", handleResize);
-    return () => {
-      window.removeEventListener("resize", handleResize);
-      chart.dispose();
-    };
+    init();
+    return () => { disposed = true; if (chart) { chart.dispose(); } };
   }, [user, stats]);
 
   return (

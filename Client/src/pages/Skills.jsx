@@ -1,4 +1,5 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useCallback } from "react";
+import { List } from 'react-window';
 import { useQuery } from "@apollo/client";
 import { getAllSkills } from "../graphql/query";
 import { useUserStore } from "../store/userStore";
@@ -131,13 +132,29 @@ const SkillCard = ({ skill, userStats = {}, unlockedSkills = [], onUnlock, loadi
 // --------------------------------------------------
 // Grid
 // --------------------------------------------------
-const SkillGrid = ({ skills, userStats, unlockedSkills, onUnlock, loadingSkillId }) => (
-  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-4">
-    {skills.map(skill => (
-      <SkillCard key={skill.id} skill={skill} userStats={userStats} unlockedSkills={unlockedSkills} onUnlock={onUnlock} loadingSkillId={loadingSkillId} />
-    ))}
-  </div>
-);
+const ROW_HEIGHT = 250;
+const SkillGrid = ({ skills, userStats, unlockedSkills, onUnlock, loadingSkillId }) => {
+  const Row = useCallback(({ index, style }) => {
+    const skill = skills[index];
+    return (
+      <div style={{ ...style, padding: '4px 8px' }}>
+        <SkillCard skill={skill} userStats={userStats} unlockedSkills={unlockedSkills} onUnlock={onUnlock} loadingSkillId={loadingSkillId} />
+      </div>
+    );
+  }, [skills, userStats, unlockedSkills, onUnlock, loadingSkillId]);
+
+  return (
+    <List
+      height={Math.min(800, skills.length * ROW_HEIGHT)}
+      itemCount={skills.length}
+      itemSize={ROW_HEIGHT}
+      width={'100%'}
+      overscanCount={4}
+    >
+      {Row}
+    </List>
+  );
+};
 
 // --------------------------------------------------
 // Main Page

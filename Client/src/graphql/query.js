@@ -160,6 +160,20 @@ export const GET_ALL_EQUIPMENT = gql`
     }
   }
 `;
+export const GET_LEADERBOARD = gql`
+  query Leaderboard($limit: Int, $sortBy: String) {
+    leaderboard(limit: $limit, sortBy: $sortBy) {
+      id
+      username
+      level
+      xp
+      coins
+      rank
+      totalMission
+      titles
+    }
+  }
+`;
 const EquipmentById = gql`
   query {
     getEquipmentById(id: "EQUIPMENT_ID_HERE") {
@@ -168,6 +182,45 @@ const EquipmentById = gql`
       statBonuses {
         strength
       }
+    }
+  }
+`;
+
+// Sidequest Queries & Mutations
+export const GET_SIDEQUESTS = gql`
+  query GetSidequests($status: String) {
+    getSidequests(status: $status) {
+      id
+      title
+      description
+      status
+      deadline
+      createdAt
+      completedAt
+      evaluated { difficulty xp coins stat }
+    }
+  }
+`;
+
+export const CREATE_SIDEQUEST = gql`
+  mutation CreateSidequest($input: CreateSidequestInput!) {
+    createSidequest(input: $input) {
+      id
+      title
+      status
+      evaluated { difficulty xp coins stat }
+      deadline
+    }
+  }
+`;
+
+export const COMPLETE_SIDEQUEST = gql`
+  mutation CompleteSidequest($id: ID!) {
+    completeSidequest(id: $id) {
+      id
+      status
+      completedAt
+      evaluated { xp coins stat difficulty }
     }
   }
 `;

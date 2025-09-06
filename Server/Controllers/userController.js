@@ -9,10 +9,11 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { User } from "../Models/user.js";
 
-const cookieOptions = {
+const isProd = process.env.NODE_ENV === 'production';
+const baseCookieOptions = {
   httpOnly: true,
-  secure: true, // Required for SameSite: 'none' and HTTPS
-  sameSite: "none",
+  secure: isProd, // Required for SameSite: 'none' and HTTPS
+  sameSite: isProd ? 'none' : 'lax',
   maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
 };
 
@@ -29,7 +30,7 @@ export const signup = async (req, res) => {
       expiresIn: "7d",
     });
     res
-      .cookie("token", token, cookieOptions)
+      .cookie("token", token, baseCookieOptions)
       .status(201)
       .json({ msg: "Registered successfully", user });
   } catch (err) {
@@ -50,7 +51,7 @@ export const login = async (req, res) => {
       expiresIn: "7d",
     });
     res
-      .cookie("token", token, cookieOptions)
+      .cookie("token", token, baseCookieOptions)
       .json({ msg: "Login successful", user });
   } catch (err) {
     res.status(500).json({ msg: err.message });
@@ -59,12 +60,13 @@ export const login = async (req, res) => {
 
 // This is likely to fail in production because it's missing the 'domain'
 export const logout = (req, res) => {
-  res.clearCookie("token", {
-     httpOnly: true,
-     secure: true,
-     sameSite: "none",
-   })
-   .json({ msg: "Logged out successfully" });
+  res
+    .clearCookie('token', {
+      httpOnly: true,
+      secure: isProd,
+      sameSite: isProd ? 'none' : 'lax',
+    })
+    .json({ msg: 'Logged out successfully' });
 };
 
 // controllers/authController.js

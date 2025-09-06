@@ -54,6 +54,8 @@ export const typeDefs = gql`
   daycount: Int
   lastUpdated: String
   lastCompleted: String
+  lastStreakReset: String
+  completedDays: [String]
   penaltiesApplied: [String]
   rewardsClaimed: Boolean
 
@@ -123,6 +125,25 @@ export const typeDefs = gql`
     rarity: String
   }
 
+  type SidequestEvaluated {
+    difficulty: String
+    xp: Int
+    coins: Int
+    stat: String
+  }
+
+  type Sidequest {
+    id: ID!
+    title: String!
+    description: String
+    userId: ID!
+    deadline: String
+    status: String
+    evaluated: SidequestEvaluated
+    createdAt: String
+    completedAt: String
+  }
+
 
   type Query {
     getUser: User
@@ -133,5 +154,19 @@ export const typeDefs = gql`
     getSkillById(id: ID!): Skill
     getAllEquipment: [Equipment!]!
     getEquipmentById(id: ID!): Equipment
+  leaderboard(limit: Int = 20, sortBy: String = "xp"): [User]
+  getSidequests(status: String): [Sidequest]
+  }
+
+  input CreateSidequestInput {
+    title: String!
+    description: String
+    deadline: String
+    hintEffort: String
+  }
+
+  type Mutation {
+    createSidequest(input: CreateSidequestInput!): Sidequest
+    completeSidequest(id: ID!): Sidequest
   }
 `;

@@ -126,7 +126,14 @@ Alert.propTypes = {
   onDismiss: PropTypes.func.isRequired,
 };
 
-const ITEMS_PER_PAGE = 8;
+const ITEMS_PER_PAGE = 12;
+
+const rarityStyles = {
+  legendary: "from-amber-600/30 to-yellow-700/10 border-amber-400/40",
+  epic: "from-purple-600/30 to-fuchsia-700/10 border-purple-400/40",
+  rare: "from-blue-600/30 to-cyan-700/10 border-blue-400/40",
+  common: "from-gray-600/30 to-slate-700/10 border-gray-500/30",
+};
 
 const Inventory = () => {
   const { data, loading, error } = useQuery(GET_ALL_EQUIPMENT);
@@ -136,22 +143,31 @@ const Inventory = () => {
 
   const [selectedRarity, setSelectedRarity] = useState("All");
   const [filterOwned, setFilterOwned] = useState(false);
+  const [search, setSearch] = useState("");
+  const [sort, setSort] = useState("rarity");
   const [page, setPage] = useState(1);
   const [message, setMessage] = useState(null);
 
   // Filter by rarity and ownership
   const filtered = useMemo(() => {
-    let result =
-      selectedRarity === "All"
-        ? data?.getAllEquipment || []
-        : (data?.getAllEquipment || []).filter(
-            (eq) => eq.rarity === selectedRarity
-          );
-    if (filterOwned) {
-      result = result.filter((eq) => userOwned.includes(eq.id));
+    let result = data?.getAllEquipment || [];
+    if (selectedRarity !== "All") result = result.filter(eq => eq.rarity === selectedRarity);
+    if (filterOwned) result = result.filter(eq => userOwned.includes(eq.id));
+    if (search.trim()) {
+      const q = search.toLowerCase();
+      result = result.filter(eq =>
+        eq.name.toLowerCase().includes(q) ||
+        eq.description.toLowerCase().includes(q)
+      );
+    }
+    if (sort === "costAsc") result = [...result].sort((a,b)=>a.cost-b.cost);
+    else if (sort === "costDesc") result = [...result].sort((a,b)=>b.cost-a.cost);
+    else if (sort === "rarity") {
+      const order = { legendary:1, epic:2, rare:3, common:4 };
+      result = [...result].sort((a,b)=>(order[a.rarity]||9)-(order[b.rarity]||9));
     }
     return result;
-  }, [selectedRarity, filterOwned, data, userOwned]);
+  }, [selectedRarity, filterOwned, data, userOwned, search, sort]);
 
   const totalPages = useMemo(
     () => Math.ceil(filtered.length / ITEMS_PER_PAGE),
@@ -196,9 +212,11 @@ const Inventory = () => {
       <AuthLayout>
         <SoloLoading loading={loading} message="Loading Gear Vault..." />
         {!loading && (
-          <div
-            className={`min-h-screen ${theme.colors.background} px-6 py-10 ${theme.colors.text}`}
-          >
+          <div className={`min-h-screen px-6 py-10 ${theme.colors.text} bg-gradient-to-br from-gray-950 via-black to-gray-900 relative overflow-hidden`}>
+            <div className="absolute inset-0 pointer-events-none">
+              <div className="absolute top-20 right-32 w-64 h-64 bg-purple-600/20 blur-3xl rounded-full" />
+              <div className="absolute bottom-24 left-20 w-72 h-72 bg-pink-600/20 blur-3xl rounded-full" />
+            </div>
             <style>{styles}</style>
             <div className="w-full mx-auto max-w-screen-lg space-y-6">
               <div className="text-center mb-6">
@@ -231,129 +249,109 @@ const Inventory = () => {
               </div>
 
               {message && <Alert message={message} onDismiss={handleDismiss} />}
-              <div className="flex justify-center">
-                <div className="flex flex-wrap gap-2 mb-4">
-                  {rarities.map((r) => (
-                    <button
-                      key={r}
-                      onClick={() => {
-                        setSelectedRarity(r);
-                        setPage(1);
-                      }}
-                      className={`px-4 py-1 rounded-full ${
-                        theme.colors.border
-                      } ${
-                        selectedRarity === r
-                          ? "bg-purple-700 border-purple-400"
-                          : "bg-gray-700 border-gray-500"
-                      } text-sm hover-glow`}
-                      aria-label={`Filter by ${r} rarity`}
-                      aria-pressed={selectedRarity === r}
-                    >
-                      {r}
-                    </button>
-                  ))}
-                  <button
-                    onClick={() => setFilterOwned((f) => !f)}
-                    className={`px-4 py-1 rounded-full ${theme.colors.border} ${
-                      filterOwned
-                        ? "bg-green-600 border-green-400"
-                        : "bg-gray-700 border-gray-500"
-                    } text-sm hover-glow`}
-                    aria-label="Toggle owned filter"
-                    aria-pressed={filterOwned}
-                  >
-                    {filterOwned ? "Showing Owned" : "Show Owned Only"}
-                  </button>
-                </div>
-              </div>
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 mb-8">
-                {paginated.map((equipment) => {
-                  const owned = userOwned.some(
-                    (eid) => String(eid) === String(equipment.id)
-                  );
-
-                  const canBuy =
-                    Number(userCoins) >= Number(equipment.cost) && !owned;
-
-                  return (
-                    <div
-                      key={equipment.id}
-                      className={`${theme.colors.card} rounded-lg p-4 flex flex-col items-center ${theme.colors.border} ${theme.colors.shadow}`}
-                    >
-                      <img
-                        src={`/pic/arti/${equipment.icon}`}
-                        alt={equipment.name}
-                        className="w-16 h-16 mb-3 rounded object-cover"
-                      />
-                      <h2
-                        className="text-lg font-bold mb-1"
-                        style={{ fontFamily: theme.fonts.primary }}
-                      >
-                        {equipment.name}
-                      </h2>
-                      <p
-                        className={`text-xs ${theme.colors.muted} text-center mb-2`}
-                      >
-                        {equipment.description}
-                      </p>
-
-                      <button
-                        disabled={!canBuy}
-                        onClick={() =>
-                          handleBuy(
-                            equipment.id,
-                            equipment.name,
-                            equipment.icon,
-                            equipment.description,
-                            equipment.cost
-                          )
-                        }
-                        className={`w-full py-2 text-sm font-semibold rounded transition ${
-                          owned
-                            ? `${theme.colors.success} text-white cursor-default`
-                            : canBuy
-                            ? `${theme.colors.button} text-white`
-                            : "bg-gray-600 text-gray-400 cursor-not-allowed"
-                        } hover-glow`}
-                        aria-label={
-                          owned
-                            ? "Owned"
-                            : canBuy
-                            ? `Buy for ${equipment.cost} coins`
-                            : "Cannot buy"
-                        }
-                        aria-disabled={!canBuy}
-                      >
-                        {owned ? "Owned" : <span>🪙 {equipment.cost}</span>}
-                      </button>
+              <div className="flex flex-col lg:flex-row gap-8">
+                {/* Sidebar */}
+                <aside className="lg:w-64 space-y-6 bg-[#141823]/60 border border-purple-500/20 rounded-xl p-4 backdrop-blur-sm h-fit">
+                  <div>
+                    <h2 className="text-sm font-semibold mb-2 text-purple-200 tracking-wide">Rarity</h2>
+                    <div className="flex flex-wrap gap-2">
+                      {rarities.map(r => (
+                        <button
+                          key={r}
+                          onClick={() => { setSelectedRarity(r); setPage(1); }}
+                          className={
+                            `px-3 py-1.5 rounded-md text-xs font-medium transition ${selectedRarity === r
+                              ? 'bg-gradient-to-r from-purple-600 to-pink-500 text-white shadow'
+                              : 'bg-gray-700/60 text-purple-300 hover:bg-gray-600/60'}`}
+                          aria-pressed={selectedRarity === r}
+                        >{r}</button>
+                      ))}
                     </div>
-                  );
-                })}
-              </div>
-
-              <div className="flex justify-center items-center gap-4">
-                <button
-                  onClick={() => setPage((p) => Math.max(1, p - 1))}
-                  disabled={page === 1}
-                  className={`${theme.colors.button} px-3 py-1 rounded hover:from-purple-500 hover:to-pink-400`}
-                  aria-label="Previous page"
-                  aria-disabled={page === 1}
-                >
-                  Prev
-                </button>
-                <span className={theme.colors.text}>
-                  Page {page} of {totalPages}
-                </span>
-                <button
-                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                  disabled={page === totalPages}
-                  className={`${theme.colors.button} px-3 py-1 rounded hover:from-purple-500 hover:to-pink-400`}
-                  aria-label="Next page"
-                  aria-disabled={page === totalPages}
-                >
-                  Next
-                </button>
+                  </div>
+                  <div>
+                    <h2 className="text-sm font-semibold mb-2 text-purple-200 tracking-wide">Ownership</h2>
+                    <button
+                      onClick={() => { setFilterOwned(f => !f); setPage(1);} }
+                      className={
+                        `w-full px-3 py-2 rounded-md text-xs font-medium transition ${filterOwned
+                          ? 'bg-green-600/80 text-white'
+                          : 'bg-gray-700/60 text-purple-300 hover:bg-gray-600/60'}`}
+                      aria-pressed={filterOwned}
+                    >{filterOwned ? 'Filtering Owned' : 'Show Owned Only'}</button>
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-xs font-semibold text-purple-200 uppercase tracking-wider">Search</label>
+                    <input value={search} onChange={e=>{ setSearch(e.target.value); setPage(1);} } placeholder="Search gear..." className="w-full bg-[#0f141d] border border-purple-500/30 rounded-md px-3 py-2 text-sm focus:outline-none focus:border-pink-500 focus:ring-1 focus:ring-pink-500/50" />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-xs font-semibold text-purple-200 uppercase tracking-wider">Sort By</label>
+                    <select value={sort} onChange={e=>{ setSort(e.target.value); setPage(1);} } className="w-full bg-[#0f141d] border border-purple-500/30 rounded-md px-3 py-2 text-sm focus:outline-none focus:border-pink-500 focus:ring-1 focus:ring-pink-500/50">
+                      <option value="rarity">Rarity</option>
+                      <option value="costAsc">Cost (Low-High)</option>
+                      <option value="costDesc">Cost (High-Low)</option>
+                    </select>
+                  </div>
+                  <div className="pt-2 border-t border-purple-500/10 text-[11px] text-purple-300/70 leading-relaxed">
+                    <p>Tip: Legendary gear offers best multipliers. Save coins strategically.</p>
+                  </div>
+                </aside>
+                {/* Main Content */}
+                <div className="flex-1 space-y-5">
+                  <div className="flex items-center justify-between text-xs text-purple-300/70">
+                    <span>{filtered.length} item{filtered.length !== 1 && 's'} found</span>
+                    <span>Page {page} / {totalPages || 1}</span>
+                  </div>
+                  {filtered.length === 0 ? (
+                    <div className="p-8 text-center border border-dashed border-purple-500/30 rounded-xl bg-[#141823]/40">
+                      <p className="text-sm text-purple-300">No equipment matches your filters.</p>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-4">
+                      {paginated.map(equipment => {
+                        const owned = userOwned.some(eid => String(eid) === String(equipment.id));
+                        const canBuy = Number(userCoins) >= Number(equipment.cost) && !owned;
+                        return (
+                          <div key={equipment.id} className={
+                            `relative rounded-xl p-4 flex flex-col border backdrop-blur-sm bg-gradient-to-br ${rarityStyles[equipment.rarity] || 'from-[#1a1e2a] to-[#0f141f] border-purple-500/30'} transition-all duration-300 hover:shadow-lg hover:shadow-purple-500/20`
+                          }>
+                            <div className="flex items-start gap-3">
+                              <img src={`/pic/arti/${equipment.icon}`} alt={equipment.name} className="w-14 h-14 rounded-md border object-contain border-gray-600/60" />
+                              <div className="flex-1 min-w-0">
+                                <h3 className="text-sm font-bold tracking-wide uppercase line-clamp-1">{equipment.name}</h3>
+                                <p className="text-[10px] text-purple-200/70 mt-1 line-clamp-2">{equipment.description}</p>
+                              </div>
+                            </div>
+                            <div className="mt-3 mb-2 flex items-center justify-between text-[11px] text-purple-300/70">
+                              <span className="capitalize">{equipment.rarity}</span>
+                              <span className="inline-flex items-center gap-1 text-amber-300 font-semibold">🪙 {equipment.cost}</span>
+                            </div>
+                            <button
+                              disabled={!canBuy}
+                              onClick={() => handleBuy(equipment.id, equipment.name, equipment.icon, equipment.description, equipment.cost)}
+                              className={`w-full py-1.5 rounded-md text-[11px] font-semibold tracking-wide flex items-center justify-center transition ${owned
+                                ? 'bg-green-600/70 text-white cursor-default'
+                                : canBuy
+                                  ? 'bg-gradient-to-r from-purple-600 to-pink-500 hover:from-purple-500 hover:to-pink-400 text-white'
+                                  : 'bg-gray-700/70 text-gray-400 cursor-not-allowed'}`}
+                              aria-label={owned ? 'Owned' : canBuy ? `Buy for ${equipment.cost} coins` : 'Cannot buy'}
+                              aria-disabled={!canBuy}
+                            >
+                              {owned ? 'Owned' : `Buy`}
+                            </button>
+                            {owned && <span className="absolute -top-1 -right-1 bg-green-600/80 text-white text-[10px] px-1.5 py-0.5 rounded-md">OWNED</span>}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                  {filtered.length > 0 && (
+                    <div className="flex justify-center items-center gap-4 pt-2">
+                      <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1} className={`px-3 py-1 rounded-md text-xs font-medium transition ${page === 1 ? 'bg-gray-700/60 text-gray-500 cursor-not-allowed' : 'bg-gradient-to-r from-purple-600 to-pink-500 text-white hover:from-purple-500 hover:to-pink-400'}`}>Prev</button>
+                      <div className="text-[11px] text-purple-300/70">Page {page} of {totalPages || 1}</div>
+                      <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages || totalPages===0} className={`px-3 py-1 rounded-md text-xs font-medium transition ${(page === totalPages || totalPages===0) ? 'bg-gray-700/60 text-gray-500 cursor-not-allowed' : 'bg-gradient-to-r from-purple-600 to-pink-500 text-white hover:from-purple-500 hover:to-pink-400'}`}>Next</button>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           </div>

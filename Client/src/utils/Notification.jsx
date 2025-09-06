@@ -123,18 +123,27 @@ export default function NotificationPopup() {
               bgStyle = isPenalty ? theme.colors.penalty : theme.colors.stat;
               break;
             case 'mission':
-              message =
-                notif.key === 'accepted'
-                  ? `Mission Accepted: ${notif.newValue}`
-                  : notif.key === 'generated'
-                  ? `Mission Generated: ${notif.newValue}`
-                  : `Mission Error: ${notif.newValue}`;
-              icon = notif.key === 'error' ? (
-                <Skull className={`w-5 h-5 mr-2 ${theme.colors.iconPenalty} drop-shadow-[0_0_4px_rgba(239,68,0.6)]`} />
-              ) : (
-                <CheckCircle className={`w-5 h-5 mr-2 ${theme.colors.iconMission} drop-shadow-[0_0_4px_rgba(34,197,94,0.6)]`} />
-              );
-              bgStyle = notif.key === 'error' ? theme.colors.missionError : theme.colors.missionSuccess;
+              if (notif.key === 'deleted') {
+                message = `Mission Deleted: ${notif.newValue}`;
+                icon = <Skull className={`w-5 h-5 mr-2 ${theme.colors.iconPenalty} drop-shadow-[0_0_4px_rgba(239,68,68,0.6)]`} />;
+                bgStyle = theme.colors.missionError;
+              } else if (notif.key === 'accepted') {
+                message = `Mission Accepted: ${notif.newValue}`;
+                icon = <CheckCircle className={`w-5 h-5 mr-2 ${theme.colors.iconMission} drop-shadow-[0_0_4px_rgba(34,197,94,0.6)]`} />;
+                bgStyle = theme.colors.missionSuccess;
+              } else if (notif.key === 'generated') {
+                message = `Mission Generated: ${notif.newValue}`;
+                icon = <CheckCircle className={`w-5 h-5 mr-2 ${theme.colors.iconMission} drop-shadow-[0_0_4px_rgba(34,197,94,0.6)]`} />;
+                bgStyle = theme.colors.missionSuccess;
+              } else if (notif.key === 'error') {
+                message = `Mission Error: ${notif.newValue}`;
+                icon = <Skull className={`w-5 h-5 mr-2 ${theme.colors.iconPenalty} drop-shadow-[0_0_4px_rgba(239,68,68,0.6)]`} />;
+                bgStyle = theme.colors.missionError;
+              } else {
+                message = `Mission Event: ${notif.newValue}`;
+                icon = <CheckCircle className={`w-5 h-5 mr-2 ${theme.colors.iconMission}`} />;
+                bgStyle = theme.colors.missionSuccess;
+              }
               break;
             default:
               message = 'Unknown notification';

@@ -6,6 +6,7 @@ import { ApolloProvider } from '@apollo/client';
 import client from './utils/apollo.js';
 import { createBrowserRouter, RouterProvider } from 'react-router-dom';
 import App from './App.jsx';
+import ProtectedRoute from './components/ProtectedRoute.jsx';
 import OAuthSuccess from './components/OathSuccess.jsx';
 import HomePage from './pages/Home.jsx';
 import OAuthTransfer from './pages/SetCookie.jsx';
@@ -23,6 +24,8 @@ const SkillPage = lazy(() => import('./pages/Skills.jsx'));
 const AddCustomMission = lazy(() => import('./pages/addCustomMission.jsx'));
 const DemoDash = lazy(() => import('./pages/DemoDash.jsx'));
 const AscensionTrial = lazy(() => import('./pages/Ascension.jsx'));
+const Leaderboard = lazy(() => import('./pages/Leaderboard.jsx'));
+const Sidequests = lazy(() => import('./pages/Sidequests.jsx'));
 
 // Define routes using `createBrowserRouter`
 const router = createBrowserRouter([
@@ -30,20 +33,32 @@ const router = createBrowserRouter([
     path: '/',
     element: <App />,
     children: [
-      { path: '/login', element: <Login /> },
-      { path: '/', element: <HomePage /> },
-      { path: '/signup', element: <Signup /> },
-      { path: '/dashboard', element:<Dashboard /> },
-      { path: '/demo', element: <DemoDash /> },
-      { path: '/oauth-success', element: <OAuthSuccess /> },
-      { path: '/oauth-transfer', element: <OAuthTransfer /> },
-      { path: '/report', element: <AscensionTrial /> },
-      { path: '/skills', element: <SkillPage /> },
-      { path: '/inventory', element: <Inventory /> },
-      { path: '/missions', element: <ActiveMissions /> },
-      { path: '/add-mission', element: <AddMission /> },
-      { path: '/add-custom', element: <AddCustomMission /> },
-      { path: '/missions/:id', element: <MissionDetails /> },
+      {
+        element: <ProtectedRoute allowGuest={true} />,
+        children: [
+          { path: '/login', element: <Login /> },
+          { path: '/', element: <HomePage /> },
+          { path: '/signup', element: <Signup /> },
+          { path: '/oauth-success', element: <OAuthSuccess /> },
+          { path: '/oauth-transfer', element: <OAuthTransfer /> },
+        ]
+      },
+      {
+        element: <ProtectedRoute />,
+        children: [
+          { path: '/dashboard', element:<Dashboard /> },
+          { path: '/demo', element: <DemoDash /> },
+          { path: '/report', element: <AscensionTrial /> },
+          { path: '/skills', element: <SkillPage /> },
+          { path: '/inventory', element: <Inventory /> },
+          { path: '/leaderboard', element: <Leaderboard /> },
+          { path: '/missions', element: <ActiveMissions /> },
+          { path: '/sidequests', element: <Sidequests /> },
+          { path: '/add-mission', element: <AddMission /> },
+          { path: '/add-custom', element: <AddCustomMission /> },
+          { path: '/missions/:id', element: <MissionDetails /> },
+        ]
+      }
     ],
   },
 ]);

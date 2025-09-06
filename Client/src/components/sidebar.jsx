@@ -1,11 +1,13 @@
 
-import { useState, memo, useCallback, useEffect } from "react";
-import { Menu, X, LogOut, Home, Compass, PlusSquare, BarChart, Package, Sparkles } from "lucide-react";
+import { useState, memo, useCallback } from "react";
+import { Menu, X, LogOut, Home, Compass, PlusSquare, BarChart, Package, Sparkles, Trophy, Swords } from "lucide-react";
 import React from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 
-import axiosInstance from "../utils/axios";
+import axiosInstance, { performClientLogout } from "../utils/axios";
+import { useUserStore } from '../store/userStore';
+import { useTrackerStore } from '../store/trackerStore';
 
 // --- Error Boundary Component (Good Practice) ---
 class ErrorBoundary extends React.Component {
@@ -49,6 +51,8 @@ class ErrorBoundary extends React.Component {
 // --- Sub-Components for Better Structure ---
 
 const NavLinks = memo(({ user, onLinkClick, onLogout, isLoggingOut, error }) => {
+  const location = useLocation();
+  const current = location.pathname;
   const navItems = [
     { to: "/dashboard", label: "Dashboard", icon: Home },
     { to: "/missions", label: "Missions", icon: Compass },
@@ -56,6 +60,8 @@ const NavLinks = memo(({ user, onLinkClick, onLogout, isLoggingOut, error }) => 
     { to: "/report", label: "Ascension Room", icon: BarChart },
     { to: "/inventory", label: "Inventory", icon: Package },
     { to: "/skills", label: "Skills", icon: Sparkles },
+    { to: "/sidequests", label: "Sidequests", icon: Swords },
+    { to: "/leaderboard", label: "Leaderboard", icon: Trophy },
   ];
 
   const listVariants = {
@@ -80,40 +86,52 @@ const NavLinks = memo(({ user, onLinkClick, onLogout, isLoggingOut, error }) => 
     >
       <div className="flex-grow space-y-2">
         {user ? (
-          navItems.map((item) => (
-            <motion.div key={item.to} variants={itemVariants}>
-              <Link
-                to={item.to}
-                onClick={onLinkClick}
-                className="flex items-center gap-4 text-purple-300 text-lg font-medium p-3 rounded-lg hover:bg-purple-500/10 hover:text-purple-100 transition-all duration-200 ease-out"
-              >
-                <item.icon className="w-5 h-5" />
-                <span>{item.label}</span>
-              </Link>
-            </motion.div>
-          ))
+          navItems.map((item) => {
+            const active = current.startsWith(item.to);
+            return (
+              <motion.div key={item.to} variants={itemVariants}>
+                <Link
+                  to={item.to}
+                  onClick={onLinkClick}
+                  className={
+                    `group flex items-center gap-3 text-sm font-medium px-3 py-2 rounded-lg transition-all duration-300 relative overflow-hidden ` +
+                    (active
+                      ? 'bg-gradient-to-r from-purple-600/30 to-pink-600/20 text-purple-100 ring-1 ring-purple-400/40 shadow-[0_0_10px_rgba(139,92,246,0.25)]'
+                      : 'text-purple-300 hover:text-purple-100 hover:bg-purple-500/10')
+                  }
+                >
+                  <span className={"p-1.5 rounded-md bg-black/30 border border-purple-500/20 shadow-inner shadow-black/50 transition-colors " + (active ? 'bg-purple-600/40 border-purple-400/50' : 'group-hover:bg-purple-700/30')}>
+                    <item.icon className="w-4 h-4" />
+                  </span>
+                  <span className="tracking-wide">{item.label}</span>
+                  {active && <span className="absolute inset-y-0 left-0 w-[3px] bg-gradient-to-b from-purple-400 to-pink-500 rounded-r" />}
+                </Link>
+              </motion.div>
+            );
+          })
         ) : (
           <motion.div variants={itemVariants}>
             <Link
               to="/login"
               onClick={onLinkClick}
-              className="block text-center w-full py-2 px-4 text-lg font-medium rounded-lg bg-gradient-to-r from-purple-600 to-pink-500 hover:from-purple-500 hover:to-pink-400 text-white transition-all duration-300 ease-out hover:scale-105 shadow-[0_0_15px_rgba(139,92,246,0.3)]"
+              className="block text-center w-full py-2 px-4 text-sm font-semibold tracking-wide rounded-lg bg-gradient-to-r from-purple-600 to-pink-500 hover:from-purple-500 hover:to-pink-400 text-white transition-all duration-300 ease-out hover:shadow-[0_0_12px_rgba(236,72,153,0.4)]"
             >
               Login
             </Link>
           </motion.div>
         )}
       </div>
+  {/* Sidequests now included in main nav list above */}
       
       {user && (
         <motion.div variants={itemVariants} className="mt-auto">
           <button
             onClick={onLogout}
             disabled={isLoggingOut}
-            className="w-full flex items-center justify-center gap-3 py-3 px-4 text-lg text-center font-medium rounded-lg bg-gradient-to-r from-red-600/80 to-rose-600/80 hover:from-red-600 hover:to-rose-600 text-white transition-all duration-300 ease-out hover:scale-105 shadow-[0_0_15px_rgba(239,68,68,0.3)] disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full flex items-center justify-center gap-2 py-2.5 px-4 text-sm tracking-wide font-semibold rounded-lg bg-gradient-to-r from-red-600/90 to-rose-600/80 hover:from-red-600 hover:to-rose-600 text-white transition-all duration-300 ease-out hover:shadow-[0_0_12px_rgba(239,68,68,0.4)] disabled:opacity-50 disabled:cursor-not-allowed"
             aria-label="Logout"
           >
-            <LogOut className="w-5 h-5" />
+            <LogOut className="w-4 h-4" />
             <span>{isLoggingOut ? "Logging out..." : "Logout"}</span>
           </button>
           {error && <p className="text-red-400 text-sm mt-2 text-center">{error}</p>}
@@ -130,47 +148,26 @@ const Sidebar = memo(() => {
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [error, setError] = useState(null);
   const navigate = useNavigate();
-  
-  const [localUser, setLocalUser] = useState(null);
- 
 
-  // This effect runs only once on mount to set the initial user state.
-  useEffect(() => {
-    try {
-      const userInStorage = localStorage.getItem("user");
-      setLocalUser(userInStorage ? JSON.parse(userInStorage) : null);
-    } catch (e) {
-      console.error("Failed to parse user from localStorage", e);
-      setLocalUser(null);
-    }
-  }, []);
+  // Global user state (reactive)
+  const user = useUserStore(s => s.user);
+  const resetUser = useUserStore(s => s.reset);
+  const resetTrackers = useTrackerStore(s => s.reset);
 
   // ✅ FIX: The toggle function is now stable and has no dependencies.
   const toggleSidebar = useCallback(() => {
     setIsOpen((prev) => !prev);
   }, []);
 
-  // ✅ FIX: This effect now handles the logic of re-syncing the user state when the sidebar opens.
-  // This prevents the infinite loop.
-  useEffect(() => {
-    if (isOpen) {
-        try {
-            const userInStorage = localStorage.getItem("user");
-            setLocalUser(userInStorage ? JSON.parse(userInStorage) : null);
-        } catch (e) {
-            console.error("Failed to parse user from localStorage", e);
-            setLocalUser(null);
-        }
-    }
-  }, [isOpen]);
-
   const handleLogout = useCallback(async () => {
   setIsLoggingOut(true);
   setError(null);
   try {
     await axiosInstance.get("/auth/logout");
-    localStorage.removeItem("user");
-    setLocalUser(null);
+    performClientLogout();
+    // Additional explicit resets (defensive in case helper shape changes)
+    resetUser();
+    resetTrackers();
     setIsOpen(false); // ✅ safely close sidebar
     navigate("/login");
   } catch (err) {
@@ -180,7 +177,7 @@ const Sidebar = memo(() => {
   } finally {
     setIsLoggingOut(false);
   }
-}, [navigate]);
+}, [navigate, resetUser, resetTrackers]);
 
 
   const sidebarVariants = {
@@ -192,7 +189,7 @@ const Sidebar = memo(() => {
     <ErrorBoundary>
       <motion.button
         onClick={toggleSidebar}
-        className="fixed top-4 right-4 z-50 p-3 rounded-full text-white transition-colors duration-300 bg-black/30 backdrop-blur-md border border-white/10 hover:bg-black/50"
+        className="fixed top-4 right-4 z-50 p-3 rounded-full text-white transition-colors duration-300 bg-black/25 backdrop-blur-md border border-white/10 hover:bg-black/40 shadow-[0_0_8px_rgba(139,92,246,0.25)]"
         aria-label={isOpen ? "Close sidebar" : "Open sidebar"}
         disabled={isLoggingOut}
         whileHover={{ scale: 1.1 }}
@@ -227,26 +224,27 @@ const Sidebar = memo(() => {
               initial="closed"
               animate="open"
               exit="closed"
-              className="fixed top-0 right-0 h-full w-72 bg-gray-900/80 backdrop-blur-xl border-l border-purple-500/30 z-40"
+              className="fixed top-0 right-0 h-full w-72 bg-gradient-to-br from-gray-950/95 via-[#0d0f17]/95 to-gray-900/90 backdrop-blur-xl border-l border-purple-500/30 z-40 shadow-[0_0_35px_-5px_rgba(139,92,246,0.35)]"
               style={{ fontFamily: "'Rajdhani', 'Orbitron', monospace" }}
             >
-              <div className="p-6 flex flex-col h-full">
-                <div className="flex justify-between items-center mb-10">
-                  <h2 className="text-transparent bg-clip-text bg-gradient-to-r from-purple-500 to-pink-500 text-2xl font-bold tracking-wider drop-shadow-[0_0_8px_rgba(139,92,246,0.4)]">
-                    <Link to="/" onClick={toggleSidebar}>SYSTEM 2.0</Link>
-                  </h2>
+              <div className="p-6 flex flex-col h-full overflow-y-auto scrollbar-thin scrollbar-track-transparent scrollbar-thumb-purple-600/30 hover:scrollbar-thumb-purple-500/50">
+                <div className="flex items-center justify-between mb-8">
+                  <Link to="/" onClick={toggleSidebar} className="group">
+                    <h2 className="text-transparent bg-clip-text bg-gradient-to-r from-purple-400 via-fuchsia-400 to-pink-500 text-xl font-extrabold tracking-wider drop-shadow-[0_0_8px_rgba(139,92,246,0.45)] group-hover:from-purple-300 group-hover:to-pink-400 transition-all">
+                      SYSTEM 2.0
+                    </h2>
+                  </Link>
                 </div>
                 <NavLinks
-                  user={localUser}
+                  user={user}
                   onLinkClick={toggleSidebar}
                   onLogout={handleLogout}
                   isLoggingOut={isLoggingOut}
                   error={error}
                 />
-                <div className="mt-6 pt-6 border-t border-purple-500/20">
-                  <p className="text-xs text-purple-500/80 tracking-wide text-center">
-                    Shadow Monarch System
-                  </p>
+                <div className="mt-6 pt-5 border-t border-purple-600/20 text-center space-y-2">
+                  <p className="text-[10px] tracking-wide text-purple-400/70">Shadow Monarch System</p>
+                  <p className="text-[9px] uppercase tracking-[0.2em] text-purple-500/40">v2.0</p>
                 </div>
               </div>
             </motion.aside>

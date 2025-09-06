@@ -3,6 +3,8 @@ import { create } from 'zustand';
 export const useTrackerStore = create((set) => ({
   trackers: [],
   setTrackers: (trackers) => set({ trackers }),
+  // Clear all trackers (used on logout)
+  reset: () => set({ trackers: [] }),
 
   updateTracker: (trackerId, updatedData) =>
   set((state) => ({

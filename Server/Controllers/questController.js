@@ -22,16 +22,18 @@ import { statLevelThresholds, userLevelThresholds } from "../libs/levelling.js";
 export const completeQuest = async (req, res) => {
   const { questId, trackerid, statAffected, xp } = req.body;
   const userId = req.user.id;
-
-  const session = await mongoose.startSession();
-  session.startTransaction();
+  const useTxn = process.env.MONGO_USE_TRANSACTIONS === 'true';
+  const session = useTxn ? await mongoose.startSession() : null;
+  if (session && useTxn) {
+    session.startTransaction();
+  }
 
   try {
     // 1. Find tracker and validate quest
-    const tracker = await Tracker.findById(trackerid).session(session);
+    const trackerQuery = Tracker.findById(trackerid);
+    const tracker = session ? await trackerQuery.session(session) : await trackerQuery;
     if (!tracker) {
-      await session.abortTransaction();
-      session.endSession();
+      if (session && useTxn) { await session.abortTransaction(); session.endSession(); }
       return res.status(404).json({ message: "Tracker not found" });
     }
 
@@ -47,13 +49,18 @@ export const completeQuest = async (req, res) => {
     // 2. Remove quest from remainingQuests
     tracker.remainingQuests.splice(questIndex, 1);
 
-    // 3. Track completedQuests (optional analytics)
-   tracker.questCompletion = tracker.questCompletion || {};
-tracker.questCompletion[new Date().toISOString()] = [new mongoose.Types.ObjectId(questId)];
+    // 3. Track completedQuests (optional analytics) using Map API
+    if (!tracker.questCompletion) {
+      tracker.questCompletion = new Map();
+    }
+    const dayKey = new Date().toISOString().split('T')[0];
+    const prev = tracker.questCompletion.get(dayKey) || [];
+    tracker.questCompletion.set(dayKey, [...prev, new mongoose.Types.ObjectId(questId)]);
 
 
     // 4. Update user stat
-    const user = await User.findById(userId).session(session);
+  const userQuery = User.findById(userId);
+  const user = session ? await userQuery.session(session) : await userQuery;
     const stat = statAffected;
     user.stats[stat].value += xp;
 
@@ -74,6 +81,13 @@ tracker.questCompletion[new Date().toISOString()] = [new mongoose.Types.ObjectId
       tracker.streak += 1;
       tracker.daycount += 1;
       tracker.lastCompleted = new Date();
+      const dayISO = tracker.lastCompleted.toISOString().split('T')[0];
+      if (!tracker.completedDays) tracker.completedDays = [];
+      if (!tracker.completedDays.includes(dayISO)) tracker.completedDays.push(dayISO);
+      // If this is the first day of a (new) streak, set/reset lastStreakReset
+      if (tracker.streak === 1) {
+        tracker.lastStreakReset = tracker.lastCompleted;
+      }
 
       const rewardXP = tracker.reward?.xp || 0;
       const gainedXP = tracker.daycount >= tracker.duration
@@ -104,11 +118,18 @@ tracker.questCompletion[new Date().toISOString()] = [new mongoose.Types.ObjectId
     }
 
     // 9. Save everything
-    await tracker.save({ session });
-    await user.save({ session });
+    if (session) {
+      await tracker.save({ session });
+      await user.save({ session });
+    } else {
+      await tracker.save();
+      await user.save();
+    }
 
-    await session.commitTransaction();
-    session.endSession();
+    if (session && useTxn) {
+      await session.commitTransaction();
+      session.endSession();
+    }
 
     return res.status(200).json({
       message: "Quest completed",
@@ -126,8 +147,10 @@ tracker.questCompletion[new Date().toISOString()] = [new mongoose.Types.ObjectId
     });
     
   } catch (err) {
-    await session.abortTransaction();
-    session.endSession();
+    if (session && useTxn) {
+      await session.abortTransaction();
+      session.endSession();
+    }
     console.error("Quest Completion Error:", err);
     return res.status(500).json({ message: "Server error" });
   }

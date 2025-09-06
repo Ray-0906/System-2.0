@@ -208,6 +208,9 @@ const StatsDisplay = ({ user, stats }) => {
                 <span className="text-sm text-yellow-400">Lv. {stat.level}</span>
               </div>
               <ProgressBar value={stat.value} max={statLevelThresholds[stat.level] || 500} />
+              <div className="text-right text-[10px] sm:text-xs text-purple-300 mt-1 tracking-wide">
+                {stat.value} / {statLevelThresholds[stat.level] || 0} XP
+              </div>
             </div>
           ))}
         </div>
@@ -316,8 +319,8 @@ const Dashboard = () => {
             <StatsDisplay user={user} stats={stats} />
           </div>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <InventorySection title="SHADOW ARTIFACTS" items={user.equipments || []} icon={Shield} type="arti" />
-            <InventorySection title="SHADOW SKILLS" items={user.skills || []} icon={Swords} type="skill" />
+            <InventorySection title="SHADOW ARTIFACTS" items={user?.equiments || []} icon={Shield} type="arti" />
+            <InventorySection title="SHADOW SKILLS" items={user?.skills || []} icon={Swords} type="skill" />
           </div>
         </motion.div>
       );
@@ -327,8 +330,12 @@ const Dashboard = () => {
 
   return (
     
-      <div className="min-h-screen bg-gray-900 text-white p-4 sm:p-6 relative overflow-x-hidden" style={{ fontFamily: "'Rajdhani', 'Orbitron', monospace" }}>
+  <div className="min-h-screen text-white p-4 sm:p-6 relative overflow-x-hidden" style={{ fontFamily: "'Rajdhani', 'Orbitron', monospace" }}>
         <AnimatedBackground />
+        <div className="absolute inset-0 pointer-events-none">
+          <div className="absolute top-20 right-32 w-64 h-64 bg-purple-600/20 blur-3xl rounded-full" />
+          <div className="absolute bottom-24 left-20 w-72 h-72 bg-pink-600/20 blur-3xl rounded-full" />
+        </div>
         <div className="max-w-7xl mx-auto relative z-10">
           <motion.h1 
             className="text-center text-4xl md:text-5xl font-extrabold mb-8 sm:mb-12 tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-purple-500 to-pink-500"

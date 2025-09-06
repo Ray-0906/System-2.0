@@ -16,10 +16,12 @@ import { addEquipments } from './addEqui.js';
 import skillRoutes from './Routes/skillRoutes.js'
 import equimentRoutes from './Routes/equimentRoutes.js'
 import { evaluateRankAscension } from './Controllers/equimentController.js';
+import sidequestRoutes from './Routes/sidequestRoutes.js';
 const app=express();
  
 
 // Middleware
+const isProd = process.env.NODE_ENV === 'production';
 app.use(cors({
     origin: `${process.env.CLIENT_URL}`,
     credentials: true,
@@ -28,15 +30,20 @@ app.use(cors({
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
+// When behind a proxy (e.g., Render), enable trust proxy for secure cookies
+if (isProd) {
+    app.set('trust proxy', 1);
+}
+
 app.use(session({
-  secret: 'keyboard cat', // Replace with real secret or env var
-  resave: false,
-  saveUninitialized: false,
-  cookie: {
-    httpOnly: true,
-    secure: true,           // ✅ ensures it's HTTPS-only
-    sameSite: "none"        // ✅ allows cross-origin (Vercel → Render)
-  }
+    secret: process.env.SESSION_SECRET || 'keyboard cat',
+    resave: false,
+    saveUninitialized: false,
+    cookie: {
+        httpOnly: true,
+        secure: isProd,
+        sameSite: isProd ? 'none' : 'lax'
+    }
 }));
 
 app.use(passport.initialize());
@@ -55,12 +62,13 @@ app.use('/quest',isAuthenticated,questRoutes);
 app.use('/tracker',isAuthenticated,trackerRoutes);
 app.use('/skill',isAuthenticated,skillRoutes);
 app.use('/inventory',isAuthenticated,equimentRoutes);
+app.use('/sidequest', isAuthenticated, sidequestRoutes);
 
 app.post('/set-cookie', (req, res) => {
     res.cookie('token', req.body.token, {
-        httpOnly: true,
-        secure: true, // Use true if your site is served over HTTPS
-        sameSite: 'none' // Allows cross-origin requests
+    httpOnly: true,
+    secure: isProd, // true over HTTPS in production
+    sameSite: isProd ? 'none' : 'lax'
     });
     res.status(200).send('Cookie set');
 });

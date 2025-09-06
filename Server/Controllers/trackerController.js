@@ -39,7 +39,6 @@ export const createTrackerForUser = async (userId, mission) => {
       userId,
       missionId: mission._id,
       currentQuests: questIds,
-      description: mission.description,
       remainingQuests: questIds,
       questCompletion,
       streak: 0,
@@ -48,10 +47,11 @@ export const createTrackerForUser = async (userId, mission) => {
       lastUpdated: new Date(),
       penaltiesApplied: [],
       rewardsClaimed: false,
+  completedDays: [],
 
       // Flattened mission fields
       title: mission.title,
-      description: mission.refinedDescription,
+  description: mission.description,
       duration: mission.duration,
       reward: mission.reward,
       penalty: mission.penalty,
@@ -122,7 +122,9 @@ export const dailyRefresh = async (req, res) => {
     if (!tracker) return res.status(404).json({ message: "Tracker not found" });
 
     let updatedStats = {};
+    let deleted = false;
     if (penaltyType === "missionFail") {
+      // Apply penalty first
       tracker.failed = true;
       const penalty = tracker.penalty.missionFail;
       updatedStats = await pentaltyEffects(
@@ -132,6 +134,16 @@ export const dailyRefresh = async (req, res) => {
         penalty.stats,
         penalty.coins
       );
+      // Auto delete mechanism: remove tracker entirely
+      await Tracker.deleteOne({ _id: trackerId });
+      // Remove tracker reference from user
+      await User.updateOne({ _id: userId }, { $pull: { trackers: trackerId } });
+      deleted = true;
+      return res.status(200).json({
+        message: "Tracker failed and deleted after inactivity.",
+        updatedStats,
+        deleted,
+      });
     } else if (penaltyType === "skip") {
       tracker.penaltiesApplied.push(new Date());
       tracker.failed = false;
@@ -145,15 +157,16 @@ export const dailyRefresh = async (req, res) => {
       );
     }
 
-    tracker.remainingQuests = tracker.currentQuests;
-    tracker.lastUpdated = new Date();
-
-    await tracker.save();
-
-    return res.status(200).json({
-      message: "Tracker refreshed successfully",
-      updatedStats,
-    });
+    if (!deleted) {
+      tracker.remainingQuests = tracker.currentQuests;
+      tracker.lastUpdated = new Date();
+      await tracker.save();
+      return res.status(200).json({
+        message: "Tracker refreshed successfully",
+        updatedStats,
+        deleted,
+      });
+    }
   } catch (err) {
     console.error("Daily Refresh Error:", err);
     return res.status(500).json({ message: "Internal Server Error" });
@@ -212,14 +225,16 @@ export const deleteMissionTracker = async (req, res) => {
     return res.status(400).json({ message: 'Invalid mission ID.' });
   }
 
-  const session = await mongoose.startSession();
+  const useTxn = process.env.MONGO_USE_TRANSACTIONS === 'true';
+  const session = useTxn ? await mongoose.startSession() : null;
 
   try {
-    session.startTransaction();
+    if (session && useTxn) session.startTransaction();
 
     // 2. Find the tracker, ensuring it belongs to the authenticated user
     // 🛡️ SECURITY: Added 'user: userId' to ensure the user owns this mission.
-    const tracker = await Tracker.findOne({ _id: id, userId: userId }).session(session);
+  const trackerQuery = Tracker.findOne({ _id: id, userId: userId });
+  const tracker = session ? await trackerQuery.session(session) : await trackerQuery;
 
     if (!tracker) {
       await session.abortTransaction();
@@ -230,29 +245,86 @@ export const deleteMissionTracker = async (req, res) => {
 
     // 3. Delete all associated quests from the Quest collection
     if (tracker.currentQuests && tracker.currentQuests.length > 0) {
-      await Quest.deleteMany({ _id: { $in: tracker.currentQuests } }).session(session);
+      if (session) {
+        await Quest.deleteMany({ _id: { $in: tracker.currentQuests } }).session(session);
+      } else {
+        await Quest.deleteMany({ _id: { $in: tracker.currentQuests } });
+      }
     }
     
     // 4. Pull the tracker ID from the user's `trackers` array
-    await User.updateOne(
-      { _id: userId },
-      { $pull: { trackers: id } }
-    ).session(session);
+    if (session) {
+      await User.updateOne(
+        { _id: userId },
+        { $pull: { trackers: id } }
+      ).session(session);
+    } else {
+      await User.updateOne(
+        { _id: userId },
+        { $pull: { trackers: id } }
+      );
+    }
 
     // 5. Delete the tracker document itself
-    await Tracker.deleteOne({ _id: id }).session(session);
+    if (session) {
+      await Tracker.deleteOne({ _id: id }).session(session);
+    } else {
+      await Tracker.deleteOne({ _id: id });
+    }
 
     // 6. Commit the transaction
-    await session.commitTransaction();
+    if (session && useTxn) await session.commitTransaction();
     
     res.status(200).json({ message: 'Mission deleted successfully.' });
 
   } catch (error) {
-    await session.abortTransaction();
+    if (session && useTxn) await session.abortTransaction();
     console.error('Error deleting mission:', error);
     res.status(500).json({ message: 'Server error while deleting mission.' });
 
   } finally {
-    session.endSession();
+    if (session) session.endSession();
+  }
+};
+
+/**
+ * Abandon (give up) a mission tracker early with a coin fee.
+ * Fee logic: If user has >=5 coins, deduct 5. Else deduct all remaining coins (0 left).
+ * Removes tracker, associated quests, and reference from user just like delete.
+ */
+export const abandonMissionTracker = async (req, res) => {
+  const { id } = req.params; // tracker id
+  const userId = req.user.id;
+
+  if (!mongoose.Types.ObjectId.isValid(id)) {
+    return res.status(400).json({ message: 'Invalid mission ID.' });
+  }
+
+  try {
+    const tracker = await Tracker.findOne({ _id: id, userId });
+    if (!tracker) {
+      return res.status(404).json({ message: 'Mission not found.' });
+    }
+
+    // Load user to apply abandon fee
+    const user = await User.findById(userId);
+    if (!user) return res.status(404).json({ message: 'User not found.' });
+
+    const originalCoins = user.coins || 0;
+    const fee = originalCoins >= 5 ? 5 : originalCoins; // all coins if less than 5
+    user.coins = originalCoins - fee;
+
+    // Clean up quests and tracker similar to delete operation
+    if (tracker.currentQuests && tracker.currentQuests.length > 0) {
+      await Quest.deleteMany({ _id: { $in: tracker.currentQuests } });
+    }
+    await User.updateOne({ _id: userId }, { $pull: { trackers: id } });
+    await Tracker.deleteOne({ _id: id });
+    await user.save();
+
+    return res.status(200).json({ message: 'Mission abandoned.', feeApplied: fee, remainingCoins: user.coins });
+  } catch (error) {
+    console.error('Error abandoning mission:', error);
+    return res.status(500).json({ message: 'Server error abandoning mission.' });
   }
 };

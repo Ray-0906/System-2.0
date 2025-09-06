@@ -8,6 +8,7 @@ import { handleTrackerRefresh } from './trackerUtils';
 
 export const useLoadUser = () => {
   const setUser = useUserStore((s) => s.setUser);
+  const setInitialized = useUserStore((s) => s.setInitialized);
   const setTrackers = useTrackerStore((s) => s.setTrackers);
   const updateTracker = useTrackerStore((s) => s.updateTracker);
 
@@ -22,16 +23,24 @@ export const useLoadUser = () => {
       //   setUser(JSON.parse(userInLocal));
       //   return;
       // }
-
-      const { data } = await fetchUser();
-      const user = data?.getUser;
-      if (user) {
-        setUser(user);
-        setTrackers(user.trackers || []);
-        for (const tracker of user.trackers || []) {
-          await handleTrackerRefresh(tracker, updateTracker);
+      try {
+        const { data } = await fetchUser();
+        const user = data?.getUser;
+        if (user) {
+          setUser(user);
+          setTrackers(user.trackers || []);
+          for (const tracker of user.trackers || []) {
+            await handleTrackerRefresh(tracker, updateTracker);
+          }
+          localStorage.setItem('user', JSON.stringify(user));
+        } else {
+          localStorage.removeItem('user');
         }
-        localStorage.setItem('user', JSON.stringify(user));
+      } catch (e) {
+        // Likely unauthorized; clear any stale data
+        localStorage.removeItem('user');
+      } finally {
+        setInitialized();
       }
     };
 

@@ -5,6 +5,7 @@ import axiosInstance from '../utils/axios';
 import { useTrackerStore } from '../store/trackerStore';
 import { processQuestResponse } from '../utils/processQuestres';
 import { useState, useEffect } from 'react';
+import { useUserStore } from '../store/userStore';
 import { theme } from './Ineventory';
 import MissionInfoPanel from '../components/MissionInfoPanel';
 import AuthLayout from '../components/AuthLayout';
@@ -164,7 +165,7 @@ const CountdownAndCalendar = ({ tracker }) => {
         <button
           onClick={() => setOpen(true)}
           className="text-xs uppercase tracking-wide px-3 py-1 rounded bg-gradient-to-r from-purple-600 to-pink-500 hover:from-purple-500 hover:to-pink-400 text-white shadow-md shadow-purple-600/30"
-        >View Calendar</button>
+        >View Streaks</button>
       </div>
       {open && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
@@ -221,13 +222,18 @@ const MissionDetails = () => {
 
 
   // ✨ NEW: Handle mission deletion
+  const updateCoin = useUserStore(s=>s.updateCoin);
+
   const handleDelete = async () => {
     setIsDeleting(true);
     try {
-      // Assuming a DELETE request to an endpoint like `/mission/{id}`
-      await axiosInstance.delete(`/tracker/${id}`);
-      deleteTracker(id); // Update local store
-      navigate('/missions'); // Redirect on success
+      // Call abandon endpoint (coin fee handled server-side)
+      const res = await axiosInstance.post(`/tracker/${id}/abandon`);
+      if(res?.data && res.data.remainingCoins !== undefined){
+        updateCoin(res.data.remainingCoins);
+      }
+      deleteTracker(id);
+      navigate('/missions');
     } catch (err) {
       console.error('Failed to delete mission:', err);
       // Optional: Add user feedback for the error
@@ -378,9 +384,13 @@ const MissionDetails = () => {
         onClose={() => setIsDeleteModalOpen(false)}
         onConfirm={handleDelete}
         isConfirming={isDeleting}
-        title="Confirm Mission Deletion"
+        title="Confirm Mission Abandon"
       >
-        <p>Are you sure you want to permanently delete this mission? This action cannot be undone and all progress will be lost.</p>
+        <p className="text-sm leading-relaxed">
+          Abandoning this mission will permanently remove all its quests & progress.
+          <br />Fee: <span className="text-yellow-300">Up to 5 coins</span> (5 if you have ≥5; otherwise all your remaining coins).
+          <br />No rewards or streak benefits are granted. This cannot be undone.
+        </p>
       </ConfirmationModal>
     </AuthLayout>
   );

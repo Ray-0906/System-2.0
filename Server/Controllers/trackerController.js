@@ -286,3 +286,45 @@ export const deleteMissionTracker = async (req, res) => {
     if (session) session.endSession();
   }
 };
+
+/**
+ * Abandon (give up) a mission tracker early with a coin fee.
+ * Fee logic: If user has >=5 coins, deduct 5. Else deduct all remaining coins (0 left).
+ * Removes tracker, associated quests, and reference from user just like delete.
+ */
+export const abandonMissionTracker = async (req, res) => {
+  const { id } = req.params; // tracker id
+  const userId = req.user.id;
+
+  if (!mongoose.Types.ObjectId.isValid(id)) {
+    return res.status(400).json({ message: 'Invalid mission ID.' });
+  }
+
+  try {
+    const tracker = await Tracker.findOne({ _id: id, userId });
+    if (!tracker) {
+      return res.status(404).json({ message: 'Mission not found.' });
+    }
+
+    // Load user to apply abandon fee
+    const user = await User.findById(userId);
+    if (!user) return res.status(404).json({ message: 'User not found.' });
+
+    const originalCoins = user.coins || 0;
+    const fee = originalCoins >= 5 ? 5 : originalCoins; // all coins if less than 5
+    user.coins = originalCoins - fee;
+
+    // Clean up quests and tracker similar to delete operation
+    if (tracker.currentQuests && tracker.currentQuests.length > 0) {
+      await Quest.deleteMany({ _id: { $in: tracker.currentQuests } });
+    }
+    await User.updateOne({ _id: userId }, { $pull: { trackers: id } });
+    await Tracker.deleteOne({ _id: id });
+    await user.save();
+
+    return res.status(200).json({ message: 'Mission abandoned.', feeApplied: fee, remainingCoins: user.coins });
+  } catch (error) {
+    console.error('Error abandoning mission:', error);
+    return res.status(500).json({ message: 'Server error abandoning mission.' });
+  }
+};

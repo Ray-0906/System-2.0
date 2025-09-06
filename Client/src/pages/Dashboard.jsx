@@ -208,6 +208,9 @@ const StatsDisplay = ({ user, stats }) => {
                 <span className="text-sm text-yellow-400">Lv. {stat.level}</span>
               </div>
               <ProgressBar value={stat.value} max={statLevelThresholds[stat.level] || 500} />
+              <div className="text-right text-[10px] sm:text-xs text-purple-300 mt-1 tracking-wide">
+                {stat.value} / {statLevelThresholds[stat.level] || 0} XP
+              </div>
             </div>
           ))}
         </div>

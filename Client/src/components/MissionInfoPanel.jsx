@@ -50,6 +50,7 @@ const sectionsBase = [
         <li><strong>Skip</strong>: Intentionally end a day early – lose the listed coins / stat points, streak stays but no gain.</li>
         <li><strong>Fail</strong>: Let the day expire with remaining quests – heavier coin & stat penalties and streak impact.</li>
         <li>Repeated failures reduce efficiency toward rank ascension.</li>
+  <li><strong>Abandon</strong>: Manually delete a mission early. Costs up to 5 coins (5 if you have ≥5; otherwise all remaining coins). No rewards granted.</li>
       </ul>
     )
   },

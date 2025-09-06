@@ -98,6 +98,21 @@ export const resolvers = {
         await user.save();
       }
       return sq; // client can refetch user to show updated stats
+    },
+    updateProfile: async (_,{ activeTitle, avatar }, { user }) => {
+      if(!user) throw new Error('Unauthorized');
+      const doc = await User.findById(user._id);
+      if(activeTitle){
+        if(!doc.titles.includes(activeTitle)) throw new Error('Title not unlocked');
+        doc.activeTitle = activeTitle;
+        // ensure ordering (active first)
+        doc.titles = [activeTitle, ...doc.titles.filter(t=>t!==activeTitle)];
+      }
+      if(avatar){
+        doc.avatar = avatar;
+      }
+      await doc.save();
+      return doc;
     }
   },
   User: {

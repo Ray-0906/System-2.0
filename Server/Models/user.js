@@ -32,6 +32,7 @@ const userSchema = new mongoose.Schema({
   coins: { type: Number, default: 0 },
   totalMission: { type: Number, default: 0 },
   titles: [String],
+  activeTitle: { type: String },
   achievements: [String],
   skills: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Skill' }],
   equiments: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Equipment' }],
@@ -39,6 +40,7 @@ const userSchema = new mongoose.Schema({
   trackers: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Tracker' }],
   completed_trackers: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Tracker' }],
   sidequests: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Sidequest' }]
+  ,avatar: { type: String }
 });
 
 export const User = mongoose.model('User', userSchema);

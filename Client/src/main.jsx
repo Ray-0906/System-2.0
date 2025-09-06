@@ -25,6 +25,7 @@ const AddCustomMission = lazy(() => import('./pages/addCustomMission.jsx'));
 const DemoDash = lazy(() => import('./pages/DemoDash.jsx'));
 const AscensionTrial = lazy(() => import('./pages/Ascension.jsx'));
 const Leaderboard = lazy(() => import('./pages/Leaderboard.jsx'));
+const Sidequests = lazy(() => import('./pages/Sidequests.jsx'));
 
 // Define routes using `createBrowserRouter`
 const router = createBrowserRouter([
@@ -52,6 +53,7 @@ const router = createBrowserRouter([
           { path: '/inventory', element: <Inventory /> },
           { path: '/leaderboard', element: <Leaderboard /> },
           { path: '/missions', element: <ActiveMissions /> },
+          { path: '/sidequests', element: <Sidequests /> },
           { path: '/add-mission', element: <AddMission /> },
           { path: '/add-custom', element: <AddCustomMission /> },
           { path: '/missions/:id', element: <MissionDetails /> },

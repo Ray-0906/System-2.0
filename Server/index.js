@@ -16,6 +16,7 @@ import { addEquipments } from './addEqui.js';
 import skillRoutes from './Routes/skillRoutes.js'
 import equimentRoutes from './Routes/equimentRoutes.js'
 import { evaluateRankAscension } from './Controllers/equimentController.js';
+import sidequestRoutes from './Routes/sidequestRoutes.js';
 const app=express();
  
 
@@ -61,6 +62,7 @@ app.use('/quest',isAuthenticated,questRoutes);
 app.use('/tracker',isAuthenticated,trackerRoutes);
 app.use('/skill',isAuthenticated,skillRoutes);
 app.use('/inventory',isAuthenticated,equimentRoutes);
+app.use('/sidequest', isAuthenticated, sidequestRoutes);
 
 app.post('/set-cookie', (req, res) => {
     res.cookie('token', req.body.token, {

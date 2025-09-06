@@ -6,6 +6,7 @@ import { useTrackerStore } from '../store/trackerStore';
 import { processQuestResponse } from '../utils/processQuestres';
 import { useState, useEffect } from 'react';
 import { theme } from './Ineventory';
+import MissionInfoPanel from '../components/MissionInfoPanel';
 import AuthLayout from '../components/AuthLayout';
 import SoloLoading from '../components/Loading';
 
@@ -317,6 +318,7 @@ const MissionDetails = () => {
               <CountdownAndCalendar tracker={tracker} />
             </div>
 
+
             {tracker.streak >= 5 && (
               <div className="mb-6">
                 <button
@@ -359,6 +361,11 @@ const MissionDetails = () => {
               ) : (
                 <p className="text-purple-500 text-center">No quests available for this mission.</p>
               )}
+            </div>
+
+            {/* Guidance Panel (bottom) */}
+            <div className="mt-10">
+              <MissionInfoPanel sections={['penalties','rewards','calendar-reset','streak-upgrade']} title="Mission Rules & Tips" />
             </div>
             
           </div>

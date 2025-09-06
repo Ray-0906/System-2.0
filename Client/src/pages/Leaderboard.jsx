@@ -28,7 +28,11 @@ export default function Leaderboard() {
   };
 
   return (
-    <div className="min-h-screen p-6 text-white" style={{ fontFamily: "'Rajdhani','Orbitron',monospace" }}>
+    <div className="min-h-screen p-6 text-white bg-gradient-to-br from-gray-950 via-black to-gray-900 relative overflow-hidden" style={{ fontFamily: "'Rajdhani','Orbitron',monospace" }}>
+      <div className="absolute inset-0 pointer-events-none">
+        <div className="absolute top-20 right-32 w-64 h-64 bg-purple-600/20 blur-3xl rounded-full" />
+        <div className="absolute bottom-24 left-20 w-72 h-72 bg-pink-600/20 blur-3xl rounded-full" />
+      </div>
       <h1 className="text-4xl font-extrabold text-center mb-8 bg-clip-text text-transparent bg-gradient-to-r from-purple-500 to-pink-500 drop-shadow">LEADERBOARD</h1>
       <div className="max-w-5xl mx-auto bg-black/40 backdrop-blur-sm rounded-xl border border-purple-500/30 shadow-lg p-4 md:p-6">
         <div className="flex flex-wrap gap-3 justify-center mb-4">

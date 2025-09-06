@@ -1,5 +1,6 @@
 import { useEffect, useState, memo } from 'react';
 import { Shield, Flame, Star, Skull, Crown, Trophy, Target } from 'lucide-react';
+import MissionInfoPanel from '../components/MissionInfoPanel';
 import { useTrackerStore } from '../store/trackerStore';
 import { Link } from 'react-router-dom';
 import AuthLayout from '../components/AuthLayout';
@@ -297,7 +298,11 @@ const ActiveMissions = () => {
 
   return (
     <><AuthLayout>
-    <div className={`min-h-screen ${theme.colors.background} text-white p-6`}>
+    <div className={`min-h-screen text-white p-6 bg-gradient-to-br from-gray-950 via-black to-gray-900 relative overflow-hidden`}>
+      <div className="absolute inset-0 pointer-events-none">
+        <div className="absolute top-20 right-32 w-64 h-64 bg-purple-600/20 blur-3xl rounded-full" />
+        <div className="absolute bottom-24 left-20 w-72 h-72 bg-pink-600/20 blur-3xl rounded-full" />
+      </div>
       <style>{styles}</style>
       
       {/* Background ambient effects */}
@@ -306,7 +311,7 @@ const ActiveMissions = () => {
         <div className="absolute bottom-20 left-20 w-64 h-64 bg-pink-500/10 rounded-full blur-3xl animate-pulse" />
       </div>
 
-      <div className="relative z-10 max-w-6xl mx-auto">
+  <div className="relative z-10 max-w-6xl mx-auto">
         {/* Enhanced Header */}
         <div className="text-center mb-12">
           <h1
@@ -324,7 +329,9 @@ const ActiveMissions = () => {
           </p>
         </div>
 
-        {/* Improved Mission Grid */}
+  {/* Rules / Guidance */}
+  <div className="mb-10"><MissionInfoPanel context="active" /></div>
+  {/* Improved Mission Grid */}
         {trackers.length === 0 ? (
           <div className="text-center py-20">
             <p

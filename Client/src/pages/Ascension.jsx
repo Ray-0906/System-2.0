@@ -4,6 +4,7 @@ import { ArrowLeft, TrendingUp, BadgeCheck, Award, Activity, Zap, Target, BarCha
 import { useNavigate } from 'react-router-dom';
 import React from 'react';
 import AuthLayout from '../components/AuthLayout';
+import MissionInfoPanel from '../components/MissionInfoPanel';
 import SoloLoading from '../components/Loading';
 import * as echarts from 'echarts';
 
@@ -206,13 +207,18 @@ const AscensionTrial = () => {
     <ErrorBoundary>
       <AuthLayout>
         <style>{styles}</style>
-        <div className={`min-h-screen ${theme.colors.background} px-8 py-10 text-white`} style={{ fontFamily: theme.fonts.primary }}>
+        <div className="min-h-screen bg-gradient-to-br from-gray-950 via-black to-gray-900 px-8 py-10 text-white relative overflow-hidden" style={{ fontFamily: theme.fonts.primary }}>
+          <div className="absolute inset-0 pointer-events-none">
+            <div className="absolute top-20 right-32 w-64 h-64 bg-purple-600/20 blur-3xl rounded-full" />
+            <div className="absolute bottom-24 left-20 w-72 h-72 bg-pink-600/20 blur-3xl rounded-full" />
+          </div>
           <div className="max-w-screen-lg mx-auto space-y-8">
             <button onClick={() => navigate(-1)} className={`${theme.colors.accent} hover:text-purple-300 flex items-center mb-4 transition-colors duration-300 hover-glow`} aria-label="Go back">
               <ArrowLeft className="w-5 h-5 mr-2" /> Back
             </button>
             <h1 className="text-3xl font-bold tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-pink-500 mb-4 flex items-center gap-3 drop-shadow-[0_0_8px_rgba(139,92,246,0.6)]"><BadgeCheck className="w-7 h-7 text-purple-400" /> Ascension Trial Results</h1>
             {mainBody}
+            <div className="mt-10"><MissionInfoPanel sections={['rank-ascension','streak-upgrade','rewards','penalties']} title="Ascension Factors & Rules" /></div>
           </div>
         </div>
       </AuthLayout>

@@ -6,6 +6,7 @@ import { useNotificationStore } from '../store/notificationStore';
 import PropTypes from 'prop-types';
 import debounce from 'lodash/debounce';
 import AuthLayout from '../components/AuthLayout';
+import MissionInfoPanel from '../components/MissionInfoPanel';
 
 // Centralized theme constants
 const theme = {
@@ -317,9 +318,13 @@ const AddCustomMission = () => {
 
   return (
     <><AuthLayout>
-    <div className={`min-h-screen ${theme.colors.background} flex items-center justify-center p-6`}>
+    <div className="min-h-screen bg-gradient-to-br from-gray-950 via-black to-gray-900 flex items-center justify-center p-6 relative overflow-hidden">
+      <div className="absolute inset-0 pointer-events-none">
+        <div className="absolute top-20 right-32 w-64 h-64 bg-purple-600/20 blur-3xl rounded-full" />
+        <div className="absolute bottom-24 left-20 w-72 h-72 bg-pink-600/20 blur-3xl rounded-full" />
+      </div>
       <style>{styles}</style>
-      <div className="w-full max-w-xl space-y-6">
+  <div className="w-full max-w-xl space-y-6 relative z-10">
         <div className="text-center mb-6">
           <h1
             className={`${theme.colors.title} text-4xl font-bold mb-2 text-glow`}
@@ -342,7 +347,7 @@ const AddCustomMission = () => {
           </Link>
         </div>
 
-        {message && <Alert message={message} onDismiss={handleDismiss} />}
+  {message && <Alert message={message} onDismiss={handleDismiss} />}
         {!missionResult ? (
           <CustomMissionForm
             tasks={tasks}
@@ -361,6 +366,9 @@ const AddCustomMission = () => {
             isProcessing={isProcessing}
           />
         )}
+        <div className="pt-8">
+          <MissionInfoPanel sections={['ai-vs-custom','rewards','penalties','streak-upgrade']} title="Custom Mission Guidance" />
+        </div>
       </div>
     </div></AuthLayout></>
   );

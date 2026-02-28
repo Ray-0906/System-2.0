@@ -118,7 +118,13 @@ export const dailyRefresh = async (req, res) => {
   console.log("Daily Refresh Request:", { trackerId, penaltyType });
 
   try {
-    const tracker = await Tracker.findById(trackerId);
+    // Bug G fix: Guard against null/undefined penaltyType
+    if (!penaltyType) {
+      return res.status(400).json({ message: "Missing penaltyType" });
+    }
+
+    // Bug A fix: Add ownership check
+    const tracker = await Tracker.findOne({ _id: trackerId, userId });
     if (!tracker) return res.status(404).json({ message: "Tracker not found" });
 
     let updatedStats = {};
@@ -127,7 +133,7 @@ export const dailyRefresh = async (req, res) => {
       // Apply penalty first
       tracker.failed = true;
       const penalty = tracker.penalty.missionFail;
-      updatedStats = await pentaltyEffects(
+      updatedStats = await penaltyEffects(
         penaltyType,
         trackerId,
         userId,
@@ -136,8 +142,7 @@ export const dailyRefresh = async (req, res) => {
       );
       // Auto delete mechanism: remove tracker entirely
       await Tracker.deleteOne({ _id: trackerId });
-      // Remove tracker reference from user
-      await User.updateOne({ _id: userId }, { $pull: { trackers: trackerId } });
+      // Bug C fix: Removed redundant User.updateOne $pull — penaltyEffects already handles it
       deleted = true;
       return res.status(200).json({
         message: "Tracker failed and deleted after inactivity.",
@@ -147,8 +152,10 @@ export const dailyRefresh = async (req, res) => {
     } else if (penaltyType === "skip") {
       tracker.penaltiesApplied.push(new Date());
       tracker.failed = false;
+      // Bug D fix: Reset streak to 0 on skip
+      tracker.streak = 0;
       const penalty = tracker.penalty.skip;
-      updatedStats = await pentaltyEffects(
+      updatedStats = await penaltyEffects(
         penaltyType,
         trackerId,
         userId,
@@ -174,20 +181,26 @@ export const dailyRefresh = async (req, res) => {
 };
 
 
-const pentaltyEffects = async (penaltyType, trackerId, userId, xp, coin) => {
+// Bug B fix: Renamed params from (xp, coin) to (statPenalty, coinPenalty)
+// Also fixed function name typo: pentaltyEffects → penaltyEffects
+const penaltyEffects = async (penaltyType, trackerId, userId, statPenalty, coinPenalty) => {
   const user = await User.findById(userId);
   if (!user) {
     console.log("User Not found");
     return;
   }
 
-  let lv = user.level;
-  let ucoin = Math.max(0, user.coins - coin);
-  let uxp = user.xp - xp;
+  // Deduct coins (clamped to 0)
+  let ucoin = Math.max(0, user.coins - coinPenalty);
 
+  // Deduct XP based on stat penalty value
+  let lv = user.level;
+  let uxp = user.xp - statPenalty;
+
+  // Bug E fix: Add threshold BEFORE decrementing level
   while (uxp < 0 && lv > 1) {
-    lv--;
-    uxp += userLevelThresholds[lv];
+    uxp += userLevelThresholds[lv]; // add back current level's threshold
+    lv--;                            // then drop the level
   }
   uxp = Math.max(0, uxp);
 

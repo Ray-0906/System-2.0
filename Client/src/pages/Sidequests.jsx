@@ -1,10 +1,11 @@
-import { useQuery, useMutation } from '@apollo/client';
+import { useQuery } from '@apollo/client';
 import { useState, useMemo } from 'react';
 import MissionInfoPanel from '../components/MissionInfoPanel';
 import AuthLayout from '../components/AuthLayout';
-import { GET_SIDEQUESTS, CREATE_SIDEQUEST, COMPLETE_SIDEQUEST, GET_USER } from '../graphql/query';
+import { GET_SIDEQUESTS, GET_USER } from '../graphql/query';
 import { useNotificationStore } from '../store/notificationStore';
 import { useUserStore } from '../store/userStore';
+import axiosInstance from '../utils/axios';
 
 const difficultyColors = {
   trivial: 'bg-gray-600/30 text-gray-200 border-gray-400/40',
@@ -52,9 +53,6 @@ function SidequestCard({ sq, onComplete }) {
 
 export default function Sidequests() {
   const { data, loading, refetch } = useQuery(GET_SIDEQUESTS, { variables: { status: 'pending' }, fetchPolicy: 'cache-and-network' });
-  const [ refetchUser ] = useMutation(COMPLETE_SIDEQUEST); // placeholder to keep structure (we'll refetch with useQuery below if needed)
-  const [createSidequest] = useMutation(CREATE_SIDEQUEST);
-  const [completeSidequest] = useMutation(COMPLETE_SIDEQUEST);
   const push = useNotificationStore(s => s.push);
   const user = useUserStore(s => s.user);
   const updateXP = useUserStore(s => s.updateXP);
@@ -72,25 +70,28 @@ export default function Sidequests() {
   async function handleCreate(e) {
     e.preventDefault();
     if(!form.title.trim()) return;
-    await createSidequest({ variables: { input: { ...form, deadline: form.deadline || null } }, onCompleted: () => { setModalOpen(false); setForm({ title:'', description:'', deadline:'', hintEffort:'' }); refetch(); } });
+    try {
+      await axiosInstance.post('/sidequest', { ...form, deadline: form.deadline || null });
+      setModalOpen(false);
+      setForm({ title:'', description:'', deadline:'', hintEffort:'' });
+      refetch();
+    } catch(err) {
+      console.error('Create sidequest error:', err);
+    }
   }
 
   async function handleComplete(id) {
-    await completeSidequest({ variables: { id }, onCompleted: (res) => {
+    try {
+      const { data: result } = await axiosInstance.post(`/sidequest/${id}/complete`);
       refetch();
-      if(sq){
-        // XP notification
-        push({ type: 'xp', delta: sq.evaluated?.xp || 0, newValue: (user?.xp||0) + (sq.evaluated?.xp||0) });
-        // Coins notification
-        push({ type: 'coins', delta: sq.evaluated?.coins || 0, newValue: (user?.coins||0) + (sq.evaluated?.coins||0) });
-        // Stat notification
-        push({ type: 'stat', key: (sq.evaluated?.stat || 'stat').toUpperCase(), delta: gain, newValue: (user?.stats?.[sq.evaluated?.stat]?.value || 0) + gain });
-      }
-      // Optimistic local augmentation if we have evaluated values in cache
+      // Optimistic local augmentation
       const sq = sidequests.find(s => s.id === id);
       const incMap = { trivial:0, easy:1, medium:2, hard:3 };
       if(sq && user){
         const gain = incMap[sq.evaluated?.difficulty] ?? 1;
+        push({ type: 'xp', delta: sq.evaluated?.xp || 0, newValue: (user?.xp||0) + (sq.evaluated?.xp||0) });
+        push({ type: 'coins', delta: sq.evaluated?.coins || 0, newValue: (user?.coins||0) + (sq.evaluated?.coins||0) });
+        push({ type: 'stat', key: (sq.evaluated?.stat || 'stat').toUpperCase(), delta: gain, newValue: (user?.stats?.[sq.evaluated?.stat]?.value || 0) + gain });
         updateXP((user.xp||0) + (sq.evaluated?.xp||0));
         updateCoin((user.coins||0) + (sq.evaluated?.coins||0));
         const statKey = sq.evaluated?.stat;
@@ -99,9 +100,9 @@ export default function Sidequests() {
           updateStats(statKey, current.value + gain, current.level);
         }
       }
-      // Optionally refetch pending list to remove completed sidequest
-      refetch();
-    }});
+    } catch(err) {
+      console.error('Complete sidequest error:', err);
+    }
   }
 
   return (

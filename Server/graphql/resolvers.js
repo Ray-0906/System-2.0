@@ -6,8 +6,7 @@ import { Quest } from "../Models/quest.js";
 import { Skill } from "../Models/skill.js";
 import { Equiment } from "../Models/inventory.js";
 import { Sidequest } from "../Models/sidequests.js";
-import { _test_evaluateSidequest as evaluateSidequest } from "../Controllers/sidequestController.js";
-import { statLevelThresholds, userLevelThresholds } from '../libs/levelling.js';
+
 
 export const resolvers = {
   JSON: GraphQLJSON,
@@ -60,61 +59,10 @@ export const resolvers = {
       return list;
     }
   },
-  Mutation: {
-    createSidequest: async (_,{ input }, { user }) => {
-      if(!user) throw new Error('Unauthorized');
-      const { title, description, deadline, hintEffort } = input;
-      const evaluated = await evaluateSidequest({ title, description, hintEffort });
-      const doc = await Sidequest.create({ title, description, userId: user._id, deadline: deadline? new Date(deadline): null, evaluated });
-      return doc;
-    },
-    completeSidequest: async (_,{ id }, { user }) => {
-      if(!user) throw new Error('Unauthorized');
-      const sq = await Sidequest.findOne({ _id: id, userId: user._id });
-      if(!sq) throw new Error('Not found');
-      if(sq.status !== 'completed') {
-        sq.status='completed';
-        sq.completedAt = new Date();
-        await sq.save();
-        // reward user
-        const incMap = { trivial:0, easy:1, medium:2, hard:3 };
-        user.xp = (user.xp||0) + sq.evaluated.xp;
-        user.coins = (user.coins||0) + sq.evaluated.coins;
-        if(user.stats && user.stats[sq.evaluated.stat]){
-          user.stats[sq.evaluated.stat].value += (incMap[sq.evaluated.difficulty] ?? 1);
-          // stat level ups
-          while(true){
-            const st = user.stats[sq.evaluated.stat];
-            const next = st.level + 1;
-            const need = statLevelThresholds[next];
-            if(need && st.value >= need) st.level = next; else break;
-          }
-        }
-        while(true){
-          const next = user.level + 1;
-          const need = userLevelThresholds[next];
-          if(need && user.xp >= need) user.level = next; else break;
-        }
-        await user.save();
-      }
-      return sq; // client can refetch user to show updated stats
-    },
-    updateProfile: async (_,{ activeTitle, avatar }, { user }) => {
-      if(!user) throw new Error('Unauthorized');
-      const doc = await User.findById(user._id);
-      if(activeTitle){
-        if(!doc.titles.includes(activeTitle)) throw new Error('Title not unlocked');
-        doc.activeTitle = activeTitle;
-        // ensure ordering (active first)
-        doc.titles = [activeTitle, ...doc.titles.filter(t=>t!==activeTitle)];
-      }
-      if(avatar){
-        doc.avatar = avatar;
-      }
-      await doc.save();
-      return doc;
-    }
-  },
+  // Mutations removed — migrated to REST endpoints:
+  // createSidequest   → POST /sidequest
+  // completeSidequest → POST /sidequest/:id/complete
+  // updateProfile     → PUT /user/profile
   User: {
     trackers: async (parent) => {
       // parent.trackers is an array of ObjectId

@@ -7,9 +7,7 @@ import client from './utils/apollo.js';
 import { createBrowserRouter, RouterProvider } from 'react-router-dom';
 import App from './App.jsx';
 import ProtectedRoute from './components/ProtectedRoute.jsx';
-import OAuthSuccess from './components/OathSuccess.jsx';
 import HomePage from './pages/Home.jsx';
-import OAuthTransfer from './pages/SetCookie.jsx';
 
 
 // Lazy load pages
@@ -39,8 +37,6 @@ const router = createBrowserRouter([
           { path: '/login', element: <Login /> },
           { path: '/', element: <HomePage /> },
           { path: '/signup', element: <Signup /> },
-          { path: '/oauth-success', element: <OAuthSuccess /> },
-          { path: '/oauth-transfer', element: <OAuthTransfer /> },
         ]
       },
       {

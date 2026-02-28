@@ -159,17 +159,4 @@ export const typeDefs = gql`
   leaderboard(limit: Int = 20, sortBy: String = "xp"): [User]
   getSidequests(status: String): [Sidequest]
   }
-
-  input CreateSidequestInput {
-    title: String!
-    description: String
-    deadline: String
-    hintEffort: String
-  }
-
-  type Mutation {
-    createSidequest(input: CreateSidequestInput!): Sidequest
-    completeSidequest(id: ID!): Sidequest
-  updateProfile(activeTitle: String, avatar: String): User
-  }
 `;

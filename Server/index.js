@@ -1,13 +1,10 @@
 import express from 'express';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
-import { conectDB } from './config/db.js';
+import { connectDB } from './config/db.js';
 import missionRoutes from './Routes/missionRoutes.js';
 import authRoutes from './Routes/authRoutes.js';
-import passport from 'passport';
-import session from 'express-session';
 import { isAuthenticated } from './Middlewares/authMiddleware.js';
-import './config/passport.js'
 import { startGraphQLServer } from './graphql/index.js';
 import questRoutes from './Routes/questRoute.js'
 import trackerRoutes from './Routes/trackerRoutes.js';
@@ -18,6 +15,7 @@ import equimentRoutes from './Routes/equimentRoutes.js'
 import { evaluateRankAscension } from './Controllers/equimentController.js';
 import sidequestRoutes from './Routes/sidequestRoutes.js';
 import titleRoutes from './Routes/titleRoutes.js';
+import userRoutes from './Routes/userRoutes.js';
 const app=express();
  
 
@@ -27,7 +25,7 @@ app.use(cors({
     origin: `${process.env.CLIENT_URL}`,
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE'],
-}));;
+}));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
@@ -35,21 +33,6 @@ app.use(cookieParser());
 if (isProd) {
     app.set('trust proxy', 1);
 }
-
-app.use(session({
-    secret: process.env.SESSION_SECRET || 'keyboard cat',
-    resave: false,
-    saveUninitialized: false,
-    cookie: {
-        httpOnly: true,
-        secure: isProd,
-        sameSite: isProd ? 'none' : 'lax'
-    }
-}));
-
-app.use(passport.initialize());
-app.use(passport.session());
-
 
 
 //routes
@@ -65,15 +48,7 @@ app.use('/skill',isAuthenticated,skillRoutes);
 app.use('/inventory',isAuthenticated,equimentRoutes);
 app.use('/sidequest', isAuthenticated, sidequestRoutes);
 app.use('/titles', isAuthenticated, titleRoutes);
-
-app.post('/set-cookie', (req, res) => {
-    res.cookie('token', req.body.token, {
-    httpOnly: true,
-    secure: isProd, // true over HTTPS in production
-    sameSite: isProd ? 'none' : 'lax'
-    });
-    res.status(200).send('Cookie set');
-});
+app.use('/user', isAuthenticated, userRoutes);
 
 // GraphQL server
 startGraphQLServer(app).catch(err => {
@@ -81,7 +56,7 @@ startGraphQLServer(app).catch(err => {
 });
 
 app.listen(3000, () => {
-    conectDB();
+    connectDB();
     // addEquipments();
     // addSkills();
     console.log('Server is running on port 3000');

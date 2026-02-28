@@ -5,6 +5,8 @@ import { yupResolver } from "@hookform/resolvers/yup";
 import * as Yup from "yup";
 import axios from "../utils/axios";
 import SoloLoading from "../components/Loading";
+import { useGoogleLogin } from '@react-oauth/google';
+import { useUserStore } from '../store/userStore';
 
 const validationSchema = Yup.object().shape({
   username: Yup.string()
@@ -87,11 +89,14 @@ const Signup = () => {
       const response = await axios.post("/auth/register", data, {
         timeout: 10000,
       });
-      if (response.data.redirectUrl) {
-        navigate(response.data.redirectUrl);
-      } else {
-        navigate("/oauth-success");
+      // Set user directly from response and mark as initialized
+      const { user } = response.data;
+      if (user) {
+        useUserStore.getState().setUser(user);
+        localStorage.setItem('user', JSON.stringify(user));
       }
+      useUserStore.getState().triggerRefetch();
+      navigate('/dashboard');
     } catch (err) {
       const errorMessage =
         err.response?.data?.message ||
@@ -104,10 +109,29 @@ const Signup = () => {
     }
   };
 
-  const handleGoogleLogin = () => {
-    const serverUrl = import.meta.env.VITE_SERVER_URL || "https://api.example.com";
-    window.location.assign(`${serverUrl}/auth/google`);
-  };
+  const handleGoogleLogin = useGoogleLogin({
+    onSuccess: async (tokenResponse) => {
+      setLoading(true);
+      setError("");
+      try {
+        const { data } = await axios.post('/auth/google', {
+          credential: tokenResponse.access_token,
+        });
+        // Set user directly from Google auth response and mark as initialized
+        if (data.user) {
+          useUserStore.getState().setUser(data.user);
+          localStorage.setItem('user', JSON.stringify(data.user));
+        }
+        useUserStore.getState().triggerRefetch();
+        navigate('/dashboard');
+      } catch (err) {
+        setError('Google signup failed. Please try again.');
+      } finally {
+        setLoading(false);
+      }
+    },
+    onError: () => setError('Google signup was cancelled.'),
+  });
 
   return (
     <div className="relative min-h-screen bg-gradient-to-br from-[#0a0a0a] via-[#1a1a2e] to-[#16213e] overflow-hidden text-white">

@@ -3,9 +3,11 @@ import { create } from "zustand";
 export const useUserStore = create((set) => ({
   user: null,
   initialized: false,
+  fetchVersion: 0,
   setUser: (userData) => set({ user: userData }),
   setInitialized: () => set({ initialized: true }),
-  reset: () => set({ user: null }),
+  reset: () => set({ user: null, initialized: false, fetchVersion: 0 }),
+  triggerRefetch: () => set((s) => ({ initialized: false, fetchVersion: s.fetchVersion + 1 })),
   updateStats: (stat, value, level) =>
     set((state) => {
       if (!state.user) return {};

@@ -275,11 +275,10 @@ const Dashboard = () => {
       try{
         const body = { activeTitle: pendingTitle };
         if(tempAvatar) body.avatar = tempAvatar;
-    const endpoint = import.meta.env.VITE_SERVER_URL ? `${import.meta.env.VITE_SERVER_URL}/graphql` : '/graphql';
-    const res = await fetch(endpoint,{ method:'POST', headers:{'Content-Type':'application/json'}, credentials:'include', body: JSON.stringify({ query:`mutation Update($activeTitle:String, $avatar:String){ updateProfile(activeTitle:$activeTitle, avatar:$avatar){ username activeTitle titles avatar coins level xp rank } }`, variables: body })});
+    const res = await fetch(`${import.meta.env.VITE_SERVER_URL || ''}/user/profile`,{ method:'PUT', headers:{'Content-Type':'application/json'}, credentials:'include', body: JSON.stringify(body) });
         const out = await res.json();
-        if(out.data?.updateProfile){
-          setUser({ ...user, ...out.data.updateProfile });
+        if(out.user){
+          setUser({ ...user, ...out.user });
           setEditing(false);
         }
       }catch(e){ console.error(e);} }

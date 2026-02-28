@@ -3,6 +3,7 @@ import axiosInstance from './axios';
 import { processPenaltyResponse } from './processQuestres';
 import { useTrackerStore } from '../store/trackerStore';
 import { useNotificationStore } from '../store/notificationStore';
+import { useUserStore } from '../store/userStore';
 
 /**
  * Refreshes a tracker's state if it's outdated, applies penalties, and updates the backend.
@@ -21,7 +22,6 @@ export const handleTrackerRefresh = async (tracker, updateTrackerInStore) => {
     ? new Date(isNaN(tracker.lastCompleted) ? tracker.lastCompleted : Number(tracker.lastCompleted))
     : null;
 
-  let delxp=0;
 
   // Ensure lastUpdated is a valid Date before proceeding
   if (lastUpdated && isNaN(lastUpdated.getTime())) {
@@ -48,14 +48,9 @@ export const handleTrackerRefresh = async (tracker, updateTrackerInStore) => {
     if (missedDays >= 7) {
       penaltyType = 'missionFail';
       updatedTracker.failed = true;
-      delxp=tracker.penalty['missionFail'].stats;
-    //notification push for mission failed in queue
 
     } else if (missedDays > 0) {
       penaltyType = 'skip';
-       delxp=tracker.penalty['skip'].stats;
-      //notification push for failed to maintain streak in queue
-      // streak-00
     }
   } else if (!lastCompleted && !isCompletedYesterday) {
     // Handle case where lastCompleted is null (new tracker)
@@ -70,8 +65,10 @@ export const handleTrackerRefresh = async (tracker, updateTrackerInStore) => {
       penaltyType,
     });
     console.log('Daily refresh response:', data);
-   // Pass negative delta to show penalty reduction
-   processPenaltyResponse(data.updatedStats, -delxp);
+   // Bug F fix: compute actual XP delta from server response instead of pre-computing
+   const user = useUserStore.getState().user;
+   const actualXpDelta = (data.updatedStats?.xp ?? user?.xp ?? 0) - (user?.xp ?? 0);
+   processPenaltyResponse(data.updatedStats, actualXpDelta);
     if (data.deleted) {
       const deleteTracker = useTrackerStore.getState().deleteTracker;
       const push = useNotificationStore.getState().push;

@@ -1,4 +1,5 @@
 import { User } from "../Models/user.js";
+import { Equiment } from "../Models/inventory.js";
 
 
 import { Skill } from "../Models/skill.js";
@@ -6,24 +7,34 @@ import { Tracker } from "../Models/tracker.js";
 
 export const buyEquipment = async(req, res) => {
   try {
-    const { equipmentId ,price} = req.body;
-    const userId = req.user._id; // Assuming user ID is available in req.user   
-    if (!equipmentId || !price) {
-      return res.status(400).json({ error: 'Equipment ID and price are required.' });
+    const { equipmentId } = req.body;
+    const userId = req.user._id;
+    if (!equipmentId) {
+      return res.status(400).json({ error: 'Equipment ID is required.' });
     }
-    // Find the user
+
+    // Server-side price lookup (don't trust client)
+    const equipment = await Equiment.findById(equipmentId);
+    if (!equipment) {
+      return res.status(404).json({ error: 'Equipment not found.' });
+    }
+
     const user = await User.findById(userId);
     if (!user) {    
         return res.status(404).json({ error: 'User not found.' });
     }
 
-    // Check if user has enough coins
-    if (user.coins < price) {
+    // Check for duplicate ownership
+    if (user.equiments.includes(equipmentId)) {
+      return res.status(400).json({ error: 'You already own this equipment.' });
+    }
+
+    // Check if user has enough coins (server-side price)
+    if (user.coins < equipment.cost) {
       return res.status(400).json({ error: 'Not enough coins to buy this equipment.' });
-    }       
-    // Deduct the price from user's coins
-    user.coins -= price; 
-    user.equiments.push(equipmentId); // Add the equipment to user's equipment list   
+    }
+    user.coins -= equipment.cost; 
+    user.equiments.push(equipmentId);
     await user.save();
      return res.status(200).json({ message: 'Equipment purchased successfully.' });    
   }

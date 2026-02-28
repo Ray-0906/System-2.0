@@ -132,6 +132,18 @@ const questDocs = await Promise.all(
 export const deleteMission = async (req, res) => {
   try {
     const { missionId } = req.body;
+    const userId = req.user.id;
+
+    const mission = await Mission.findById(missionId);
+    if (!mission) {
+      return res.status(404).json({ error: 'Mission not found' });
+    }
+
+    // Authorization: only the creator can delete
+    if (mission.createdBy && mission.createdBy.toString() !== userId) {
+      return res.status(403).json({ error: 'Not authorized to delete this mission' });
+    }
+
     await Mission.findByIdAndDelete(missionId);
     res.status(200).json({ message: 'Mission deleted successfully' });
   } catch (err) {

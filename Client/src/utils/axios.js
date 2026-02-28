@@ -12,7 +12,9 @@ const axiosInstance = axios.create({
 export const performClientLogout = () => {
   // Access store states directly without React hooks
   try {
-    useUserStore.getState().reset();
+    // Clear user but keep initialized=true (we know the state: logged out)
+    // Setting initialized=false would cause infinite loading since useLoadUser won't re-run
+    useUserStore.getState().setUser(null);
     useTrackerStore.getState().reset?.();
   } catch (e) {
     console.warn('Store reset issue:', e);

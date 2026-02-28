@@ -165,9 +165,7 @@ const Sidebar = memo(() => {
   try {
     await axiosInstance.get("/auth/logout");
     performClientLogout();
-    // Additional explicit resets (defensive in case helper shape changes)
-    resetUser();
-    resetTrackers();
+    // Don't call resetUser/resetTrackers again — performClientLogout already handled it
     setIsOpen(false); // ✅ safely close sidebar
     navigate("/login");
   } catch (err) {

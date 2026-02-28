@@ -29,10 +29,12 @@ export const signup = async (req, res) => {
     const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
       expiresIn: "7d",
     });
+    const userResponse = user.toObject();
+    delete userResponse.password;
     res
       .cookie("token", token, baseCookieOptions)
       .status(201)
-      .json({ msg: "Registered successfully", user });
+      .json({ msg: "Registered successfully", user: userResponse });
   } catch (err) {
     res.status(500).json({ msg: err.message });
   }
@@ -50,9 +52,11 @@ export const login = async (req, res) => {
     const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
       expiresIn: "7d",
     });
+    const userResponse = user.toObject();
+    delete userResponse.password;
     res
       .cookie("token", token, baseCookieOptions)
-      .json({ msg: "Login successful", user });
+      .json({ msg: "Login successful", user: userResponse });
   } catch (err) {
     res.status(500).json({ msg: err.message });
   }

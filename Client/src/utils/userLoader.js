@@ -9,6 +9,7 @@ import { handleTrackerRefresh } from './trackerUtils';
 export const useLoadUser = () => {
   const setUser = useUserStore((s) => s.setUser);
   const setInitialized = useUserStore((s) => s.setInitialized);
+  const fetchVersion = useUserStore((s) => s.fetchVersion);
   const setTrackers = useTrackerStore((s) => s.setTrackers);
   const updateTracker = useTrackerStore((s) => s.updateTracker);
 
@@ -18,21 +19,35 @@ export const useLoadUser = () => {
 
   useEffect(() => {
     const loadUser = async () => {
-      const userInLocal = localStorage.getItem('user');
-      // if (userInLocal) {
-      //   setUser(JSON.parse(userInLocal));
-      //   return;
-      // }
+      // 1. Fast-init from localStorage cache for instant render
+      const cached = localStorage.getItem('user');
+      if (cached) {
+        try {
+          const cachedUser = JSON.parse(cached);
+          setUser(cachedUser);
+          setTrackers(cachedUser.trackers || []);
+          setInitialized(); // Instant render with cached data
+        } catch {
+          localStorage.removeItem('user');
+        }
+      }
+
+      // 2. Background: fetch fresh user data from server
       try {
         const { data } = await fetchUser();
         const user = data?.getUser;
         if (user) {
           setUser(user);
           setTrackers(user.trackers || []);
-          for (const tracker of user.trackers || []) {
-            await handleTrackerRefresh(tracker, updateTracker);
-          }
           localStorage.setItem('user', JSON.stringify(user));
+
+          // 3. Refresh trackers in parallel (not sequentially)
+          const trackerPromises = (user.trackers || []).map((tracker) =>
+            handleTrackerRefresh(tracker, updateTracker).catch((err) => {
+              console.warn('Tracker refresh failed for', tracker.id, err);
+            })
+          );
+          await Promise.allSettled(trackerPromises);
         } else {
           localStorage.removeItem('user');
         }
@@ -40,12 +55,13 @@ export const useLoadUser = () => {
         // Likely unauthorized; clear any stale data
         localStorage.removeItem('user');
       } finally {
+        // Always mark as initialized after network fetch completes
         setInitialized();
       }
     };
 
     loadUser();
-  }, []);
+  }, [fetchVersion]);
 
   return { loading, error };
 };

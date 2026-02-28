@@ -1,4 +1,5 @@
 import { Tracker } from "../Models/tracker.js";
+import { Quest } from "../Models/quest.js";
 import { User } from "../Models/user.js";
 import mongoose from "mongoose";
 import { upgradeQuests } from "../libs/adaptiveQuest.js";
@@ -20,7 +21,7 @@ import { statLevelThresholds, userLevelThresholds } from "../libs/levelling.js";
 // };
 
 export const completeQuest = async (req, res) => {
-  const { questId, trackerid, statAffected, xp } = req.body;
+  const { questId, trackerid } = req.body;
   const userId = req.user.id;
   const useTxn = process.env.MONGO_USE_TRANSACTIONS === 'true';
   const session = useTxn ? await mongoose.startSession() : null;
@@ -29,8 +30,8 @@ export const completeQuest = async (req, res) => {
   }
 
   try {
-    // 1. Find tracker and validate quest
-    const trackerQuery = Tracker.findById(trackerid);
+    // 1. Find tracker with ownership check
+    const trackerQuery = Tracker.findOne({ _id: trackerid, userId });
     const tracker = session ? await trackerQuery.session(session) : await trackerQuery;
     if (!tracker) {
       if (session && useTxn) { await session.abortTransaction(); session.endSession(); }
@@ -41,10 +42,14 @@ export const completeQuest = async (req, res) => {
       (q) => q.toString() === questId
     );
     if (questIndex === -1) {
-      await session.abortTransaction();
-      session.endSession();
+      if (session && useTxn) { await session.abortTransaction(); session.endSession(); }
       return res.status(400).json({ message: "Quest not found in remainingQuests" });
     }
+
+    // Server-side quest data lookup from DB (tracker.currentQuests are ObjectId refs)
+    const questData = await Quest.findById(questId);
+    const statAffected = questData?.statAffected || 'strength';
+    const xp = questData?.xp || 0;
 
     // 2. Remove quest from remainingQuests
     tracker.remainingQuests.splice(questIndex, 1);

@@ -138,7 +138,7 @@ const rarityStyles = {
 const Inventory = () => {
   const { data, loading, error } = useQuery(GET_ALL_EQUIPMENT);
   const user = useUserStore((state) => state.user);
-  const userOwned = user?.equipment || [];
+  const userOwned = (user?.equiments || []).map(e => typeof e === 'string' ? e : e.id);
   const userCoins = user?.coins || 0;
 
   const [selectedRarity, setSelectedRarity] = useState("All");
@@ -192,16 +192,37 @@ const Inventory = () => {
       });
 
       if (res.data) {
-        useUserStore.getState().updateCoin(userCoins - cost);
+        // Update coins from server (authoritative)
+        useUserStore.getState().updateCoin(res.data.coins ?? (userCoins - cost));
         useUserStore.getState().updateBuy(equipmentId, name, icon, desc);
 
-        setMessage({ type: "success", text: "Purchase successful!" });
+        // Apply stat bonuses to store from server response
+        if (res.data.updatedStats) {
+          const store = useUserStore.getState();
+          for (const [stat, data] of Object.entries(res.data.updatedStats)) {
+            if (stat !== '__typename' && data?.value !== undefined) {
+              store.updateStats(stat, data.value, data.level);
+            }
+          }
+        }
+
+        const bonusText = res.data.appliedBonuses
+          ? Object.entries(res.data.appliedBonuses)
+              .filter(([k]) => k !== '__typename')
+              .map(([k, v]) => `${k.toUpperCase()} +${v}`)
+              .join(', ')
+          : '';
+
+        setMessage({ 
+          type: "success", 
+          text: bonusText ? `Purchase successful! ${bonusText}` : "Purchase successful!"
+        });
       } else {
         setMessage({ type: "error", text: res.message || "Purchase failed" });
       }
     } catch (e) {
       console.error("Purchase error:", e);
-      setMessage({ type: "error", text: "Server error" });
+      setMessage({ type: "error", text: e.response?.data?.error || "Server error" });
     }
   };
 
@@ -306,39 +327,96 @@ const Inventory = () => {
                       <p className="text-sm text-purple-300">No equipment matches your filters.</p>
                     </div>
                   ) : (
-                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
                       {paginated.map(equipment => {
                         const owned = userOwned.some(eid => String(eid) === String(equipment.id));
                         const canBuy = Number(userCoins) >= Number(equipment.cost) && !owned;
+                        const bonuses = equipment.statBonuses || {};
+                        const STAT_KEYS = ['strength', 'agility', 'intelligence', 'endurance'];
+                        const activeStats = STAT_KEYS.filter(k => bonuses[k] && bonuses[k] !== 0).map(k => [k, bonuses[k]]);
+                        const effectDesc = equipment.effect?.description;
+                        const typeIcon = { weapon: '⚔️', armor: '🛡️', accessory: '💍' }[equipment.type] || '📦';
+                        const rarityGlow = {
+                          legendary: 'shadow-amber-500/30 hover:shadow-amber-400/50',
+                          epic: 'shadow-purple-500/30 hover:shadow-purple-400/50',
+                          rare: 'shadow-blue-500/30 hover:shadow-blue-400/50',
+                          common: 'shadow-gray-500/20 hover:shadow-gray-400/30',
+                        };
+                        const rarityDot = {
+                          legendary: 'bg-amber-400', epic: 'bg-purple-400', rare: 'bg-blue-400', common: 'bg-gray-500',
+                        };
+
                         return (
                           <div key={equipment.id} className={
-                            `relative rounded-xl p-4 flex flex-col border backdrop-blur-sm bg-gradient-to-br ${rarityStyles[equipment.rarity] || 'from-[#1a1e2a] to-[#0f141f] border-purple-500/30'} transition-all duration-300 hover:shadow-lg hover:shadow-purple-500/20`
+                            `group relative rounded-2xl overflow-hidden border backdrop-blur-md bg-gradient-to-br ${rarityStyles[equipment.rarity] || 'from-[#1a1e2a] to-[#0f141f] border-purple-500/30'} transition-all duration-300 shadow-lg ${rarityGlow[equipment.rarity] || ''} hover:scale-[1.02]`
                           }>
-                            <div className="flex items-start gap-3">
-                              <img src={`/pic/arti/${equipment.icon}`} alt={equipment.name} className="w-14 h-14 rounded-md border object-contain border-gray-600/60" />
-                              <div className="flex-1 min-w-0">
-                                <h3 className="text-sm font-bold tracking-wide uppercase line-clamp-1">{equipment.name}</h3>
-                                <p className="text-[10px] text-purple-200/70 mt-1 line-clamp-2">{equipment.description}</p>
+                            {/* Top section: image + info */}
+                            <div className="p-4 pb-2">
+                              <div className="flex gap-3">
+                                <div className="relative shrink-0">
+                                  <img src={`/pic/arti/${equipment.icon}`} alt={equipment.name} className="w-16 h-16 rounded-lg border-2 border-white/10 object-contain bg-black/30 p-1" />
+                                  {owned && <div className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-green-500 rounded-full flex items-center justify-center text-[10px] text-white font-bold shadow-lg">✓</div>}
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <h3 className="text-[13px] font-bold tracking-wider uppercase text-white/95 leading-tight">{equipment.name}</h3>
+                                  <div className="flex items-center gap-1.5 mt-1">
+                                    <span className="text-[10px] text-white/50">{typeIcon}</span>
+                                    <span className="text-[10px] text-white/40 capitalize">{equipment.type}</span>
+                                    <span className={`w-1.5 h-1.5 rounded-full ${rarityDot[equipment.rarity]}`} />
+                                    <span className="text-[10px] text-white/40 capitalize">{equipment.rarity}</span>
+                                  </div>
+                                  <p className="text-[10px] text-white/35 mt-1 leading-relaxed line-clamp-2">{equipment.description}</p>
+                                </div>
                               </div>
                             </div>
-                            <div className="mt-3 mb-2 flex items-center justify-between text-[11px] text-purple-300/70">
-                              <span className="capitalize">{equipment.rarity}</span>
-                              <span className="inline-flex items-center gap-1 text-amber-300 font-semibold">🪙 {equipment.cost}</span>
+
+                            {/* Stats + Effect section */}
+                            <div className="px-4 pb-2 space-y-2">
+                              {activeStats.length > 0 && (
+                                <div className="flex flex-wrap gap-1">
+                                  {activeStats.map(([stat, val]) => {
+                                    const cfg = {
+                                      strength:     { label: 'STR', color: 'text-red-400/90' },
+                                      agility:      { label: 'AGI', color: 'text-green-400/90' },
+                                      intelligence: { label: 'INT', color: 'text-blue-400/90' },
+                                      endurance:    { label: 'END', color: 'text-amber-400/90' },
+                                    };
+                                    const { label, color } = cfg[stat] || { label: stat.toUpperCase(), color: 'text-gray-400' };
+                                    return (
+                                      <span key={stat} className={`text-[10px] font-mono font-semibold ${color} bg-white/5 px-1.5 py-0.5 rounded`}>
+                                        {label} {val > 0 ? `+${val}` : val}
+                                      </span>
+                                    );
+                                  })}
+                                </div>
+                              )}
+
+                              {effectDesc && effectDesc !== 'None' && (
+                                <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-cyan-400/5 border border-cyan-500/15">
+                                  <span className="text-[10px]">✨</span>
+                                  <span className="text-[10px] text-cyan-300/90 font-medium">{effectDesc}</span>
+                                </div>
+                              )}
                             </div>
-                            <button
-                              disabled={!canBuy}
-                              onClick={() => handleBuy(equipment.id, equipment.name, equipment.icon, equipment.description, equipment.cost)}
-                              className={`w-full py-1.5 rounded-md text-[11px] font-semibold tracking-wide flex items-center justify-center transition ${owned
-                                ? 'bg-green-600/70 text-white cursor-default'
-                                : canBuy
-                                  ? 'bg-gradient-to-r from-purple-600 to-pink-500 hover:from-purple-500 hover:to-pink-400 text-white'
-                                  : 'bg-gray-700/70 text-gray-400 cursor-not-allowed'}`}
-                              aria-label={owned ? 'Owned' : canBuy ? `Buy for ${equipment.cost} coins` : 'Cannot buy'}
-                              aria-disabled={!canBuy}
-                            >
-                              {owned ? 'Owned' : `Buy`}
-                            </button>
-                            {owned && <span className="absolute -top-1 -right-1 bg-green-600/80 text-white text-[10px] px-1.5 py-0.5 rounded-md">OWNED</span>}
+
+                            {/* Footer: price + action */}
+                            <div className="px-4 pb-4 pt-1 flex items-center justify-between">
+                              <div className="flex items-center gap-1">
+                                <span className="text-sm">🪙</span>
+                                <span className="text-sm text-amber-300 font-bold tabular-nums">{equipment.cost}</span>
+                              </div>
+                              <button
+                                disabled={!canBuy}
+                                onClick={() => handleBuy(equipment.id, equipment.name, equipment.icon, equipment.description, equipment.cost)}
+                                className={`px-5 py-1.5 rounded-lg text-[11px] font-bold tracking-wider uppercase transition-all duration-200 ${owned
+                                  ? 'bg-green-500/20 text-green-400 border border-green-500/30 cursor-default'
+                                  : canBuy
+                                    ? 'bg-gradient-to-r from-purple-600 to-pink-500 hover:from-purple-500 hover:to-pink-400 text-white shadow-md shadow-purple-500/20 hover:shadow-lg hover:shadow-purple-500/30'
+                                    : 'bg-white/5 text-white/30 cursor-not-allowed border border-white/10'}`}
+                              >
+                                {owned ? '✓ Owned' : 'Buy'}
+                              </button>
+                            </div>
                           </div>
                         );
                       })}

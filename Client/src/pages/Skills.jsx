@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback, useRef, useEffect } from "react";
+import React, { useState, useMemo } from "react";
 import { useQuery } from "@apollo/client";
 import { getAllSkills } from "../graphql/query";
 import { useUserStore } from "../store/userStore";
@@ -81,96 +81,118 @@ const SkillCard = ({ skill, userStats = {}, unlockedSkills = [], onUnlock, loadi
   const progressPercent = Math.round((fulfilled / totalRequired) * 100);
   const unlockable = !isUnlocked && progressPercent === 100;
 
-  let buttonText = "Locked";
-  let buttonClass = "bg-gray-700 text-gray-400 cursor-not-allowed";
-  let disabled = true;
-  if (isUnlocked) { buttonText = "Unlocked"; buttonClass = "bg-gray-800 text-gray-400 cursor-default"; }
-  else if (unlockable) { buttonText = "Obtain"; buttonClass = "bg-gradient-to-r from-purple-600 to-pink-500 hover:from-purple-500 hover:to-pink-400 text-white"; disabled = false; }
+  const effectLabels = {
+    xp_multiplier: '⚡ XP Boost',
+    coin_multiplier: '🪙 Coin Boost',
+    stat_bonus: '📈 Stat Boost',
+  };
+
+  const rankCfg = {
+    E: { color: 'text-gray-400', glow: 'shadow-gray-500/20 hover:shadow-gray-400/30', dot: 'bg-gray-400' },
+    D: { color: 'text-green-400', glow: 'shadow-green-500/20 hover:shadow-green-400/30', dot: 'bg-green-400' },
+    C: { color: 'text-blue-400', glow: 'shadow-blue-500/20 hover:shadow-blue-400/30', dot: 'bg-blue-400' },
+    B: { color: 'text-purple-400', glow: 'shadow-purple-500/20 hover:shadow-purple-400/30', dot: 'bg-purple-400' },
+    A: { color: 'text-amber-400', glow: 'shadow-amber-500/30 hover:shadow-amber-400/50', dot: 'bg-amber-400' },
+    S: { color: 'text-red-400', glow: 'shadow-red-500/30 hover:shadow-red-400/50', dot: 'bg-red-400' },
+  };
+  const rc = rankCfg[skill.rank] || rankCfg.E;
 
   return (
     <div className={cn(
-      "group relative rounded-xl p-4 flex flex-col border backdrop-blur-sm bg-gradient-to-br from-[#141823] to-[#10141d]",
-      "transition-all duration-300 hover:shadow-lg hover:shadow-purple-500/20",
-      rarityAccent[skill.rank?.toLowerCase()] || "from-[#1a1e2a] to-[#0f141f] border-purple-500/30",
-      isUnlocked && "ring-1 ring-green-400/50"
+      "group relative rounded-2xl overflow-hidden border backdrop-blur-md bg-gradient-to-br transition-all duration-300 shadow-lg hover:scale-[1.02]",
+      rarityAccent[skill.rank?.toLowerCase()] || "from-[#141823] to-[#10141d] border-purple-500/30",
+      rc.glow,
+      isUnlocked && "ring-1 ring-green-400/40"
     )} style={{ fontFamily: theme.fonts.primary }}>
-      <div className="flex items-start gap-3">
-        <div className="relative">
-          <img src={`/pic/skill/${skill.icon}`} alt={skill.name} className={cn("w-14 h-14 rounded-md border object-contain", isUnlocked ? "border-green-400/50" : "border-gray-600/60")} />
-          {isUnlocked && <span className="absolute -top-1 -right-1 text-xs bg-green-600/80 text-white px-1.5 py-0.5 rounded-md shadow">✓</span>}
-        </div>
-        <div className="flex-1 min-w-0">
-          <h3 className="text-sm font-bold tracking-wide uppercase line-clamp-1">{skill.name}</h3>
-          <p className="text-xs text-purple-300/80 mt-0.5 line-clamp-2">{skill.description}</p>
+
+      {/* Header */}
+      <div className="p-4 pb-2">
+        <div className="flex gap-3">
+          <div className="relative shrink-0">
+            <img src={`/pic/skill/${skill.icon}`} alt={skill.name} className={cn("w-16 h-16 rounded-lg border-2 object-contain bg-black/30 p-1", isUnlocked ? "border-green-400/40" : "border-white/10")} />
+            {isUnlocked && <div className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-green-500 rounded-full flex items-center justify-center text-[10px] text-white font-bold shadow-lg">✓</div>}
+          </div>
+          <div className="flex-1 min-w-0">
+            <h3 className="text-[13px] font-bold tracking-wider uppercase text-white/95 leading-tight">{skill.name}</h3>
+            <div className="flex items-center gap-1.5 mt-1">
+              <span className={`w-1.5 h-1.5 rounded-full ${rc.dot}`} />
+              <span className={`text-[10px] font-bold ${rc.color}`}>Rank {skill.rank}</span>
+              <span className="text-[10px] text-white/30">·</span>
+              <span className="text-[10px] text-white/40">Lvl {skill.minLevel}+</span>
+            </div>
+            <p className="text-[10px] text-white/35 mt-1 leading-relaxed line-clamp-2">{skill.description}</p>
+          </div>
         </div>
       </div>
-      <div className="grid grid-cols-2 gap-x-2 gap-y-1 text-[10px] mt-3 text-purple-300/80">
-        <span className="uppercase tracking-wide">Rank: {skill.rank}</span>
-        <span>Min Lvl: {skill.minLevel}</span>
-        {skill.statRequired.map(req => (
-          <span key={req.stat} className="capitalize">{req.stat}: {" "}
-            <span className={(userStats?.[req.stat]?.level || 0) >= req.value ? "text-green-400" : "text-red-400"}>
-              {(userStats?.[req.stat]?.level || 0)}/{req.value}
+
+      {/* Requirements + Effect */}
+      <div className="px-4 pb-2 space-y-2">
+        {/* Stat requirements */}
+        <div className="flex flex-wrap gap-1">
+          {skill.statRequired.map(req => {
+            const met = (userStats?.[req.stat]?.level || 0) >= req.value;
+            return (
+              <span key={req.stat} className={`text-[10px] font-mono font-semibold px-1.5 py-0.5 rounded capitalize ${
+                met ? 'text-green-400/90 bg-green-500/10' : 'text-red-400/80 bg-red-500/10'
+              }`}>
+                {req.stat} {(userStats?.[req.stat]?.level || 0)}/{req.value}
+              </span>
+            );
+          })}
+        </div>
+
+        {/* Effect */}
+        {skill.effect?.type && (
+          <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-cyan-400/5 border border-cyan-500/15">
+            <span className="text-[10px] text-cyan-300/90 font-medium">
+              {effectLabels[skill.effect.type] || skill.effect.type}
             </span>
-          </span>
-        ))}
+            <span className="text-[10px] text-cyan-200/60 capitalize">
+              {skill.effect.stat === 'all' ? 'All Stats' : skill.effect.stat}
+            </span>
+            <span className="ml-auto text-[10px] text-cyan-200 font-bold">+{Math.round((skill.effect.value - 1) * 100)}%</span>
+          </div>
+        )}
       </div>
-      <div className="mt-3">
-        <div className="w-full h-1.5 bg-gray-700/60 rounded-full overflow-hidden relative">
-          <div className="h-full bg-gradient-to-r from-purple-600 to-pink-500 rounded-full transition-all duration-500" style={{ width: `${progressPercent}%` }} />
-          <span className="absolute inset-0 text-[10px] flex items-center justify-center font-semibold text-white/70">{progressPercent}%</span>
+
+      {/* Progress + Button */}
+      <div className="px-4 pb-4 pt-1 space-y-2">
+        <div className="w-full h-1 bg-white/5 rounded-full overflow-hidden">
+          <div className="h-full bg-gradient-to-r from-purple-500 to-pink-500 rounded-full transition-all duration-500" style={{ width: `${progressPercent}%` }} />
         </div>
+
+        <button
+          disabled={(isUnlocked || !unlockable) || loadingSkillId === skill.id}
+          onClick={() => onUnlock && onUnlock(skill.id, skill.name, skill.icon, skill.description)}
+          className={cn(
+            "w-full py-1.5 rounded-lg text-[11px] font-bold tracking-wider uppercase transition-all duration-200",
+            isUnlocked
+              ? 'bg-green-500/20 text-green-400 border border-green-500/30 cursor-default'
+              : unlockable
+                ? 'bg-gradient-to-r from-purple-600 to-pink-500 hover:from-purple-500 hover:to-pink-400 text-white shadow-md shadow-purple-500/20'
+                : 'bg-white/5 text-white/30 cursor-not-allowed border border-white/10',
+            loadingSkillId === skill.id && "opacity-80"
+          )}
+        >
+          {loadingSkillId === skill.id
+            ? <span className="flex items-center justify-center gap-2"><span className="loader w-3 h-3 border-2 border-t-transparent border-white rounded-full animate-spin" />Obtaining...</span>
+            : isUnlocked ? '✓ Unlocked' : unlockable ? 'Obtain' : 'Locked'}
+        </button>
       </div>
-      <button disabled={disabled || loadingSkillId === skill.id} onClick={() => onUnlock && onUnlock(skill.id, skill.name, skill.icon, skill.description)} aria-label={buttonText.toLowerCase()} className={cn("mt-3 w-full py-1.5 rounded-md text-[11px] font-semibold tracking-wide flex items-center justify-center transition", buttonClass, loadingSkillId === skill.id && "opacity-80")}> 
-        {loadingSkillId === skill.id ? (<span className="flex items-center gap-2"><span className="loader w-3 h-3 border-2 border-t-transparent border-white rounded-full animate-spin" />Obtaining...</span>) : buttonText}
-      </button>
     </div>
   );
 };
 
 // --------------------------------------------------
-// Grid (custom lightweight virtualization)
+// Grid
 // --------------------------------------------------
-const ROW_HEIGHT = 250;
-const VIEWPORT_HEIGHT = 800; // px
-const OVERSCAN = 3; // extra items above & below
 
 const SkillGrid = ({ skills, userStats, unlockedSkills, onUnlock, loadingSkillId }) => {
-  const containerRef = useRef(null);
-  const [scrollTop, setScrollTop] = useState(0);
-
-  const onScroll = useCallback(() => {
-    if (!containerRef.current) return;
-    setScrollTop(containerRef.current.scrollTop);
-  }, []);
-
-  useEffect(() => {
-    const el = containerRef.current;
-    if (!el) return;
-    el.addEventListener('scroll', onScroll, { passive: true });
-    return () => el.removeEventListener('scroll', onScroll);
-  }, [onScroll]);
-
-  const total = skills.length;
-  const startIndex = Math.max(0, Math.floor(scrollTop / ROW_HEIGHT) - OVERSCAN);
-  const visibleCount = Math.ceil(VIEWPORT_HEIGHT / ROW_HEIGHT) + OVERSCAN * 2;
-  const endIndex = Math.min(total - 1, startIndex + visibleCount - 1);
-  const items = [];
-  for (let i = startIndex; i <= endIndex; i++) {
-    const skill = skills[i];
-    if (!skill) continue;
-    items.push(
-      <div key={skill.id} style={{ position: 'absolute', top: i * ROW_HEIGHT, left: 0, right: 0, height: ROW_HEIGHT, padding: '4px 8px' }}>
-        <SkillCard skill={skill} userStats={userStats} unlockedSkills={unlockedSkills} onUnlock={onUnlock} loadingSkillId={loadingSkillId} />
-      </div>
-    );
-  }
-
   return (
-    <div ref={containerRef} style={{ height: Math.min(VIEWPORT_HEIGHT, total * ROW_HEIGHT), overflowY: 'auto', position: 'relative' }} className="rounded-lg border border-purple-500/10 bg-[#141823]/40">
-      <div style={{ height: total * ROW_HEIGHT, position: 'relative' }}>
-        {items}
-      </div>
+    <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+      {skills.map(skill => (
+        <SkillCard key={skill.id} skill={skill} userStats={userStats} unlockedSkills={unlockedSkills} onUnlock={onUnlock} loadingSkillId={loadingSkillId} />
+      ))}
     </div>
   );
 };

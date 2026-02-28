@@ -8,11 +8,11 @@ import { isAuthenticated } from './Middlewares/authMiddleware.js';
 import { startGraphQLServer } from './graphql/index.js';
 import questRoutes from './Routes/questRoute.js'
 import trackerRoutes from './Routes/trackerRoutes.js';
-import { addSkills } from './addjs.js';
-import { addEquipments } from './addEqui.js';
+import { addSkills } from './seeds/addSkills.js';
+import { addEquipments } from './seeds/addEquipment.js';
 import skillRoutes from './Routes/skillRoutes.js'
 import equimentRoutes from './Routes/equimentRoutes.js'
-import { evaluateRankAscension } from './Controllers/equimentController.js';
+import rankRoutes from './Routes/rankRoutes.js';
 import sidequestRoutes from './Routes/sidequestRoutes.js';
 import titleRoutes from './Routes/titleRoutes.js';
 import userRoutes from './Routes/userRoutes.js';
@@ -39,7 +39,7 @@ if (isProd) {
 app.get('/', (req, res) => {
     res.send('Welcome to the server!');
 });
-app.get('/user/rankAscension', isAuthenticated, evaluateRankAscension);
+app.use('/rank', isAuthenticated, rankRoutes);
 app.use('/mission',isAuthenticated,missionRoutes);
 app.use('/auth',authRoutes);
 app.use('/quest',isAuthenticated,questRoutes);

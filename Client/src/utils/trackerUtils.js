@@ -11,7 +11,13 @@ import { useUserStore } from '../store/userStore';
  * @param {Object} tracker - The tracker object from Zustand store
  * @param {Function} updateTrackerInStore - Zustand setter function to update the tracker
  */
+// In-flight guard: prevents duplicate concurrent refreshes for the same tracker
+const refreshingTrackers = new Set();
+
 export const handleTrackerRefresh = async (tracker, updateTrackerInStore) => {
+  // Skip if this tracker is already being refreshed
+  if (refreshingTrackers.has(tracker.id)) return;
+  refreshingTrackers.add(tracker.id);
   const today = new Date();
   
   // Parse lastUpdated and lastCompleted to ensure they are Date objects
@@ -34,7 +40,7 @@ export const handleTrackerRefresh = async (tracker, updateTrackerInStore) => {
 
   // 1. If already updated today, do nothing
   if (isUpdatedToday) {
-    console.log('Tracker already updated today');
+    refreshingTrackers.delete(tracker.id);
     return;
   }
 
@@ -65,10 +71,12 @@ export const handleTrackerRefresh = async (tracker, updateTrackerInStore) => {
       penaltyType,
     });
     console.log('Daily refresh response:', data);
-   // Bug F fix: compute actual XP delta from server response instead of pre-computing
-   const user = useUserStore.getState().user;
-   const actualXpDelta = (data.updatedStats?.xp ?? user?.xp ?? 0) - (user?.xp ?? 0);
-   processPenaltyResponse(data.updatedStats, actualXpDelta);
+   // Only process penalty notifications when there was an actual penalty
+   if (penaltyType) {
+     const user = useUserStore.getState().user;
+     const actualXpDelta = (data.updatedStats?.xp ?? user?.xp ?? 0) - (user?.xp ?? 0);
+     processPenaltyResponse(data.updatedStats, actualXpDelta);
+   }
     if (data.deleted) {
       const deleteTracker = useTrackerStore.getState().deleteTracker;
       const push = useNotificationStore.getState().push;
@@ -85,6 +93,7 @@ export const handleTrackerRefresh = async (tracker, updateTrackerInStore) => {
     }
   } catch (err) {
     console.error('Error refreshing tracker:', err);
-    // Optional: Handle error state in store/UI if needed
+  } finally {
+    refreshingTrackers.delete(tracker.id);
   }
 };

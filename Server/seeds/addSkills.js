@@ -1,5 +1,5 @@
 import mongoose from "mongoose";
-import { Skill } from "./Models/skill.js";
+import { Skill } from "../Models/skill.js";
 // Adjust the import path accordingly
 
 export async function addSkills() {
@@ -15,18 +15,19 @@ export async function addSkills() {
           { stat: "charisma", value: 35 },
         ],
         minLevel: 22,
+        effect: { type: 'xp_multiplier', value: 1.08, stat: 'intelligence' },
       },
       {
         name: "Mana Storm",
-        description:
-          "Unleashes a chaotic storm of mana, damaging all nearby enemies.",
+        description: "Unleashes a chaotic storm of mana, damaging all nearby enemies.",
         rank: "A",
         icon: "mana-storm.png",
         statRequired: [{ stat: "intelligence", value: 45 }],
         minLevel: 25,
+        effect: { type: 'xp_multiplier', value: 1.10, stat: 'intelligence' },
       },
       {
-        name: "King’s Command",
+        name: "King's Command",
         description: "Force enemies to submit, reducing their ability to act.",
         rank: "A",
         icon: "kings-command.png",
@@ -35,11 +36,11 @@ export async function addSkills() {
           { stat: "endurance", value: 30 },
         ],
         minLevel: 27,
+        effect: { type: 'coin_multiplier', value: 1.10, stat: 'all' },
       },
       {
         name: "Shadow Domain",
-        description:
-          "Create a dark zone that empowers you and weakens enemies.",
+        description: "Create a dark zone that empowers you and weakens enemies.",
         rank: "S",
         icon: "shadow-domain.png",
         statRequired: [
@@ -47,11 +48,11 @@ export async function addSkills() {
           { stat: "charisma", value: 50 },
         ],
         minLevel: 35,
+        effect: { type: 'xp_multiplier', value: 1.15, stat: 'all' },
       },
       {
         name: "Annihilation Fist",
-        description:
-          "A single strike that obliterates anything in front of you.",
+        description: "A single strike that obliterates anything in front of you.",
         rank: "S",
         icon: "annihilation-fist.png",
         statRequired: [
@@ -59,11 +60,11 @@ export async function addSkills() {
           { stat: "endurance", value: 50 },
         ],
         minLevel: 40,
+        effect: { type: 'xp_multiplier', value: 1.15, stat: 'strength' },
       },
       {
         name: "Voidwalk",
-        description:
-          "Become untouchable for a few seconds, slipping between dimensions.",
+        description: "Become untouchable for a few seconds, slipping between dimensions.",
         rank: "S",
         icon: "voidwalk.png",
         statRequired: [
@@ -71,15 +72,16 @@ export async function addSkills() {
           { stat: "intelligence", value: 50 },
         ],
         minLevel: 45,
+        effect: { type: 'xp_multiplier', value: 1.12, stat: 'agility' },
       },
       {
         name: "Void Slash",
-        description:
-          "A swift slash that rends the air and damages all in its path.",
+        description: "A swift slash that rends the air and damages all in its path.",
         rank: "C",
         icon: "void-slash.png",
         statRequired: [{ stat: "strength", value: 20 }],
         minLevel: 10,
+        effect: { type: 'xp_multiplier', value: 1.05, stat: 'strength' },
       },
       {
         name: "Arcane Shield",
@@ -88,6 +90,7 @@ export async function addSkills() {
         icon: "arcane-shield.png",
         statRequired: [{ stat: "intelligence", value: 22 }],
         minLevel: 12,
+        effect: { type: 'xp_multiplier', value: 1.05, stat: 'endurance' },
       },
       {
         name: "Intimidating Presence",
@@ -96,6 +99,7 @@ export async function addSkills() {
         icon: "intimidation.png",
         statRequired: [{ stat: "charisma", value: 25 }],
         minLevel: 13,
+        effect: { type: 'xp_multiplier', value: 1.05, stat: 'charisma' },
       },
       {
         name: "Flash Step",
@@ -107,11 +111,11 @@ export async function addSkills() {
           { stat: "intelligence", value: 20 },
         ],
         minLevel: 15,
+        effect: { type: 'xp_multiplier', value: 1.07, stat: 'agility' },
       },
       {
         name: "Overdrive",
-        description:
-          "Temporarily increases strength and agility beyond limits.",
+        description: "Temporarily increases strength and agility beyond limits.",
         rank: "B",
         icon: "overdrive.png",
         statRequired: [
@@ -119,15 +123,16 @@ export async function addSkills() {
           { stat: "agility", value: 30 },
         ],
         minLevel: 17,
+        effect: { type: 'xp_multiplier', value: 1.08, stat: 'strength' },
       },
       {
         name: "Shadow Dash",
-        description:
-          "Dash forward at blinding speed, leaving a shadow trail behind.",
+        description: "Dash forward at blinding speed, leaving a shadow trail behind.",
         rank: "E",
         icon: "shadow-dash.png",
         statRequired: [{ stat: "agility", value: 10 }],
         minLevel: 2,
+        effect: { type: 'xp_multiplier', value: 1.03, stat: 'agility' },
       },
       {
         name: "Mana Bolt",
@@ -136,15 +141,16 @@ export async function addSkills() {
         icon: "mana-bolt.png",
         statRequired: [{ stat: "intelligence", value: 12 }],
         minLevel: 3,
+        effect: { type: 'xp_multiplier', value: 1.03, stat: 'intelligence' },
       },
       {
         name: "Vital Guard",
-        description:
-          "Increases endurance momentarily to reduce incoming damage.",
+        description: "Increases endurance momentarily to reduce incoming damage.",
         rank: "D",
         icon: "vital-guard.png",
         statRequired: [{ stat: "endurance", value: 15 }],
         minLevel: 5,
+        effect: { type: 'xp_multiplier', value: 1.05, stat: 'endurance' },
       },
       {
         name: "Hunter's Instinct",
@@ -153,6 +159,7 @@ export async function addSkills() {
         icon: "hunters-instinct.png",
         statRequired: [{ stat: "agility", value: 18 }],
         minLevel: 6,
+        effect: { type: 'coin_multiplier', value: 1.05, stat: 'all' },
       },
     ];
 

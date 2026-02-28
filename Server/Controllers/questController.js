@@ -3,22 +3,9 @@ import { Quest } from "../Models/quest.js";
 import { User } from "../Models/user.js";
 import mongoose from "mongoose";
 import { upgradeQuests } from "../libs/adaptiveQuest.js";
-import { statLevelThresholds, userLevelThresholds } from "../libs/levelling.js";
+import { recalcUserLevel } from "../services/levelService.js";
+import { applyStatGain, applyMissionReward } from "../services/rewardService.js";
 
-// export const statLevelThresholds = {
-//   1: 10,
-//   2: 25,
-//   3: 45,
-//   4: 70,
-//   5: 100,
-// };
-
-// export const userLevelThresholds = {
-//   1: 40,
-//   2: 100,
-//   3: 200,
-//   4: 400,
-// };
 
 export const completeQuest = async (req, res) => {
   const { questId, trackerid } = req.body;
@@ -30,29 +17,25 @@ export const completeQuest = async (req, res) => {
   }
 
   try {
-    // 1. Find tracker with ownership check
-    const trackerQuery = Tracker.findOne({ _id: trackerid, userId });
-    const tracker = session ? await trackerQuery.session(session) : await trackerQuery;
+    // 1. Atomic quest removal — prevents race conditions with rapid-fire requests
+    const trackerQuery = {
+      _id: trackerid,
+      userId,
+      remainingQuests: questId,
+    };
+    const trackerUpdate = { $pull: { remainingQuests: questId } };
+    const tracker = session
+      ? await Tracker.findOneAndUpdate(trackerQuery, trackerUpdate, { new: true, session })
+      : await Tracker.findOneAndUpdate(trackerQuery, trackerUpdate, { new: true });
     if (!tracker) {
       if (session && useTxn) { await session.abortTransaction(); session.endSession(); }
-      return res.status(404).json({ message: "Tracker not found" });
+      return res.status(400).json({ message: "Quest not found or already completed" });
     }
 
-    const questIndex = tracker.remainingQuests.findIndex(
-      (q) => q.toString() === questId
-    );
-    if (questIndex === -1) {
-      if (session && useTxn) { await session.abortTransaction(); session.endSession(); }
-      return res.status(400).json({ message: "Quest not found in remainingQuests" });
-    }
-
-    // Server-side quest data lookup from DB (tracker.currentQuests are ObjectId refs)
+    // Server-side quest data lookup from DB
     const questData = await Quest.findById(questId);
     const statAffected = questData?.statAffected || 'strength';
     const xp = questData?.xp || 0;
-
-    // 2. Remove quest from remainingQuests
-    tracker.remainingQuests.splice(questIndex, 1);
 
     // 3. Track completedQuests (optional analytics) using Map API
     if (!tracker.questCompletion) {
@@ -63,20 +46,11 @@ export const completeQuest = async (req, res) => {
     tracker.questCompletion.set(dayKey, [...prev, new mongoose.Types.ObjectId(questId)]);
 
 
-    // 4. Update user stat
-  const userQuery = User.findById(userId);
-  const user = session ? await userQuery.session(session) : await userQuery;
+    // 4. Update user stat with equipment bonuses + skill multipliers
+    const userQuery = User.findById(userId);
+    const user = session ? await userQuery.session(session) : await userQuery;
     const stat = statAffected;
-    user.stats[stat].value += xp;
-
-    // 5. Stat level-up (multi-level support)
-    while (
-      statLevelThresholds[user.stats[stat].level] &&
-      user.stats[stat].value >= statLevelThresholds[user.stats[stat].level]
-    ) {
-      user.stats[stat].value -= statLevelThresholds[user.stats[stat].level];
-      user.stats[stat].level += 1;
-    }
+    await applyStatGain(user, stat, xp);
 
     // 6. Check if all daily quests are completed
     const dailyCompleted = tracker.remainingQuests.length === 0;
@@ -105,20 +79,14 @@ export const completeQuest = async (req, res) => {
 
       user.xp += gainedXP;
      user.coins+=gainCoin;
-      // 7. User level-up (multi-level support)
-      while (
-        userLevelThresholds[user.level] &&
-        user.xp >= userLevelThresholds[user.level]
-      ) {
-        user.xp -= userLevelThresholds[user.level];
-        user.level += 1;
-      }
+      // 7. User level-up via shared service
+      recalcUserLevel(user);
 
-      // 8. Mark mission as completed
+      // 8. Mark mission as completed + remove from active trackers
       if (tracker.daycount >= tracker.duration) {
         missionCompleted = true;
         user.completed_trackers.push(trackerid);
-        // Optionally update user.achievements, titles, coins, etc.
+        user.trackers = user.trackers.filter(t => t.toString() !== trackerid.toString());
       }
     }
 

@@ -10,6 +10,11 @@ const skillSchema=new mongoose.Schema({
         value:{ type:Number, required:true, min: 0 }
     }],
     minLevel:{ type:Number, default: 1 },
+    effect: {
+      type: { type: String, enum: ['xp_multiplier', 'coin_multiplier', 'stat_bonus'], default: null },
+      value: { type: Number, default: 0 },
+      stat: { type: String, enum: ['strength', 'agility', 'intelligence', 'endurance', 'charisma', 'all'], default: null },
+    },
 });
 
 export const Skill= new mongoose.model('Skill', skillSchema);

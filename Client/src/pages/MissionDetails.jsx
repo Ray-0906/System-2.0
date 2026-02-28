@@ -6,7 +6,7 @@ import { useTrackerStore } from '../store/trackerStore';
 import { processQuestResponse } from '../utils/processQuestres';
 import { useState, useEffect } from 'react';
 import { useUserStore } from '../store/userStore';
-import { theme } from './Ineventory';
+import { theme } from './Inventory';
 import MissionInfoPanel from '../components/MissionInfoPanel';
 import AuthLayout from '../components/AuthLayout';
 import SoloLoading from '../components/Loading';

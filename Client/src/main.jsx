@@ -17,7 +17,7 @@ const Dashboard = lazy(() => import('./pages/Dashboard'));
 const ActiveMissions = lazy(() => import('./pages/Activemissions'));
 const MissionDetails = lazy(() => import('./pages/MissionDetails.jsx'));
 const AddMission = lazy(() => import('./pages/newMission.jsx'));
-const Inventory = lazy(() => import('./pages/Ineventory.jsx'));
+const Inventory = lazy(() => import('./pages/Inventory.jsx'));
 const SkillPage = lazy(() => import('./pages/Skills.jsx'));
 const AddCustomMission = lazy(() => import('./pages/addCustomMission.jsx'));
 const DemoDash = lazy(() => import('./pages/DemoDash.jsx'));

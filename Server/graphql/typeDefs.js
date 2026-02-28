@@ -85,18 +85,34 @@ export const typeDefs = gql`
     coins: Int
     totalMission: Int
     titles: [String]
-  activeTitle: String
-  avatar: String
+    activeTitle: String
+    avatar: String
     achievements: [String]
     current_missions: [ID]
     completed_trackers:[Tracker]
     trackers: [Tracker]
     skills:[Skill]
     equiments: [Equipment]
+    multipliers: Multipliers
+  }
+
+  type Multipliers {
+    strength: Float
+    intelligence: Float
+    agility: Float
+    endurance: Float
+    charisma: Float
+    coins: Float
   }
   type StatRequirement {
     stat: String!
     value: Int!
+  }
+
+  type SkillEffect {
+    type: String
+    value: Float
+    stat: String
   }
 
   type Skill {
@@ -107,12 +123,20 @@ export const typeDefs = gql`
     icon: String
     statRequired: [StatRequirement!]!
     minLevel: Int!
-  }  
-    type StatBonuses {
+    effect: SkillEffect
+  }
+
+  type StatBonuses {
     strength: Int
     endurance: Int
     intelligence: Int
-    agility:Int
+    agility: Int
+  }
+
+  type EquipmentEffect {
+    stat: String
+    bonus: Float
+    description: String
   }
 
   type Equipment {
@@ -123,7 +147,7 @@ export const typeDefs = gql`
     icon: String
     cost: Int
     statBonuses: StatBonuses
-    effect: String
+    effect: EquipmentEffect
     rarity: String
   }
 

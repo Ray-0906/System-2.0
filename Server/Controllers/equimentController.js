@@ -112,6 +112,13 @@ export const evaluateRankAscension = async (req, res) => {
     const user = await User.findById(userId);
     if (!user) return res.status(404).json({ error: 'User not found' });
 
+    // Cooldown: 1 hour between rank checks to prevent spam
+    if (user.lastRankCheck && Date.now() - new Date(user.lastRankCheck).getTime() < 3600000) {
+      const retryIn = Math.ceil((3600000 - (Date.now() - new Date(user.lastRankCheck).getTime())) / 60000);
+      return res.status(429).json({ error: `Rank check on cooldown. Try again in ${retryIn} minutes.` });
+    }
+    user.lastRankCheck = new Date();
+
     const trackers = await Tracker.find({ userId });
 
     // 1. Stat Levels

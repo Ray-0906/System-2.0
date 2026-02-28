@@ -39,8 +39,10 @@ const userSchema = new mongoose.Schema({
   current_missions: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Mission' }],
   trackers: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Tracker' }],
   completed_trackers: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Tracker' }],
-  sidequests: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Sidequest' }]
-  ,avatar: { type: String }
+  sidequests: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Sidequest' }],
+  avatar: { type: String },
+  googleId: { type: String },
+  lastRankCheck: { type: Date, default: null },
 });
 
 export const User = mongoose.model('User', userSchema);

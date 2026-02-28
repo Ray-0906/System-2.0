@@ -47,6 +47,14 @@ export const GET_USER = gql`
           level
         }
       }
+      multipliers {
+        strength
+        intelligence
+        agility
+        endurance
+        charisma
+        coins
+      }
       completed_trackers {
       id
       }
@@ -126,6 +134,11 @@ export const getAllSkills = gql`
         stat
         value
       }
+      effect {
+        type
+        value
+        stat
+      }
     }
   }
 `;
@@ -151,7 +164,11 @@ export const GET_ALL_EQUIPMENT = gql`
       description
       icon
       cost
-      effect
+      effect {
+        stat
+        bonus
+        description
+      }
       rarity
       statBonuses {
         strength

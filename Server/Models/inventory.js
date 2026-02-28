@@ -11,9 +11,12 @@ const EquipmentSchema = new mongoose.Schema({
     endurance: Number,
     intelligence: Number,
     agility: Number,
-    
   },
-  effect: String, // e.g., "+5% XP on quests"
+  effect: {
+    stat: { type: String, enum: ['strength', 'agility', 'intelligence', 'endurance', 'charisma', 'coins', 'all'], default: null },
+    bonus: { type: Number, default: 0 }, // e.g. 0.05 = +5%
+    description: String, // human-readable description for UI
+  },
   rarity: String,
 });
 

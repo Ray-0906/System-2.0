@@ -118,14 +118,21 @@ export const dailyRefresh = async (req, res) => {
   console.log("Daily Refresh Request:", { trackerId, penaltyType });
 
   try {
-    // Bug G fix: Guard against null/undefined penaltyType
-    if (!penaltyType) {
-      return res.status(400).json({ message: "Missing penaltyType" });
-    }
-
-    // Bug A fix: Add ownership check
+    // Ownership check — always needed
     const tracker = await Tracker.findOne({ _id: trackerId, userId });
     if (!tracker) return res.status(404).json({ message: "Tracker not found" });
+
+    // If no penalty needed, just reset quests for today and update lastUpdated
+    if (!penaltyType) {
+      tracker.remainingQuests = tracker.currentQuests;
+      tracker.lastUpdated = new Date();
+      await tracker.save();
+      return res.status(200).json({
+        message: "Daily refresh — no penalty",
+        updatedStats: {},
+        deleted: false,
+      });
+    }
 
     let updatedStats = {};
     let deleted = false;

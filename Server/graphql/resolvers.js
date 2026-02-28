@@ -6,6 +6,7 @@ import { Quest } from "../Models/quest.js";
 import { Skill } from "../Models/skill.js";
 import { Equiment } from "../Models/inventory.js";
 import { Sidequest } from "../Models/sidequests.js";
+import { getMultipliers } from "../services/multiplierService.js";
 
 
 export const resolvers = {
@@ -59,21 +60,19 @@ export const resolvers = {
       return list;
     }
   },
-  // Mutations removed — migrated to REST endpoints:
-  // createSidequest   → POST /sidequest
-  // completeSidequest → POST /sidequest/:id/complete
-  // updateProfile     → PUT /user/profile
+  // Mutations removed — migrated to REST endpoints
   User: {
     trackers: async (parent) => {
-      // parent.trackers is an array of ObjectId
       return await Tracker.find({ _id: { $in: parent.trackers } });
     },
     skills: async (parent) => {
       return await Skill.find({ _id: { $in: parent.skills } });
     },
     equiments: async (parent) => {
-      // parent.equiments is an array of ObjectId
       return await Equiment.find({ _id: { $in: parent.equiments } });
+    },
+    multipliers: async (parent) => {
+      return await getMultipliers(parent._id);
     },
   },
 

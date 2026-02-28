@@ -92,7 +92,7 @@ const AscensionTrial = () => {
     if(isRefresh){ setRefreshing(true);} else { setLoading(true);}  
     setError(null);
     try {
-      const res = await axiosInstance.get('/user/rankAscension');
+      const res = await axiosInstance.get('/rank/ascension');
       setData(res.data);
     } catch (err) {
       setError(err.message || 'Failed to fetch ascension data');

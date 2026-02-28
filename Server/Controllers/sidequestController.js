@@ -2,7 +2,6 @@
 import { Sidequest } from '../Models/sidequests.js';
 import { User } from '../Models/user.js';
 import { ChatMistralAI } from '@langchain/mistralai';
-import { statLevelThresholds, userLevelThresholds } from '../libs/levelling.js';
 import 'dotenv/config';
 
 // Difficulty reward table
@@ -63,37 +62,21 @@ Task title: ${title}\nDescription: ${description || ''}\nEffort hint: ${hintEffo
 	return { difficulty, xp, coins, stat };
 }
 
-function recalcUserLevel(user){
-	// simple while to catch multi-level jumps
-	while(true){
-		const next = user.level + 1;
-		const needed = userLevelThresholds[next];
-		if(needed && user.xp >= needed){
-			user.level = next;
-		} else break;
-	}
-}
-
-function recalcStatLevels(user, statKey){
-	const statObj = user.stats?.[statKey];
-	if(!statObj) return;
-	while(true){
-		const next = statObj.level + 1;
-		const needed = statLevelThresholds[next];
-		if(needed && statObj.value >= needed){
-			statObj.level = next;
-		} else break;
-	}
-}
+import { recalcStatLevel, recalcUserLevel } from '../services/levelService.js';
 
 function applySidequestReward(user, sq){
-	user.xp = (user.xp||0) + sq.evaluated.xp;
-	user.coins = (user.coins||0) + sq.evaluated.coins;
+	// Scale rewards by user level (+5% per level)
+	const levelMultiplier = 1 + (user.level - 1) * 0.05;
+	const scaledXP = Math.round(sq.evaluated.xp * levelMultiplier);
+	const scaledCoins = Math.round(sq.evaluated.coins * levelMultiplier);
+
+	user.xp = (user.xp||0) + scaledXP;
+	user.coins = (user.coins||0) + scaledCoins;
 	const incMap = { trivial:0, easy:1, medium:2, hard:3 };
 	const gain = incMap[sq.evaluated.difficulty] ?? 1;
 	if(user.stats && user.stats[sq.evaluated.stat]){
 		user.stats[sq.evaluated.stat].value += gain;
-		recalcStatLevels(user, sq.evaluated.stat);
+		recalcStatLevel(user, sq.evaluated.stat);
 	}
 	recalcUserLevel(user);
 }

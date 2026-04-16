@@ -1,0 +1,303 @@
+# System 2.0 — Event & RAG Pipeline Documentation
+
+Complete documentation of how events flow from user actions to AI-searchable vectors.
+
+---
+
+## Table of Contents
+
+1. [Architecture Overview](#architecture-overview)
+2. [The Full Data Flow (Step by Step)](#the-full-data-flow)
+3. [Where Each Piece of Work Actually Happens](#where-work-happens)
+4. [The Queue — What It Does and Doesn't Do](#the-queue-honest-assessment)
+5. [File Reference](#file-reference)
+6. [Future: True Cross-Service Queue](#future-architecture)
+
+---
+
+## Architecture Overview
+
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│                         NODE.JS SERVER (Port 3000)                      │
+│                                                                         │
+│  User Action (complete quest, buy equipment, etc.)                      │
+│       ↓                                                                 │
+│  Service Layer (questService, shopService, etc.)                        │
+│       ↓                                                                 │
+│  eventBus.emitAsync('quest:completed', { userId, stat, xp, streak })   │
+│       ↓                                                                 │
+│  ┌─── eventLogger.js ───────────────────────────────────────────────┐   │
+│  │  1. EventLog.create() → MongoDB  (permanent record)              │   │
+│  │  2. enqueue() → Redis/BullMQ     (async job for workers)         │   │
+│  └──────────────────────────────────────────────────────────────────┘   │
+│       ↓                                          ↓                      │
+│  ┌─── RAG Worker ────────┐   ┌─── Notification Worker ────────────┐   │
+│  │  Checks: ≥20 events?  │   │  Builds emoji notification         │   │
+│  │  YES → buildPages()   │   │  Pushes via Socket.io to frontend  │   │
+│  │    → Mistral summary  │   │  "🎯 +50 STR XP! Streak: 5"       │   │
+│  │    → HTTP POST to ──────────────────────────────────────────┐   │   │
+│  │      RAG-Service      │   └────────────────────────────────┐│   │   │
+│  └───────────────────────┘                                    ││   │   │
+│                                                               ││   │   │
+│  ┌─── assistantService.js (when user chats) ──────────────┐  ││   │   │
+│  │  1. buildPages() (safety net — worker usually did it)  │  ││   │   │
+│  │  2. HTTP POST /search → RAG-Service (semantic search)  │  ││   │   │
+│  │  3. HTTP POST /chat → RAG-Service (LLM response)       │  ││   │   │
+│  │  4. Save ChatMessage + maybe summarize old ones        │  ││   │   │
+│  └────────────────────────────────────────────────────────┘  ││   │   │
+└──────────────────────────────────────────────────────────────┼┼───┘   │
+                                                               ││       │
+┌──────────────────────────────────────────────────────────────┼┼───────┘
+│                    RAG-SERVICE (Python FastAPI, Port 8100)    ││
+│                                                              ↓↓
+│  POST /pages/embed  ←─── receives summary text ─────────────┘│
+│    → Mistral mistral-embed (1024-dim vector)                  │
+│    → Pinecone upsert (vector + metadata)                      │
+│                                                               │
+│  POST /search  ←─── receives query ──────────────────────────┘
+│    → Mistral embed query → Pinecone top-5 similarity search
+│    → Returns ranked results
+│
+│  POST /chat  ←─── receives full context (profile, history, events, RAG results)
+│    → Assembles layered prompt
+│    → Mistral mistral-small-latest → generates reply
+│
+│  POST /history/summarize  ←─── receives old chat messages
+│    → Mistral condenses into rolling summary
+│
+│  DELETE /users/{userId}  ←─── GDPR: deletes all vectors
+│
+│  GET /health  ←─── reports Pinecone + Mistral status
+└───────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## The Full Data Flow
+
+### Step 1: User Does Something
+
+A user completes a quest. The `questService` handles the business logic (XP calculation, streak update) and emits an event:
+
+```js
+// Server/services/questService.js
+eventBus.emitAsync(Events.QUEST_COMPLETED, { userId, stat: 'strength', xp: 50, streak: 5 });
+```
+
+### Step 2: EventLogger Writes to MongoDB + Pushes to Queue
+
+`eventLogger.js` is listening for ALL 11 event types. When it receives the event:
+
+```js
+// Step 2a: Permanent record in MongoDB
+const doc = await EventLog.create({
+  userId: payload.userId,       // who
+  type: 'quest:completed',      // what
+  data: payload,                // full payload
+  summary: 'Completed a quest. Gained 50 strength XP. Current streak: 5.',  // human-readable
+  pageIndex: -1,                // unassigned — not yet in a page
+  timestamp: Date.now(),        // when
+});
+
+// Step 2b: Push to Redis queue (no-op if Redis not configured)
+enqueue({ userId, type: 'quest:completed', summary: doc.summary, data: payload, eventLogId: doc._id });
+```
+
+**Key point:** `EventLog` docs are born with `pageIndex: -1` (unassigned). They stay unassigned until 20 accumulate and get grouped into a page.
+
+### Step 3: Workers Process the Job (if Redis is running)
+
+Two workers consume from the same `system2-events` queue:
+
+**RAG Worker** checks if it's time to build a page:
+```
+Count unassigned events for user → 
+  < 20? → skip
+  ≥ 20? → call buildPages(userId) → groups events → Mistral summary → embed in Pinecone
+```
+
+**Notification Worker** pushes a WebSocket notification:
+```
+Build message: "🎯 +50 STR XP! Streak: 5"
+Push via Socket.io → user's browser shows toast
+```
+
+### Step 4: Page Building (the heaviest operation)
+
+When `buildPages(userId)` runs (either from worker or chat safety net):
+
+```
+1. Fetch all EventLog docs with pageIndex: -1, sorted by timestamp
+2. Take the first 20 → these become "Page N"
+3. Update their pageIndex in MongoDB: -1 → N
+4. Build summary text:
+   "[4/11/2026] Completed a quest. Gained 50 strength XP. Current streak: 5."
+   "[4/11/2026] Finished all daily quests! Streak: 5, Day 12..."
+   ...18 more events...
+5. Call Mistral LLM to summarize into 2-3 sentences + 5-8 keywords
+   → "The player maintained a 5-day streak focusing on strength..."
+6. Save PageSummary to MongoDB (summary, keywords, timeRange, pineconeId)
+7. POST to RAG-Service /pages/embed with the summary text
+   → RAG-Service embeds with Mistral mistral-embed (1024-dim)
+   → RAG-Service upserts vector to Pinecone with metadata
+8. Update PageSummary.embeddedAt in MongoDB
+```
+
+### Step 5: User Chats → Semantic Search + LLM Response
+
+When the user asks "Why am I failing?":
+
+```
+1. Build user context (profile, stats, active missions)
+2. Fetch chat history (last 5 messages + rolling summary)
+3. buildPages() — safety net, fire-and-forget
+4. POST /search to RAG-Service:
+   → Embed "Why am I failing?" → 1024-dim vector
+   → Pinecone finds top-5 most similar page summaries for this user
+   → Returns: [{ summary: "Player broke 3 streaks...", score: 0.87 }, ...]
+5. Fetch last 20 raw events from MongoDB
+6. POST /chat to RAG-Service with ALL context:
+   → RAG-Service assembles a layered prompt:
+     Layer 1: System identity (who the assistant is)
+     Layer 2: Player profile (level, rank, stats, coins)
+     Layer 3: Active missions
+     Layer 4: Chat history (rolling summary + recent messages)
+     Layer 5: Recent events (last 20 raw)
+     Layer 6: Semantic context (top-5 page summaries from Pinecone)
+     Layer 7: Instructions (how to respond)
+   → Mistral LLM generates reply
+7. Save user message + assistant reply as ChatMessage (30-day TTL)
+8. If total messages > 10 → summarize oldest into ChatSummary (persists forever)
+```
+
+---
+
+## Where Work Happens
+
+This is the critical part — **who does what:**
+
+| Work | Where | Why |
+|---|---|---|
+| Event logging (MongoDB write) | **Node.js** | EventBus + Mongoose live here |
+| Queue enqueue | **Node.js** → **Redis** | BullMQ producer is in Node.js |
+| Page building trigger (check ≥20) | **Node.js** (RAG Worker) | Reads MongoDB, decision logic |
+| Page summarization (LLM) | **Node.js** ⚠️ | `ragService.buildPages()` calls Mistral via Langchain |
+| Text embedding (1024-dim vector) | **Python RAG-Service** | `POST /pages/embed` → Mistral embed |
+| Pinecone upsert | **Python RAG-Service** | Same endpoint |
+| Semantic search | **Python RAG-Service** | `POST /search` → embed query → Pinecone |
+| Chat LLM response | **Python RAG-Service** | `POST /chat` → prompt assembly → Mistral LLM |
+| Chat history summarization | **Python RAG-Service** | `POST /history/summarize` → Mistral |
+| WebSocket notification | **Node.js** (Notification Worker) | Socket.io lives in Node.js |
+
+> [!IMPORTANT]
+> **The split is uneven.** Page summarization (the heaviest CPU-bound Node.js work) uses Langchain's `ChatMistralAI` directly from Node.js, while the embedding/search/chat all go through the Python RAG-Service. In a fully decoupled architecture, this summarization should also move to the RAG-Service.
+
+---
+
+## The Queue — Honest Assessment
+
+### What the queue currently provides:
+
+| Benefit | Details |
+|---|---|
+| **Proactive RAG ingestion** | Pages are built when event #20 arrives, not when user chats |
+| **Non-blocking notifications** | WebSocket push doesn't block the main HTTP request |
+| **Retry logic** | 3 retries with exponential backoff if Mistral/Pinecone is down |
+| **Rate limiting** | RAG worker limited to 10 jobs/minute to avoid API rate limits |
+| **Graceful degradation** | Server works perfectly without Redis |
+
+### What the queue does NOT provide:
+
+| Missing | Details |
+|---|---|
+| **True service decoupling** | Workers run in the same Node.js process. If Node.js crashes, workers crash too. |
+| **Independent scaling** | You can't scale RAG processing separately from the HTTP server |
+| **Language boundary crossing** | The Python RAG-Service doesn't consume from Redis. It just receives HTTP calls. |
+| **Separate deployment** | Workers can't be deployed on a different machine |
+
+### Bottom line:
+The current queue is an **in-process async job scheduler** — not a true message bus between services. It's useful for proactive triggering and non-blocking side effects, but it doesn't decouple services at the infrastructure level.
+
+---
+
+## File Reference
+
+### Event Pipeline (Node.js)
+
+| File | Responsibility |
+|---|---|
+| [eventBus.js](file:///c:/Users/astra/Desktop/projects/System-2.0/Server/events/eventBus.js) | Async EventEmitter + event name constants (11 types) |
+| [eventLogger.js](file:///c:/Users/astra/Desktop/projects/System-2.0/Server/events/eventLogger.js) | Listens to all events → EventLog (MongoDB) + enqueue (Redis) |
+| [eventLog.js](file:///c:/Users/astra/Desktop/projects/System-2.0/Server/Models/eventLog.js) | Mongoose schemas: EventLog (individual events) + PageSummary (grouped) |
+
+### Queue & Workers (Node.js)
+
+| File | Responsibility |
+|---|---|
+| [connection.js](file:///c:/Users/astra/Desktop/projects/System-2.0/Server/queue/connection.js) | Shared Redis connection config. null if no REDIS_URL. |
+| [eventQueue.js](file:///c:/Users/astra/Desktop/projects/System-2.0/Server/queue/eventQueue.js) | BullMQ queue definition + enqueue() helper (no-op without Redis) |
+| [ragWorker.js](file:///c:/Users/astra/Desktop/projects/System-2.0/Server/workers/ragWorker.js) | Checks ≥20 unassigned events → triggers buildPages() |
+| [notificationWorker.js](file:///c:/Users/astra/Desktop/projects/System-2.0/Server/workers/notificationWorker.js) | Builds emoji notification → Socket.io push |
+
+### WebSocket (Node.js)
+
+| File | Responsibility |
+|---|---|
+| [socketManager.js](file:///c:/Users/astra/Desktop/projects/System-2.0/Server/socket/socketManager.js) | Socket.io setup, JWT auth middleware, user rooms, emitToUser() |
+
+### RAG Layer (Node.js → Python)
+
+| File | Responsibility |
+|---|---|
+| [ragService.js](file:///c:/Users/astra/Desktop/projects/System-2.0/Server/services/ragService.js) | HTTP client to RAG-Service. Owns buildPages() (summary + embed trigger). |
+| [assistantService.js](file:///c:/Users/astra/Desktop/projects/System-2.0/Server/services/assistantService.js) | Orchestrates chat: context + history + search + RAG-Service call |
+| [chatHistory.js](file:///c:/Users/astra/Desktop/projects/System-2.0/Server/Models/chatHistory.js) | ChatMessage (30-day TTL) + ChatSummary (permanent rolling summary) |
+
+### RAG-Service (Python)
+
+| File | Responsibility |
+|---|---|
+| [server.py](file:///c:/Users/astra/Desktop/projects/System-2.0/RAG-Service/server.py) | FastAPI app with 6 endpoints |
+| [embedding_service.py](file:///c:/Users/astra/Desktop/projects/System-2.0/RAG-Service/services/embedding_service.py) | Mistral embeddings + Pinecone upsert/search/delete |
+| [chat_service.py](file:///c:/Users/astra/Desktop/projects/System-2.0/RAG-Service/services/chat_service.py) | 6-layer prompt assembly + Mistral LLM chat |
+| [summarize_service.py](file:///c:/Users/astra/Desktop/projects/System-2.0/RAG-Service/services/summarize_service.py) | Rolling chat history summarization |
+
+---
+
+## Future: True Cross-Service Queue
+
+The architecture you described — where the RAG-Service (Python) directly consumes from Redis — is the correct production evolution:
+
+```
+                    NODE.JS SERVER                          RAG-SERVICE (PYTHON)
+                    ──────────────                          ────────────────────
+
+User does action                             
+       ↓                                     
+eventLogger.js:                              
+  1. EventLog → MongoDB                      
+  2. Redis PUBLISH "event:new"  ──────────►  Redis SUBSCRIBE "event:new"
+       ↓                                            ↓
+Notification Worker:                         RAG Consumer (Python):
+  → Socket.io push                             1. Read events from MongoDB
+  (must stay in Node.js)                       2. Summarize (Mistral) ← moved here
+                                               3. Embed (Mistral embed)
+                                               4. Pinecone upsert
+                                               ALL AI work in one place
+```
+
+### What changes:
+
+1. **RAG-Service** gets a Redis consumer (Python `redis` or `bullmq` equivalent)
+2. **Page summarization** moves from `ragService.js` (Node/Langchain) → RAG-Service (Python/Mistral)
+3. **Node.js** only publishes events and pushes notifications — no AI work at all
+4. **Langchain dependency removed** from Node.js `package.json`
+
+### What stays:
+
+- EventBus + eventLogger → MongoDB (Node.js owns the data pipeline)
+- Socket.io notifications → must stay in Node.js
+- assistantService.js → still calls RAG-Service via HTTP for chat
+
+This is the natural next step when you deploy to production with separate servers.

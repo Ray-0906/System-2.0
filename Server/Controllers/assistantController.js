@@ -1,0 +1,19 @@
+/**
+ * AssistantController — thin HTTP layer for AI chat.
+ */
+import { chat } from '../services/assistantService.js';
+import { handleServiceError } from '../utils/serviceError.js';
+import { ServiceError } from '../utils/serviceError.js';
+
+export const chatWithAssistant = async (req, res) => {
+  try {
+    const { message } = req.body;
+    if (!message || !message.trim()) {
+      throw new ServiceError('Message is required', 400);
+    }
+    const result = await chat(req.user._id || req.user.id, message.trim());
+    return res.status(200).json(result);
+  } catch (err) {
+    return handleServiceError(res, err);
+  }
+};

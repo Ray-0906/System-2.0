@@ -1,4 +1,5 @@
 import express from 'express';
+import { createServer } from 'http';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import { connectDB } from './config/db.js';
@@ -16,7 +17,16 @@ import rankRoutes from './Routes/rankRoutes.js';
 import sidequestRoutes from './Routes/sidequestRoutes.js';
 import titleRoutes from './Routes/titleRoutes.js';
 import userRoutes from './Routes/userRoutes.js';
+import assistantRoutes from './Routes/assistantRoutes.js';
+import './events/eventLogger.js';  // Activate event logging
+import { initSocket } from './socket/socketManager.js';
+import './workers/notificationWorker.js';  // Socket.io push (stays in Node.js)
+
 const app=express();
+const httpServer = createServer(app);
+
+// Initialize WebSocket server
+initSocket(httpServer);
  
 
 // Middleware
@@ -49,13 +59,14 @@ app.use('/inventory',isAuthenticated,equimentRoutes);
 app.use('/sidequest', isAuthenticated, sidequestRoutes);
 app.use('/titles', isAuthenticated, titleRoutes);
 app.use('/user', isAuthenticated, userRoutes);
+app.use('/assistant', isAuthenticated, assistantRoutes);
 
 // GraphQL server
 startGraphQLServer(app).catch(err => {
     console.error('Error starting GraphQL server:', err);
 });
 
-app.listen(3000, () => {
+httpServer.listen(3000, () => {
     connectDB();
     // addEquipments();
     // addSkills();

@@ -9,6 +9,7 @@ import { questRepo } from '../repositories/questRepository.js';
 import { userRepo } from '../repositories/userRepository.js';
 import { recalcUserLevel } from './levelService.js';
 import { applyMissionReward, applyStatGain } from './rewardService.js';
+import { clearTemporaryCoinPenalty } from './multiplierService.js';
 import { upgradeQuests } from '../libs/adaptiveQuest.js';
 import eventBus, { Events } from '../events/eventBus.js';
 
@@ -59,6 +60,9 @@ export const completeQuest = async (userId, questId, trackerId) => {
       if (!tracker.completedDays) tracker.completedDays = [];
       if (!tracker.completedDays.includes(dayISO)) tracker.completedDays.push(dayISO);
       if (tracker.streak === 1) tracker.lastStreakReset = tracker.lastCompleted;
+
+      // Regain streak-break coin multiplier penalty on first fully completed daily cycle.
+      await clearTemporaryCoinPenalty(userId);
 
       const { gainedXP, gainedCoins } = await applyMissionReward(user, tracker);
 

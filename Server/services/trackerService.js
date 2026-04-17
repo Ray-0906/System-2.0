@@ -10,6 +10,7 @@ import { userRepo } from '../repositories/userRepository.js';
 import { missionRepo } from '../repositories/missionRepository.js';
 import { userLevelThresholds } from '../libs/levelling.js';
 import eventBus, { Events } from '../events/eventBus.js';
+import { applyTemporaryCoinPenalty } from './multiplierService.js';
 
 /**
  * Create a tracker when a user joins a mission.
@@ -134,6 +135,11 @@ export const dailyRefresh = async (userId, trackerId, penaltyType) => {
         }
         if (coinPenalty > 0) {
           user.coins = Math.max(0, user.coins - coinPenalty);
+        }
+
+        // Apply temporary -5% coin multiplier only for streak-break (skip) penalties.
+        if (penaltyType === 'skip') {
+          await applyTemporaryCoinPenalty(userId);
         }
 
         await userRepo.save(user);

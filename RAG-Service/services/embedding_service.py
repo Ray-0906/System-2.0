@@ -12,7 +12,7 @@ import os
 import time
 import logging
 from pinecone import Pinecone, ServerlessSpec
-from mistralai.client import Mistral
+from langchain_mistralai import MistralAIEmbeddings
 
 logger = logging.getLogger("rag.embedding")
 
@@ -20,7 +20,7 @@ logger = logging.getLogger("rag.embedding")
 
 _pinecone: Pinecone | None = None
 _index = None
-_mistral: Mistral | None = None
+_embeddings: MistralAIEmbeddings | None = None
 
 PINECONE_INDEX_NAME = os.environ.get("PINECONE_INDEX", "system2-rag")
 EMBED_MODEL = "mistral-embed"  # 1024 dimensions
@@ -40,14 +40,17 @@ def get_pinecone():
 
 
 def get_mistral():
-    global _mistral
-    if _mistral is None:
+    global _embeddings
+    if _embeddings is None:
         api_key = os.environ.get("MISTRAL_API_KEY", "")
         if not api_key:
             raise RuntimeError("MISTRAL_API_KEY not set")
-        _mistral = Mistral(api_key=api_key)
-        logger.info("Mistral client initialized")
-    return _mistral
+        _embeddings = MistralAIEmbeddings(
+            model=EMBED_MODEL,
+            mistral_api_key=api_key,
+        )
+        logger.info("LangChain Mistral embeddings initialized")
+    return _embeddings
 
 
 # ── Embedding ─────────────────────────────────────────
@@ -58,14 +61,10 @@ def embed_text(text: str, retries: int = 3) -> list[float]:
     Embed text into a 1024-dim vector using Mistral.
     Retries with exponential backoff on failure.
     """
-    client = get_mistral()
+    embeddings = get_mistral()
     for attempt in range(retries):
         try:
-            response = client.embeddings.create(
-                model=EMBED_MODEL,
-                inputs=[text],
-            )
-            vector = response.data[0].embedding
+            vector = embeddings.embed_query(text)
             logger.debug(f"Embedded {len(text)} chars → {len(vector)}-dim vector")
             return vector
         except Exception as e:
@@ -81,14 +80,10 @@ def embed_text(text: str, retries: int = 3) -> list[float]:
 
 def embed_texts(texts: list[str], retries: int = 3) -> list[list[float]]:
     """Batch embed multiple texts."""
-    client = get_mistral()
+    embeddings = get_mistral()
     for attempt in range(retries):
         try:
-            response = client.embeddings.create(
-                model=EMBED_MODEL,
-                inputs=texts,
-            )
-            return [item.embedding for item in response.data]
+            return embeddings.embed_documents(texts)
         except Exception as e:
             wait = 2**attempt
             logger.warning(f"Batch embed attempt {attempt + 1}/{retries} failed: {e}")
@@ -256,7 +251,7 @@ def is_mistral_healthy() -> bool:
     """Check if Mistral API is reachable."""
     try:
         client = get_mistral()
-        client.models.list()
+        client.embed_query("health check")
         return True
     except Exception:
         return False

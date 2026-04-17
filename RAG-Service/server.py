@@ -27,8 +27,11 @@ from models.schemas import (
     ChatRequest, ChatResponse,
     SummarizeRequest, SummarizeResponse,
     HealthResponse,
+    MissionGenerationRequest, MissionGenerationResponse,
+    CustomMissionGenerationRequest,
+    ChatAction
 )
-from services import embedding_service, chat_service, summarize_service, page_builder
+from services import embedding_service, chat_service, summarize_service, page_builder, mission_service
 from workers.event_consumer import start_consumer
 
 # ── Logging ───────────────────────────────────────────
@@ -159,29 +162,70 @@ async def chat(req: ChatRequest, _: None = Depends(verify_internal_request)):
     builds layered prompt, calls Mistral LLM, returns reply.
     """
     try:
-        reply = chat_service.chat(
+        # 1. Native Vector Search
+        search_results = []
+        try:
+            raw_results = embedding_service.semantic_search(
+                query=req.message,
+                user_id=req.userId,
+                top_k=5
+            )
+            # Reformat for the prompt
+            search_results = [
+                {
+                    "summary": r["summary"],
+                    "score": r["score"],
+                    "timeFrom": r.get("timeFrom", ""),
+                    "timeTo": r.get("timeTo", "")
+                }
+                for r in raw_results
+            ]
+        except Exception as e:
+            logger.error(f"Semantic search failed during chat: {e}")
+
+        # 2. Invoke RAG LLM Call
+        result = chat_service.chat(
             user_profile=req.userProfile,
             active_missions=req.activeMissions,
             chat_history=[{"role": m.role, "content": m.content} for m in req.chatHistory],
             chat_summary=req.chatSummary,
             recent_events=req.recentEvents,
-            semantic_context=[
-                {
-                    "summary": c.summary,
-                    "score": c.score,
-                    "timeFrom": c.timeFrom,
-                    "timeTo": c.timeTo,
-                }
-                for c in req.semanticContext
-            ],
+            semantic_context=search_results,
             message=req.message,
+            has_pending_mission=req.hasPendingMission,
         )
 
-        return ChatResponse(reply=reply, source="semantic")
+        action_data = None
+        if result.get("action"):
+            action_data = ChatAction(**result["action"])
+
+        return ChatResponse(reply=result["reply"], source="semantic", action=action_data)
 
     except Exception as e:
         logger.error(f"Chat error: {e}")
         raise HTTPException(500, f"Chat failed: {str(e)}")
+
+
+@app.post("/mission/generate", response_model=MissionGenerationResponse)
+async def generate_mission(req: MissionGenerationRequest, _: None = Depends(verify_internal_request)):
+    """Generate a mission from a free-form description."""
+    try:
+        result = mission_service.generate_mission_from_description(req.description, req.days)
+        return MissionGenerationResponse.model_validate(result)
+    except Exception as e:
+        logger.error(f"Mission generation error: {e}")
+        raise HTTPException(500, f"Mission generation failed: {str(e)}")
+
+
+@app.post("/mission/generate-custom", response_model=MissionGenerationResponse)
+async def generate_custom_mission(req: CustomMissionGenerationRequest, _: None = Depends(verify_internal_request)):
+    """Generate a mission from user-provided quests."""
+    try:
+        result = mission_service.generate_custom_mission(req.quests, req.days)
+        return MissionGenerationResponse.model_validate(result)
+    except Exception as e:
+        logger.error(f"Custom mission generation error: {e}")
+        raise HTTPException(500, f"Custom mission generation failed: {str(e)}")
 
 
 @app.post("/history/summarize", response_model=SummarizeResponse)

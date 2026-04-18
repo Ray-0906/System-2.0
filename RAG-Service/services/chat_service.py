@@ -121,8 +121,8 @@ def suggest_next_actions(
 def _limit(items: list, limit: int):
     return items[:limit] if items else []
 
-@tool
-def generate_mission(description: str, days: int) -> str:
+@tool(response_format="content_and_artifact")
+def generate_mission(description: str, days: int) -> tuple[str, dict]:
     """Call this tool to design and generate a new mission for the user based on their goals.
     You MUST inform the user about the generated mission and ask for confirmation.
     """
@@ -131,25 +131,25 @@ def generate_mission(description: str, days: int) -> str:
         parsed_days = max(1, min(30, int(days)))
         if len(description.strip()) < 10:
             description = f"{description.strip()} detailed mission plan"
-            
+
         mission_dict = mission_service.generate_mission_from_description(description, parsed_days)
-        return json.dumps({
+        return "Mission structured and returned successfully inside invisible artifact.", {
             "intent": "propose_mission",
             "days": parsed_days,
             "mission": mission_dict
-        })
+        }
     except Exception as e:
-        return f"System Error generating mission: {str(e)}. Tell the user you couldn't generate it."
+        return f"System Error generating mission: {str(e)}. Tell the user you couldn't generate it.", {}
 
-@tool
-def confirm_mission() -> str:
+@tool(response_format="content_and_artifact")
+def confirm_mission() -> tuple[str, dict]:
     """Call this tool ONLY when the user explicitly confirms they want to save/add the pending mission proposal."""
-    return json.dumps({"intent": "confirm_mission"})
+    return "Mission confirmed by user.", {"intent": "confirm_mission"}
 
-@tool
-def cancel_mission() -> str:
+@tool(response_format="content_and_artifact")
+def cancel_mission() -> tuple[str, dict]:
     """Call this tool ONLY when the user rejects or wants to cancel the pending mission draft."""
-    return json.dumps({"intent": "cancel_mission"})
+    return "Mission canceled.", {"intent": "cancel_mission"}
 
 
 def build_system_prompt(state: dict) -> str:
@@ -253,22 +253,23 @@ def _compose_reply(state: dict):
     action = None
     for msg in reversed(out_messages):
         if isinstance(msg, ToolMessage):
-            try:
-                data = json.loads(msg.content)
-                intent = data.get("intent")
+            # Parse the tool intent natively using LangGraph artifacts (Fixes fragile intent bug)
+            artifact = getattr(msg, "artifact", None)
+            if artifact and isinstance(artifact, dict):
+                intent = artifact.get("intent")
                 if intent == "propose_mission":
                     action = {
                         "type": "propose_mission",
-                        "mission": data.get("mission"),
-                        "days": data.get("days")
+                        "mission": artifact.get("mission"),
+                        "days": artifact.get("days")
                     }
+                    break
                 elif intent == "confirm_mission":
                     action = {"type": "confirm_mission"}
+                    break
                 elif intent == "cancel_mission":
                     action = {"type": "cancel_mission"}
-                break
-            except Exception:
-                pass
+                    break
 
     logger.info("Chat response: %s chars, Action: %s", len(reply), action)
     return {"reply": reply, "action": action}

@@ -4,15 +4,33 @@
  */
 import { useState, useRef, useEffect } from 'react';
 import axiosInstance from '../utils/axios';
+import { useUserStore } from '../store/userStore';
 
 export default function ChatWidget() {
+  const triggerRefetch = useUserStore(s => s.triggerRefetch);
   const [open, setOpen] = useState(false);
-  const [messages, setMessages] = useState([
-    { role: 'assistant', content: "Hey Hunter! 💀 I'm your Growth Assistant. Ask me anything about your stats, missions, streaks, or get suggestions for your next move." },
-  ]);
+  const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const bottomRef = useRef(null);
+
+  // Fetch chat history once on load
+  useEffect(() => {
+    const fetchHistory = async () => {
+      try {
+        const { data } = await axiosInstance.get('/assistant/history');
+        if (data && data.messages && data.messages.length > 0) {
+          setMessages(data.messages);
+        } else {
+          setMessages([{ role: 'assistant', content: "Hey Hunter! 💀 I'm your Growth Assistant. Ask me anything about your stats, missions, streaks, or get suggestions for your next move." }]);
+        }
+      } catch (err) {
+        console.error('Failed to load chat history:', err);
+        setMessages([{ role: 'assistant', content: "Hey Hunter! 💀 I'm your Growth Assistant. Ask me anything about your stats, missions, streaks, or get suggestions for your next move." }]);
+      }
+    };
+    fetchHistory();
+  }, []);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -29,6 +47,11 @@ export default function ChatWidget() {
     try {
       const { data } = await axiosInstance.post('/assistant/chat', { message: text });
       setMessages(prev => [...prev, { role: 'assistant', content: data.reply }]);
+      
+      // Tell UI to refetch if AI changed the database
+      if (data.action?.type === 'mission_created' || data.action?.type === 'mission_proposal_canceled') {
+        triggerRefetch();
+      }
     } catch (err) {
       setMessages(prev => [...prev, { role: 'assistant', content: '⚠️ Connection error. Try again.' }]);
     } finally {

@@ -6,410 +6,300 @@ import { useNotificationStore } from '../store/notificationStore';
 import PropTypes from 'prop-types';
 import AuthLayout from '../components/AuthLayout';
 import MissionInfoPanel from '../components/MissionInfoPanel';
+import { motion, AnimatePresence } from 'framer-motion';
 
-// Centralized theme constants
-const theme = {
-  fonts: { primary: "'Rajdhani', 'Orbitron', monospace" },
-  colors: {
-    background: 'bg-gradient-to-br from-gray-900 via-black to-gray-800',
-    card: 'bg-gradient-to-br from-gray-800 to-black',
-    input: 'bg-gray-800/70',
-    border: 'border-purple-500/50',
-    shadow: 'shadow-[0_0_15px_rgba(139,92,246,0.3)]',
-    title: 'text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-pink-500',
-    accent: 'text-purple-400',
-    button: 'bg-gradient-to-r from-purple-600 to-pink-500 hover:from-purple-500 hover:to-pink-400',
-    success: 'bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-500 hover:to-emerald-500',
-    error: 'bg-gradient-to-r from-red-600 to-rose-600',
-    rank: 'text-yellow-400',
-    reward: 'text-emerald-400',
-    penalty: 'text-red-400',
-    text: 'text-white',
-    muted: 'text-purple-300',
-    loading: 'text-purple-400',
-  },
-  animations: {
-    fadeInUp: 'animate-fade-in-up',
-    pulse: 'animate-pulse',
-  },
+const theme = { 
+  fonts: { primary: "'Exo 2', sans-serif" }, 
+  colors: { 
+    background: 'bg-gradient-to-b from-[#030305] to-[#0a0a0f]', 
+    card: 'bg-[#050608] border border-[#1e2330]', 
+    input: 'bg-[#090b10] border-[#1e2330]', 
+    border: 'border-[#a855f7]/30', 
+    borderActive: 'border-[#a855f7]', 
+    shadow: 'shadow-[0_0_15px_rgba(168,85,247,0.15)]', 
+    title: 'text-white', 
+    accent: 'text-[#a855f7]', 
+    button: 'bg-gradient-to-r from-[#a855f7] to-[#7c3aed] hover:shadow-[0_0_20px_rgba(168,85,247,0.4)]', 
+    success: 'bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-500 hover:to-emerald-500 shadow-[0_0_15px_rgba(34,197,94,0.3)]', 
+    error: 'bg-red-950/30 hover:bg-red-900/40 text-red-500 border border-red-500/50', 
+    rank: 'text-[#a855f7]', 
+    reward: 'text-green-400', 
+    penalty: 'text-red-400', 
+    text: 'text-gray-200', 
+    muted: 'text-gray-500', 
+    loading: 'text-[#a855f7]' 
+  } 
 };
 
-// CSS-in-JS for animations and hover effects
 const styles = `
-  @import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@300;400;500;600;700&display=swap');
-  
-  @keyframes fadeInUp {
-    from { opacity: 0; transform: translateY(20px); }
-    to { opacity: 1; transform: translateY(0); }
-  }
-  .animate-fade-in-up {
-    animation: fadeInUp 0.5s ease-out;
-  }
-  .hover-glow {
-    transition: all 0.3s ease;
-  }
   .hover-glow:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 0 20px rgba(139, 92, 246, 0.6);
-    border-color: rgba(139, 92, 246, 0.8);
+    box-shadow: 0 0 20px rgba(168,85,247, 0.4);
   }
 `;
 
-/**
- * Loading state component
- */
-const LoadingState = memo(() => (
-  <p
-    className={`text-center text-lg ${theme.colors.loading} ${theme.animations.pulse}`}
-    style={{ fontFamily: theme.fonts.primary }}
-    aria-live="polite"
-  >
-    Generating mission...
-  </p>
-));
+const GeneratorIcon = memo(({ isLoading }) => isLoading ? <div className="w-5 h-5 border-2 border-t-transparent border-white rounded-full animate-spin mr-2" /> : <Wand2 className="w-5 h-5 mr-2 group-hover:rotate-12 transition-transform duration-300 drop-shadow-[0_0_5px_rgba(255,255,255,0.5)]" />); GeneratorIcon.displayName = 'GeneratorIcon'; GeneratorIcon.propTypes = { isLoading: PropTypes.bool };
 
-/**
- * Message component for success/error feedback
- */
-const Message = memo(({ message }) => (
-  <div
-    role="alert"
-    aria-live="polite"
-    className={`text-sm px-4 py-2 rounded-md ${message.type === 'success' ? theme.colors.success : theme.colors.error} ${theme.animations.fadeInUp}`}
-    style={{ fontFamily: theme.fonts.primary }}
-  >
-    {message.text}
-  </div>
-));
+const AcceptIcon = memo(({ isAccepting }) => isAccepting ? <div className="w-5 h-5 border-2 border-t-transparent border-white rounded-full animate-spin mr-2" /> : <CheckCircle className="w-5 h-5 mr-2 drop-shadow-[0_0_5px_rgba(255,255,255,0.5)]" />); AcceptIcon.displayName = 'AcceptIcon'; AcceptIcon.propTypes = { isAccepting: PropTypes.bool };
 
-Message.propTypes = {
-  message: PropTypes.shape({
-    type: PropTypes.oneOf(['success', 'error']).isRequired,
-    text: PropTypes.string.isRequired,
-  }).isRequired,
-};
+const DifficultyIcon = memo(({ difficulty }) => { switch (difficulty?.toLowerCase()) { case 'hard': return <Skull className={`w-4 h-4 ${theme.colors.penalty} drop-shadow-[0_0_3px_rgba(244,63,94,0.5)] mr-1`} />; case 'medium': return <Shield className={`w-4 h-4 text-yellow-400 drop-shadow-[0_0_3px_rgba(250,204,21,0.5)] mr-1`} />; default: return <Star className={`w-4 h-4 text-green-400 drop-shadow-[0_0_3px_rgba(34,197,94,0.5)] mr-1`} />; } }); DifficultyIcon.displayName = 'DifficultyIcon'; DifficultyIcon.propTypes = { difficulty: PropTypes.string };
 
-/**
- * Mission form component
- */
-const MissionForm = memo(({ formState, setFormState, handleGenerate, isLoading }) => (
-  <div
-    className={`${theme.colors.card} rounded-2xl p-8 ${theme.colors.border} ${theme.colors.shadow} space-y-6 ${theme.animations.fadeInUp}`}
-    style={{ fontFamily: theme.fonts.primary }}
-  >
-    <h2 className={`${theme.colors.title} text-2xl font-semibold drop-shadow-[0_0_4px_rgba(139,92,246,0.4)]`}>
-      Create New Mission
-    </h2>
-    <div>
-      <h3 className={`text-xl font-bold flex items-center gap-2 ${theme.colors.accent}`}>
-        <Wand2 size={20} className="text-purple-300" /> AI Mission Generator
-      </h3>
-      <p className={`text-sm ${theme.colors.muted} mt-1`}>
-        Describe your goal, and let the AI craft a mission to help you achieve it.
-      </p>
-    </div>
-    <div>
-      <label className={`block text-sm mb-1 ${theme.colors.text}`}>Mission Goal</label>
-      <textarea
-        rows={3}
-        aria-label="Mission goal"
-        className={`w-full px-4 py-2 rounded-md ${theme.colors.input} ${theme.colors.border} focus:outline-none focus:ring-2 focus:ring-purple-500 resize-none ${theme.colors.text}`}
-        placeholder="e.g., 'Learn to cook healthy meals', 'Improve my coding skills', 'Run a 5k'"
-        value={formState.goal}
-        onChange={(e) => setFormState({ ...formState, goal: e.target.value })}
-      />
-      <p className={`text-xs ${theme.colors.muted} mt-1`}>Be specific about what you want to achieve.</p>
-    </div>
-    <div>
-      <label className={`block text-sm mb-1 ${theme.colors.text}`}>Duration (in days)</label>
-      <input
-        type="number"
-        min={1}
-        aria-label="Mission duration"
-        className={`w-full px-4 py-2 rounded-md ${theme.colors.input} ${theme.colors.border} focus:outline-none focus:ring-2 focus:ring-purple-500 ${theme.colors.text}`}
-        value={formState.duration}
-        onChange={(e) => setFormState({ ...formState, duration: Number(e.target.value) })}
-      />
-    </div>
-    <button
-      onClick={handleGenerate}
-      disabled={isLoading}
-      className={`w-full py-3 ${theme.colors.button} text-white font-semibold rounded-md flex items-center justify-center gap-2 transition-all disabled:opacity-60 hover-glow`}
-      aria-label="Generate mission"
-    >
-      <Wand2 size={18} className={isLoading ? 'animate-spin' : ''} />
-      {isLoading ? 'Generating...' : 'Generate Mission'}
-    </button>
-  </div>
-));
+const RankBadge = memo(({ rank }) => ( 
+  <div className={`px-4 py-2 border bg-[#121319] border-[#1e2330] text-center`} style={{ clipPath: 'polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px)' }}>
+    <span className="block text-[10px] text-gray-500 font-['Rajdhani'] tracking-widest font-black">RANK</span>
+    <span className={`${theme.colors.rank} font-black font-['Exo_2'] drop-shadow-[0_0_5px_rgba(168,85,247,0.5)] leading-none text-2xl capitalize`}>{rank || '?'}</span>
+  </div> 
+)); RankBadge.displayName = 'RankBadge'; RankBadge.propTypes = { rank: PropTypes.string };
 
-MissionForm.propTypes = {
-  formState: PropTypes.shape({
-    goal: PropTypes.string.isRequired,
-    duration: PropTypes.number.isRequired,
-  }).isRequired,
-  setFormState: PropTypes.func.isRequired,
-  handleGenerate: PropTypes.func.isRequired,
-  isLoading: PropTypes.bool.isRequired,
-};
-
-/**
- * Mission details component
- */
-const MissionDetails = memo(({ mission, quests, handleAccept, isAccepting, handleBack }) => (
-  <div
-    className={`${theme.colors.card} rounded-2xl p-8 ${theme.colors.border} ${theme.colors.shadow} space-y-6 ${theme.animations.fadeInUp}`}
-    style={{ fontFamily: theme.fonts.primary }}
-  >
-    <h2 className={`${theme.colors.title} text-2xl font-semibold drop-shadow-[0_0_4px_rgba(139,92,246,0.4)]`}>
-      Mission Details
-    </h2>
-    <div>
-      <h3 className={`text-lg font-medium ${theme.colors.accent}`}>{mission.title}</h3>
-      <p className={`text-sm ${theme.colors.text} mt-1`}>{mission.description}</p>
-      <p className={`text-sm ${theme.colors.muted} flex items-center gap-1 mt-2`}>
-        <Shield className={`w-4 h-4 ${theme.colors.rank}`} /> Rank: <span className={theme.colors.rank}>{mission.rank}</span>
-      </p>
-      <p className={`text-sm ${theme.colors.muted} mt-1`}>Duration: {mission.duration} days</p>
-    </div>
-    <div>
-      <h4 className={`text-md font-medium ${theme.colors.reward} flex items-center gap-1`}>
-        <Star className={`w-4 h-4 ${theme.colors.reward}`} /> Rewards
-      </h4>
-      <p className={`text-sm ${theme.colors.text} mt-1`}>XP: {mission.reward?.xp || 0}</p>
-      <p className={`text-sm ${theme.colors.text}`}>Coins: {mission.reward?.coins || 0}</p>
-      {mission.reward?.specialReward && (
-        <p className={`text-sm ${theme.colors.text} capitalize`}>Special: {mission.reward.specialReward}</p>
-      )}
-    </div>
-    <div>
-      <h4 className={`text-md font-medium ${theme.colors.penalty} flex items-center gap-1`}>
-        <Skull className={`w-4 h-4 ${theme.colors.penalty}`} /> Penalties
-      </h4>
-      <p className={`text-sm ${theme.colors.text} mt-1`}>
-        Skip - Coins: {mission.penalty?.skip?.coins || 0}, Stats: {mission.penalty?.skip?.stats || 0}
-      </p>
-      <p className={`text-sm ${theme.colors.text}`}>
-        Mission Fail - Coins: {mission.penalty?.missionFail?.coins || 0}, Stats: {mission.penalty?.missionFail?.stats || 0}
-      </p>
-    </div>
-    <div>
-      <h4 className={`text-md font-medium ${theme.colors.accent}`}>Quests</h4>
-      <ul className={`list-disc list-inside ${theme.colors.text} text-sm space-y-1`}>
-        {quests?.length ? (
-          quests.map((quest, index) => (
-            <li key={index}>
-              {quest.title} (Stat: {quest.statAffected}, XP: {quest.xp})
-            </li>
-          ))
-        ) : (
-          <li>No quests available.</li>
-        )}
-      </ul>
-    </div>
-    <div className="flex gap-4">
-      <button
-        onClick={handleAccept}
-        disabled={isAccepting}
-        className={`flex-1 py-3 ${theme.colors.success} text-white font-semibold rounded-md flex items-center justify-center gap-2 transition-all disabled:opacity-60 hover-glow`}
-        aria-label="Accept mission"
-      >
-        <CheckCircle size={18} className={isAccepting ? 'animate-spin' : ''} />
-        {isAccepting ? 'Accepting...' : 'Accept Mission'}
-      </button>
-      <button
-        onClick={handleBack}
-        disabled={isAccepting}
-        className={`flex-1 py-3 ${theme.colors.button} text-white font-semibold rounded-md flex items-center justify-center transition-all disabled:opacity-60 hover-glow`}
-        aria-label="Back to form"
-      >
-        Back to Form
-      </button>
-    </div>
-  </div>
-));
-
-MissionDetails.propTypes = {
-  mission: PropTypes.shape({
-    _id: PropTypes.string.isRequired,
-    title: PropTypes.string.isRequired,
-    description: PropTypes.string.isRequired,
-    rank: PropTypes.string.isRequired,
-    duration: PropTypes.number.isRequired,
-    reward: PropTypes.shape({
-      xp: PropTypes.number,
-      coins: PropTypes.number,
-      specialReward: PropTypes.string,
-    }),
-    penalty: PropTypes.shape({
-      skip: PropTypes.shape({
-        coins: PropTypes.number,
-        stats: PropTypes.number,
-      }),
-      missionFail: PropTypes.shape({
-        coins: PropTypes.number,
-        stats: PropTypes.number,
-      }),
-    }),
-  }).isRequired,
-  quests: PropTypes.arrayOf(
-    PropTypes.shape({
-      title: PropTypes.string.isRequired,
-      statAffected: PropTypes.string.isRequired,
-      xp: PropTypes.number.isRequired,
-    })
-  ),
-  handleAccept: PropTypes.func.isRequired,
-  isAccepting: PropTypes.bool.isRequired,
-  handleBack: PropTypes.func.isRequired,
-};
-
-/**
- * Main AddMission Component
- */
-const AddMission = () => {
-  const [formState, setFormState] = useState({ goal: '', duration: 7 });
-  const [isLoading, setIsLoading] = useState(false);
-  const [isAccepting, setIsAccepting] = useState(false);
-  const [message, setMessage] = useState(null);
-  const [missionData, setMissionData] = useState(null);
-  const pushNotification = useNotificationStore((state) => state.push);
-
-  const handleGenerate = useCallback(async () => {
-    if (!formState.goal || formState.duration < 1) {
-      setMessage({ type: 'error', text: 'Please provide a valid goal and duration.' });
-      pushNotification({
-        type: 'mission',
-        key: 'error',
-        delta: 0,
-        newValue: 'Invalid goal or duration',
-      });
-      return;
-    }
-
-    setIsLoading(true);
-    setMessage(null);
-
-    try {
-      const response = await axiosInstance.post('/mission/create', {
-        description: formState.goal,
-        days: formState.duration,
-      });
-      setMissionData({ mission: response.data.mission, quests: response.data.quests });
-      setMessage({ type: 'success', text: response.data.message });
-      pushNotification({
-        type: 'mission',
-        key: 'generated',
-        delta: 0,
-        newValue: response.data.mission.title,
-      });
-      console.log('Mission Response:', response.data);
-    } catch (error) {
-      console.error('Error generating mission:', error);
-      setMessage({ type: 'error', text: 'Failed to generate mission. Please try again.' });
-      pushNotification({
-        type: 'mission',
-        key: 'error',
-        delta: 0,
-        newValue: 'Failed to generate mission',
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  }, [formState.goal, formState.duration, pushNotification]);
-
-  const handleAccept = useCallback(async () => {
-    if (!missionData?.mission?._id) return;
-
-    setIsAccepting(true);
-    setMessage(null);
-
-    try {
-      await axiosInstance.post('/mission/join', { missionId: missionData.mission._id });
-      setMessage({ type: 'success', text: 'Mission accepted successfully!' });
-      pushNotification({
-        type: 'mission',
-        key: 'accepted',
-        delta: 0,
-        newValue: missionData.mission.title,
-      });
-      setFormState({ goal: '', duration: 7 });
-      setMissionData(null);
-      window.location.replace('/missions');
-
-    } catch (error) {
-      console.error('Error accepting mission:', error);
-      setMessage({ type: 'error', text: 'Failed to accept mission. Please try again.' });
-      pushNotification({
-        type: 'mission',
-        key: 'error',
-        delta: 0,
-        newValue: 'Failed to accept mission',
-      });
-    } finally {
-      setIsAccepting(false);
-    }
-  }, [missionData, pushNotification]);
-
-  const handleBack = useCallback(() => {
-    setMissionData(null);
-    setMessage(null);
-  }, []);
-
-  return (
-    <><AuthLayout>
-    <div className="min-h-screen bg-gradient-to-br from-gray-950 via-black to-gray-900 flex items-center justify-center p-6 relative overflow-hidden">
-      <div className="absolute inset-0 pointer-events-none">
-        <div className="absolute top-20 right-32 w-64 h-64 bg-purple-600/20 blur-3xl rounded-full" />
-        <div className="absolute bottom-24 left-20 w-72 h-72 bg-pink-600/20 blur-3xl rounded-full" />
-      </div>
-      <style>{styles}</style>
-  <div className="w-full max-w-xl space-y-6 relative z-10">
-        <div className="text-center mb-6">
-          <h1
-            className={`${theme.colors.title} text-4xl font-bold mb-2 text-glow`}
-            style={{ fontFamily: theme.fonts.primary, textShadow: '0 0 20px rgba(139, 92, 246, 0.5)' }}
-          >
-            AI MISSION CRAFT
-          </h1>
-          <p
-            className={`${theme.colors.accent} text-lg font-semibold tracking-wide`}
-            style={{ fontFamily: theme.fonts.primary }}
-          >
-            Unleash your destiny! Describe your goal and set the days—let the AI weave a bespoke mission to conquer your ambitions.
+const QuestList = memo(({ quests }) => (
+  <ul className="space-y-4 relative z-10">
+    {quests.map((q, i) => (
+      <li key={i} className="flex gap-4 items-start">
+        <div className="w-5 h-5 rounded-full bg-[#121319] border border-[#1e2330] flex items-center justify-center text-[10px] font-black text-gray-500 font-['Rajdhani'] mt-0.5 shrink-0">
+          {i+1}
+        </div>
+        <div>
+          <p className="text-gray-200 font-semibold text-sm mb-1">{q.title}</p>
+          <p className="text-[10px] font-['Rajdhani'] tracking-widest font-bold">
+            <span className="text-gray-500">STAT: </span><span className="text-[#a855f7] uppercase">{q.statAffected}</span> 
+            <span className="mx-2 text-gray-700">|</span> 
+            <span className="text-gray-500">REWARD: </span><span className="text-green-400">+{q.xp} XP</span>
           </p>
-          <Link
-            to="/add-custom"
-            className={`mt-4 inline-flex items-center px-4 py-2 ${theme.colors.button} text-white rounded-md hover-glow transition-all`}
-            aria-label="Back to missions"
-          >
-            <FilePenLine size={18} className="mr-2" /> Custom Mission
-          </Link>
         </div>
-        {isLoading && <LoadingState />}
-        {message && <Message message={message} />}
-        {!missionData ? (
-          <MissionForm
-            formState={formState}
-            setFormState={setFormState}
-            handleGenerate={handleGenerate}
-            isLoading={isLoading}
-          />
-        ) : (
-          <MissionDetails
-            mission={missionData.mission}
-            quests={missionData.quests}
-            handleAccept={handleAccept}
-            isAccepting={isAccepting}
-            handleBack={handleBack}
-          />
-        )}
-        <div className="pt-8">
-          <MissionInfoPanel sections={['ai-vs-custom','rewards','penalties','streak-upgrade']} title="AI Mission Guidance" />
+      </li>
+    ))}
+  </ul>
+)); QuestList.displayName = 'QuestList'; QuestList.propTypes = { quests: PropTypes.array.isRequired };
+
+export default function NewMission() {
+  const [goal, setGoal] = useState('');
+  const [duration, setDuration] = useState(7);
+  const [mission, setMission] = useState(null);
+  const [status, setStatus] = useState({ isLoading: false, isAccepting: false, error: null });
+  const pushNotification = useNotificationStore(s => s.push);
+  
+  const generateMission = useCallback(async () => {
+    if (!goal.trim()) { pushNotification({ type: 'mission', key: 'error', newValue: 'Enter an objective first!' }); return; }
+    setStatus({ isLoading: true, isAccepting: false, error: null });
+    try {
+      const { data } = await axiosInstance.post('/mission/create', { description: goal, days: duration });
+      if (data && data.mission && data.mission.title) { 
+        setMission({ ...data.mission, quests: data.quests }); 
+        pushNotification({ type: 'mission', key: 'generated', newValue: data.mission.title }); 
+      }
+      else { throw new Error('Invalid mission format received'); }
+    } catch (err) {
+      console.error(err);
+      setStatus(prev => ({ ...prev, error: err.response?.data?.message || 'Failed to analyze request.' }));
+      pushNotification({ type: 'mission', key: 'error', newValue: 'System error.' });
+    } finally {
+      setStatus(prev => ({ ...prev, isLoading: false }));
+    }
+  }, [goal, duration, pushNotification]);
+  
+  const acceptMission = useCallback(async () => {
+    if (!mission) return;
+    setStatus(prev => ({ ...prev, isAccepting: true }));
+    try {
+      await axiosInstance.post('/mission/join', { missionId: mission._id });
+      pushNotification({ type: 'mission', key: 'accepted', newValue: mission.title });
+      window.location.href = '/missions';
+    } catch (err) {
+      setStatus(prev => ({ ...prev, error: 'Failed to accept mission.', isAccepting: false }));
+      pushNotification({ type: 'mission', key: 'error', newValue: 'Failed to accept.' });
+    }
+  }, [mission, pushNotification]);
+  
+  return (
+    <AuthLayout>
+      <div 
+        className={`min-h-screen ${theme.colors.background} text-white font-['Exo_2'] selection:bg-[#a855f7]/30 selection:text-white relative overflow-hidden pb-20 pt-6 md:pt-10`}
+        onMouseMove={(e) => {
+          document.documentElement.style.setProperty('--mouse-x', `${e.clientX}px`);
+          document.documentElement.style.setProperty('--mouse-y', `${e.clientY}px`);
+        }}
+      >
+        <div 
+          className="pointer-events-none fixed inset-0 z-0 transition-opacity duration-300 animate-pulse"
+          style={{
+            background: 'radial-gradient(400px circle at var(--mouse-x) var(--mouse-y), rgba(168, 85, 247, 0.15), transparent 80%)'
+          }}
+        />
+        {/* Base Grid Background */}
+        <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.03)_1px,transparent_1px)] bg-[size:40px_40px] md:bg-[size:60px_60px] pointer-events-none" />
+        
+        {/* Glow Effects */}
+        <div className="absolute top-0 right-1/4 w-96 h-96 bg-[#3b82f6] rounded-full mix-blend-screen filter blur-[150px] opacity-10 pointer-events-none animate-pulse"></div>
+        <div className="absolute bottom-1/4 left-1/4 w-96 h-96 bg-[#a855f7] rounded-full mix-blend-screen filter blur-[150px] opacity-10 pointer-events-none"></div>
+
+        <div className="max-w-4xl mx-auto px-4 md:px-6 relative z-10">
+          <style>{styles}</style>
+          
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-[#1e2330] pb-6 mb-8">
+            <div>
+              <Link to="/missions" className="inline-flex items-center text-[#a855f7] hover:text-[#c084fc] font-['Rajdhani'] font-bold tracking-widest text-sm mb-4 transition-colors">
+                <ArrowLeft size={16} className="mr-2" /> RECRUITMENT BOARD
+              </Link>
+              <h3 className="text-[#a855f7] text-[10px] font-black tracking-[0.4em] font-['Rajdhani'] mb-1">AI SYSTEM START</h3>
+              <h1 className="text-4xl md:text-5xl font-black italic tracking-wider drop-shadow-[0_0_15px_rgba(168,85,247,0.3)] uppercase">MISSION GENERATOR</h1>
+              <p className="text-gray-400 mt-2 font-light max-w-xl">
+                Submit your objective. The system will calculate the optimal growth path.
+              </p>
+            </div>
+            
+            <div className="hidden md:block">
+              <div className="w-16 h-16 border-2 border-[#a855f7]/30 rounded-full flex items-center justify-center relative">
+                <div className="absolute inset-0 border-2 border-[#a855f7] border-t-transparent rounded-full animate-spin" style={{ animationDuration: '3s' }}></div>
+                <div className="w-2 h-2 bg-[#a855f7] rounded-full shadow-[0_0_10px_rgba(168,85,247,1)] blur-[1px]"></div>
+              </div>
+            </div>
+          </div>
+
+          <div className={`${theme.colors.card} p-1 relative overflow-hidden group transition-all duration-500 mb-8`}
+               style={{ clipPath: 'polygon(0 0, 100% 0, 100% calc(100% - 20px), calc(100% - 20px) 100%, 0 100%)' }}>
+            <div className={`absolute inset-0 bg-gradient-to-br from-transparent to-[#a855f7]/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none`} />
+            
+            <div className="bg-[#090b10] h-full p-8 md:p-10 relative" style={{ clipPath: 'polygon(0 0, 100% 0, 100% calc(100% - 19px), calc(100% - 19px) 100%, 0 100%)' }}>
+              <div className="absolute top-0 right-0 w-64 h-64 bg-[radial-gradient(circle,rgba(168,85,247,0.1)_0%,transparent_70%)] pointer-events-none"></div>
+              <div className="absolute top-0 left-0 w-1 h-full bg-gradient-to-b from-[#a855f7] to-transparent opacity-50"></div>
+
+              {status.error && (
+                <div className={`mb-6 p-4 border font-['Rajdhani'] font-bold tracking-widest text-sm flex items-center bg-red-950/30 border-red-500/50 text-red-400`} style={{ clipPath: 'polygon(0 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%)' }}>
+                  <Skull className="w-4 h-4 mr-3 shrink-0" />
+                  <p>{status.error}</p>
+                </div>
+              )}
+              
+              <div className="space-y-6 relative z-10">
+                <div className="flex gap-4 flex-col sm:flex-row">
+                  <div className="flex-1">
+                    <label className={`flex text-[#a855f7] text-[10px] font-black font-['Rajdhani'] tracking-[0.2em] mb-3 uppercase items-center gap-2`}>
+                      <Wand2 className="w-4 h-4" /> OBJECTIVE OVERRIDE
+                    </label>
+                    <textarea
+                      value={goal}
+                      onChange={(e) => setGoal(e.target.value)}
+                      placeholder="e.g., Learn Next.js in 10 days, Complete a 5K run..."
+                      className={`w-full bg-[#050608] border border-[#1e2330] text-white focus-visible:ring-1 focus-visible:ring-[#a855f7]/50 focus-visible:border-[#a855f7]/50 h-32 text-lg font-['Exo_2'] rounded-none p-4 resize-none transition-all placeholder:text-gray-600`}
+                      disabled={status.isLoading}
+                    />
+                  </div>
+                  <div className="w-full sm:w-32">
+                    <label className={`flex text-[#a855f7] text-[10px] font-black font-['Rajdhani'] tracking-[0.2em] mb-3 uppercase items-center gap-2`}>
+                      <ClockIcon className="w-4 h-4" /> DAYS
+                    </label>
+                    <input
+                      type="number"
+                      min="1"
+                      max="30"
+                      value={duration}
+                      onChange={(e) => setDuration(Number(e.target.value))}
+                      className={`w-full bg-[#050608] border border-[#1e2330] text-white focus-visible:ring-1 focus-visible:ring-[#a855f7]/50 focus-visible:border-[#a855f7]/50 h-32 text-center text-4xl font-['Exo_2'] font-black rounded-none p-4 transition-all`}
+                      disabled={status.isLoading}
+                    />
+                  </div>
+                </div>
+                <div className="flex flex-col sm:flex-row gap-4">
+                  <button
+                    onClick={generateMission}
+                    disabled={status.isLoading || !goal.trim()}
+                    className={`flex-1 flex items-center justify-center gap-3 h-14 bg-gradient-to-r from-[#a855f7] to-[#7c3aed] text-white font-['Rajdhani'] font-black tracking-[0.2em] relative overflow-hidden group transition-all disabled:opacity-50 disabled:cursor-not-allowed hover:shadow-[0_0_20px_rgba(168,85,247,0.4)]`}
+                    style={{ clipPath: 'polygon(0 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%)' }}
+                  >
+                    {!status.isLoading && goal.trim() && (
+                      <div className="absolute inset-0 bg-[linear-gradient(45deg,transparent_25%,rgba(255,255,255,0.2)_50%,transparent_75%)] bg-[length:250%_250%,100%_100%] animate-[shimmer_2s_infinite] pointer-events-none hidden group-hover:block"></div>
+                    )}
+                    <span className="relative z-10 flex items-center justify-center">
+                      <GeneratorIcon isLoading={status.isLoading} />
+                      {status.isLoading ? 'COMPUTING...' : 'INITIATE ANALYSIS'}
+                    </span>
+                  </button>
+                  <Link
+                    to="/add-custom"
+                    className={`sm:w-auto h-14 px-6 flex items-center justify-center gap-2 bg-transparent border border-[#1e2330] text-gray-500 hover:border-[#a855f7]/50 hover:text-[#a855f7] hover:bg-[#a855f7]/5 font-['Rajdhani'] font-bold tracking-[0.2em] transition-all`}
+                    style={{ clipPath: 'polygon(0 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%)' }}
+                  >
+                    <FilePenLine className="w-4 h-4" /> MANUAL ENTRY
+                  </Link>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {mission && (
+            <div className={`${theme.colors.card} p-1 relative overflow-hidden transition-all duration-500 mt-8 mb-8`}
+                 style={{ clipPath: 'polygon(0 0, 100% 0, 100% calc(100% - 20px), calc(100% - 20px) 100%, 0 100%)' }}>
+              <div className={`absolute inset-0 bg-gradient-to-br from-transparent to-[#a855f7]/10 opacity-100 transition-opacity duration-500 pointer-events-none`} />
+              
+              <div className="bg-[#050608] h-full p-8 md:p-10 relative" style={{ clipPath: 'polygon(0 0, 100% 0, 100% calc(100% - 19px), calc(100% - 19px) 100%, 0 100%)' }}>
+                <div className="absolute top-0 left-0 w-full h-[2px] bg-gradient-to-r from-transparent via-[#a855f7] to-transparent"></div>
+                <div className="absolute top-0 right-0 w-64 h-64 bg-[radial-gradient(circle,rgba(168,85,247,0.1)_0%,transparent_70%)] pointer-events-none"></div>
+
+                <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8 relative z-10 border-b border-[#1e2330] pb-6">
+                  <div>
+                    <h3 className="text-[#a855f7] text-[10px] font-black tracking-[0.4em] font-['Rajdhani'] mb-1">SYNTHESIS COMPLETE</h3>
+                    <h2 className="text-2xl md:text-3xl font-black italic tracking-wide text-white drop-shadow-[0_0_10px_rgba(255,255,255,0.2)] uppercase">{mission.title}</h2>
+                    <div className="flex flex-wrap items-center gap-3 text-xs font-bold font-['Rajdhani'] tracking-widest mt-2">
+                      <span className="px-2 py-1 bg-[#090b10] border border-[#1e2330] text-gray-400 flex items-center uppercase">
+                        <ClockIcon className="w-3 h-3 mr-1 text-[#06b6d4]" /> {mission.duration} DAYS
+                      </span>
+                      <span className="px-2 py-1 bg-[#090b10] border border-[#1e2330] text-gray-400 flex items-center uppercase">
+                        <DifficultyIcon difficulty={mission.difficulty} />{mission.difficulty || 'Normal'}
+                      </span>
+                    </div>
+                  </div>
+                  <RankBadge rank={mission.rank} />
+                </div>
+
+                <div className="space-y-6 relative z-10">
+                  <MissionInfoPanel title="MISSION DIRECTIVE">
+                    <p className={`text-gray-400 font-light text-sm pl-4 border-l-2 border-[#1e2330]`}>{mission.description}</p>
+                  </MissionInfoPanel>
+                  
+                  <div className="mb-10">
+                    <h4 className="text-gray-400 font-black tracking-widest font-['Rajdhani'] text-xs flex items-center gap-2 mb-4">
+                      <Wand2 size={14} className="text-[#a855f7]" /> DAILY PROTOCOL
+                    </h4>
+                    <div className="bg-[#090b10] border border-[#1e2330] p-4 relative">
+                      <div className="absolute left-6 top-4 bottom-4 w-[1px] bg-[#1e2330]"></div>
+                      <QuestList quests={mission.quests}/>
+                    </div>
+                  </div>
+
+                  <div className="bg-[#090b10] border border-[#1e2330] p-4 relative overflow-hidden" style={{ clipPath: 'polygon(0 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%)' }}>
+                    <div className="absolute top-0 right-0 w-16 h-16 bg-[radial-gradient(circle,rgba(34,197,94,0.15)_0%,transparent_70%)]"></div>
+                    <h4 className="text-green-500 font-black tracking-widest font-['Rajdhani'] text-xs flex items-center gap-2 mb-4 border-b border-green-500/20 pb-2">
+                      <Star size={14} /> COMPLETION REWARDS
+                    </h4>
+                    <div className="flex flex-wrap gap-3 font-['Exo_2'] font-bold text-xs uppercase">
+                      <span className={`px-3 py-1.5 bg-[#06b6d4]/10 border border-[#06b6d4]/30 ${theme.colors.reward} shadow-[0_0_10px_rgba(6,182,212,0.2)] tracking-widest`}>
+                        +{mission.reward?.xp || 0} XP
+                      </span>
+                      <span className="px-3 py-1.5 bg-yellow-500/10 border border-yellow-500/30 text-yellow-400 shadow-[0_0_10px_rgba(250,204,21,0.2)] tracking-widest flex items-center">
+                        <CoinIcon className="w-3 h-3 mr-1"/>+{mission.reward?.coins || 0} COINS
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="pt-6 border-t border-[#1e2330] mt-8 flex sm:justify-end">
+                    <button 
+                      onClick={acceptMission} 
+                      disabled={status.isAccepting} 
+                      className={`w-full sm:w-auto h-14 px-8 flex items-center justify-center gap-3 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-500 hover:to-emerald-500 text-white font-['Rajdhani'] font-black tracking-[0.2em] relative overflow-hidden transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-[0_0_15px_rgba(34,197,94,0.3)]`}
+                      style={{ clipPath: 'polygon(0 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%)' }}
+                    >
+                      <AcceptIcon isAccepting={status.isAccepting}/>
+                      <span className="relative z-10">{status.isAccepting ? 'PROCESSING...' : 'ACCEPT MISSION'}</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
-    </div></AuthLayout></>
+    </AuthLayout>
   );
-};
+}
 
-export default AddMission;
+const ClockIcon = (p) => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...p}><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>;
+const CoinIcon = (p) => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" {...p}><circle cx="12" cy="12" r="8"/><path d="M12 8v8"/></svg>;

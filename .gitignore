@@ -12,3 +12,4 @@ env/
 venv/
 .agents
 .claude
+graphify-out/

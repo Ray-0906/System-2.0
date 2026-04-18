@@ -121,8 +121,8 @@ Example output for reference:
 """.strip()
 
 
-def _build_custom_prompt(quests: list[MissionQuest], days: int) -> str:
-    quests_json = json.dumps([quest.model_dump() for quest in quests], indent=2)
+def _build_custom_prompt(quests: list[str], days: int) -> str:
+    quests_json = json.dumps(quests, indent=2)
     return f"""
 You are a mission generator for a life gamification app like Solo Leveling. Your task is to generate a structured JSON response based on the provided quests and number of days. The quest titles MUST NOT be changed and no extra quests should be added.
 
@@ -133,7 +133,10 @@ Inputs:
 Instructions:
 1. Generate a mission title (5-10 words) that summarizes the provided quests.
 2. Refine the quests into a polished, concise mission description (50-100 words) based on the given quests.
-3. Use the provided quests as-is (do not modify titles or add new quests).
+3. Use the provided quests as-is (do not modify titles or add new quests) but generate `statAffected` and `xp` for each. Each quest MUST have:
+   - title: The EXACT title provided.
+   - statAffected: Exactly one of: strength, intelligence, agility, endurance, charisma
+   - xp: A positive integer (1-50 based on quest difficulty)
 4. Set a rank from: E, D, C, B, A, S.
 5. Set mission rewards scaled with difficulty.
 6. Generate penalties based on mission rank.
@@ -174,7 +177,7 @@ def generate_mission_from_description(description: str, days: int) -> dict:
     return _parse_and_validate(content)
 
 
-def generate_custom_mission(quests: list[MissionQuest], days: int) -> dict:
+def generate_custom_mission(quests: list[str], days: int) -> dict:
     if not quests:
         raise ValueError("Quests must be a non-empty array.")
     if not isinstance(days, int) or days < 1 or days > 30:

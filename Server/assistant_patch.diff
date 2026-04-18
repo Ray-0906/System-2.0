@@ -1,0 +1,212 @@
+--- a/Server/services/assistantService.js
++++ b/Server/services/assistantService.js
+@@ -17,13 +17,71 @@
+  */
+ import { userRepo } from '../repositories/userRepository.js';
+ import { trackerRepo } from '../repositories/trackerRepository.js';
++import * as trackerService from '../services/trackerService.js';
+ import { ChatMessage, ChatSummary } from '../Models/chatHistory.js';
++import { AssistantPendingAction } from '../Models/assistantPendingAction.js';  
++import { createMissionFromGenerated } from './missionService.js';
+ import * as ragService from './ragService.js';
+ import 'dotenv/config';
+
+ // Messages to summarize before TTL deletes them
+ const SUMMARIZE_THRESHOLD = 20; // trigger summarization when > 20 messages exist
+ const CHAT_HISTORY_LIMIT = 10;  // last 5 exchanges = 10 messages
++const MISSION_PROPOSAL_TTL_HOURS = 2;
++
++const parseRequestedDays = (message) => {
++  const match = message.match(/\b([1-9]|[12]\d|30)\s*(day|days|d)\b/i);        
++  if (match) return Number(match[1]);
++  return 7;
++};
++
++const renderMissionProposal = (generated, days) => {
++  const quests = (generated.quests || [])
++    .slice(0, 4)
++    .map((q, idx) => `${idx + 1}. ${q.title} (${q.statAffected}, ${q.xp} XP)`) 
++    .join('\n');
++
++  return [
++    `I generated a mission plan for **${days} days**:`,
++    '',
++    `Title: ${generated.title}`,
++    `Rank: ${generated.rank}`,
++    `Reward: ${generated.reward?.xp || 0} XP, ${generated.reward?.coins || 0} coins`,
++    '',
++    'Quests:',
++    quests || '- No quests generated',
++    '',
++    'Reply with **yes** to add this mission to your account, or tell me what to change.',
++  ].join('\n');
++};
++
++const savePendingMissionProposal = async (userId, payload) => {
++  const expiresAt = new Date(Date.now() + MISSION_PROPOSAL_TTL_HOURS * 60 * 60 * 1000);
++  await AssistantPendingAction.findOneAndUpdate(
++    { userId },
++    {
++      type: 'mission_proposal',
++      payload,
++      expiresAt,
++      createdAt: new Date(),
++    },
++    { upsert: true, new: true }
++  );
++};
++
++const clearPendingMissionProposal = async (userId) => {
++  await AssistantPendingAction.deleteOne({ userId, type: 'mission_proposal' });
++};
++
++const getPendingMissionProposal = async (userId) => {
++  const pending = await AssistantPendingAction.findOne({ userId, type: 'mission_proposal' }).lean();
++  if (!pending) return null;
++  if (pending.expiresAt && new Date(pending.expiresAt).getTime() < Date.now()) {
++    await clearPendingMissionProposal(userId);
++    return null;
++  }
++  return pending;
++};
+
+ // ── Build real-time player context ───────────────────
+
+@@ -60,7 +118,7 @@ Titles: ${(user.titles || []).join(', ') || 'None'}`;        
+
+ // ── Chat History Management ──────────────────────────
+
+-async function getChatHistory(userId) {
++export async function getChatHistory(userId) {
+   // Get recent messages
+   const messages = await ChatMessage.find({ userId })
+     .sort({ timestamp: -1 })
+@@ -140,6 +198,8 @@ export const chat = async (userId, message) => {
+     return { reply: "I couldn't find your player profile. Please make sure you're logged in.", source: 'error' };
+   }
+
++  const pendingMission = await getPendingMissionProposal(userId);
++
+   // 2. Fetch chat history (recent messages + rolling summary)
+   const { messages: chatHistory, summary: chatSummary } = await getChatHistory(userId);
+
+@@ -148,40 +208,90 @@ export const chat = async (userId, message) => {
+     console.error('[Assistant] Page build trigger error:', err.message)        
+   );
+
+-  // 4. Semantic search via RAG-Service → Pinecone (Top-5)
+-  const semanticResults = await ragService.semanticSearch(userId, message, 5); 
+-
+-  // 5. Get last 20 raw events for short-term memory
+-  const recentEvents = await ragService.getRecentEvents(userId, 20);
+-  const recentEventSummaries = recentEvents.map(e => e.summary);
+-
+-  // 6. Send everything to RAG-Service for LLM response
+-  const ragResponse = await ragService.chatWithRAG({
+-    userProfile: userContext.profile,
+-    activeMissions: userContext.activeMissions,
+-    chatHistory,
+-    chatSummary,
+-    recentEvents: recentEventSummaries,
+-    semanticContext: semanticResults,
+-    message,
+-  });
+-
+-  let reply;
+-  let source;
+-
+-  if (ragResponse && ragResponse.reply) {
+-    reply = ragResponse.reply;
+-    source = ragResponse.source || 'semantic';
+-  } else {
+-    // RAG-Service is down — minimal response with just profile context        
+-    reply = `I'm having trouble accessing my full memory right now, but based on your current profile:\n\n` +
+-      `You're **${userContext.profile.split('\n')[0].replace('Username: ', '')}**, ` +
+-      `and you have ${recentEvents.length} recent activities logged. ` +       
++    // 4. Get last 20 raw events for short-term memory
++    const recentEvents = await ragService.getRecentEvents(userId, 20);
++    const recentEventSummaries = recentEvents.map(e => e.summary);
++
++    // 5. Send everything to RAG-Service for Semantic Search + LLM response    
++    const ragResponse = await ragService.chatWithRAG({
++      userId: userId.toString(),
++      userProfile: userContext.profile,
++      activeMissions: userContext.activeMissions,
++      chatHistory,
++      chatSummary,
++      recentEvents: recentEventSummaries,
+       `Try again in a moment for a more detailed analysis!`;
+     source = 'degraded';
+     console.warn('[Assistant] RAG-Service unavailable, serving degraded response');
+   }
+
++  if (action) {
++    if (action.type === 'cancel_mission') {
++      if (pendingMission?.payload?.generatedMission) {
++        await clearPendingMissionProposal(userId);
++      }
++      await saveChatMessages(userId, message, reply).catch(err =>
++        console.error('[Assistant] Failed to save chat history:', err.message) 
++      );
++      return { reply, source: 'action', action: { type: 'mission_proposal_canceled' } };
++    }
++
++    if (action.type === 'confirm_mission') {
++      if (!pendingMission?.payload?.generatedMission) {
++        const errorReply = "I couldn't find a pending mission draft to add. We may have timed out, or I lost track! Ask me to suggest a new mission for you."; 
++        await saveChatMessages(userId, message, errorReply).catch(err =>       
++          console.error('[Assistant] Failed to save chat history:', err.message)
++        );
++        return { reply: errorReply, source: 'error' };
++      }
++
++      const saved = await createMissionFromGenerated(
++        pendingMission.payload.generatedMission,
++        pendingMission.payload.days || 7
++      );
++      await clearPendingMissionProposal(userId);
++
++      // Automatically enroll the user in the mission they just confirmed      
++      await trackerService.joinMission(userId, saved.mission._id);
++
++      await saveChatMessages(userId, message, reply).catch(err =>
++        console.error('[Assistant] Failed to save chat history:', err.message) 
++      );
++
++      return {
++        reply,
++        source: 'action',
++        action: {
++          type: 'mission_created',
++          missionId: saved.mission._id,
++          title: saved.mission.title,
++        },
++      };
++    }
++
++    if (action.type === 'propose_mission') {
++      const days = action.days || parseRequestedDays(message);
++      const generated = action.mission;
++      if (generated?.quests?.length) {
++        await savePendingMissionProposal(userId, { generatedMission: generated, days });
++        await saveChatMessages(userId, message, reply).catch(err =>
++          console.error('[Assistant] Failed to save chat history:', err.message)
++        );
++
++        return {
++          reply,
++          source: 'action',
++          action: {
++            type: 'mission_proposed',
++            requiresConfirmation: true,
++            title: generated.title,
++            days,
++          },
++        };
++      }
++    }
++  }
++
+   // 7. Save chat messages to history
+   await saveChatMessages(userId, message, reply).catch(err =>
+     console.error('[Assistant] Failed to save chat history:', err.message)     

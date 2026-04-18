@@ -162,34 +162,46 @@ async def chat(req: ChatRequest, _: None = Depends(verify_internal_request)):
     builds layered prompt, calls Mistral LLM, returns reply.
     """
     try:
-        # 1. Native Vector Search
-        search_results = []
-        try:
-            raw_results = embedding_service.semantic_search(
-                query=req.message,
-                user_id=req.userId,
-                top_k=5
-            )
-            # Reformat for the prompt
-            search_results = [
-                {
-                    "summary": r["summary"],
-                    "score": r["score"],
-                    "timeFrom": r.get("timeFrom", ""),
-                    "timeTo": r.get("timeTo", "")
-                }
-                for r in raw_results
-            ]
-        except Exception as e:
-            logger.error(f"Semantic search failed during chat: {e}")
+        # 1. & 2. Fetch context from MongoDB natively and run Semantic Search in parallel
+        from services.db_service import build_user_context, get_chat_history, get_recent_events
+        import asyncio
 
-        # 2. Invoke RAG LLM Call
+        def do_search():
+            try:
+                raw_results = embedding_service.semantic_search(
+                    query=req.message,
+                    user_id=req.userId,
+                    top_k=5
+                )
+                return [
+                    {
+                        "summary": r["summary"],
+                        "score": r["score"],
+                        "timeFrom": r.get("timeFrom", ""),
+                        "timeTo": r.get("timeTo", "")
+                    }
+                    for r in raw_results
+                ]
+            except Exception as e:
+                logger.error(f"Semantic search failed during chat: {e}")
+                return []
+
+        search_task = asyncio.to_thread(do_search)
+        user_context_task = build_user_context(req.userId)
+        chat_history_task = get_chat_history(req.userId)
+        recent_events_task = get_recent_events(req.userId)
+
+        search_results, (user_profile, active_missions_str), chat_history_data, recent_events_str = await asyncio.gather(
+            search_task, user_context_task, chat_history_task, recent_events_task
+        )
+
+        # 3. Invoke RAG LLM Call
         result = chat_service.chat(
-            user_profile=req.userProfile,
-            active_missions=req.activeMissions,
-            chat_history=[{"role": m.role, "content": m.content} for m in req.chatHistory],
-            chat_summary=req.chatSummary,
-            recent_events=req.recentEvents,
+            user_profile=user_profile,
+            active_missions=active_missions_str,
+            chat_history=chat_history_data["messages"],
+            chat_summary=chat_history_data["summary"],
+            recent_events=recent_events_str,
             semantic_context=search_results,
             message=req.message,
             has_pending_mission=req.hasPendingMission,

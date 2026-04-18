@@ -52,13 +52,8 @@ class ChatMessage(BaseModel):
 
 class ChatRequest(BaseModel):
     userId: str
-    userProfile: str
-    activeMissions: str = "No active missions."
-    chatHistory: list[ChatMessage] = []
-    chatSummary: str = ""
-    recentEvents: list[str] = []
-    semanticContext: list[SearchResult] = []
     message: str
+    semanticContext: list[SearchResult] = []
     hasPendingMission: bool = False
 
 
@@ -123,7 +118,7 @@ class MissionGenerationRequest(BaseModel):
 
 
 class CustomMissionGenerationRequest(BaseModel):
-    quests: list[MissionQuest] = Field(default_factory=list)
+    quests: list[str] = Field(default_factory=list)
     days: int = Field(ge=1, le=30)
 
 

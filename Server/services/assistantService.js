@@ -1,13 +1,13 @@
-/**
+﻿/**
  * AssistantService — AI Growth Assistant with full player context.
  *
  * Unified flow:
  *   1. Build real-time player context (stats, missions, equipment)
  *   2. Fetch chat history (recent messages + rolling summary)
  *   3. Build pages if unassigned events ≥ 20
- *   4. Semantic search via RAG-Service → Pinecone (Top-5 relevant pages)
- *   5. Fetch last 20 raw events for short-term memory
- *   6. Send everything to RAG-Service /chat → Mistral LLM → reply
+ *   4. Fetch last 20 raw events for short-term memory
+ *   5. Send everything to RAG-Service /chat → semantic search + Mistral LLM → reply
+ *   6. Handle Pending Mission proposals & cancelations
  *   7. Save user message + reply to ChatHistory
  *   8. Trigger history summarization if needed
  *
@@ -17,53 +17,79 @@
  */
 import { userRepo } from '../repositories/userRepository.js';
 import { trackerRepo } from '../repositories/trackerRepository.js';
+import * as trackerService from '../services/trackerService.js';
 import { ChatMessage, ChatSummary } from '../Models/chatHistory.js';
+import { AssistantPendingAction } from '../Models/assistantPendingAction.js';
+import { createMissionFromGenerated } from './missionService.js';
 import * as ragService from './ragService.js';
 import 'dotenv/config';
 
 // Messages to summarize before TTL deletes them
 const SUMMARIZE_THRESHOLD = 20; // trigger summarization when > 20 messages exist
 const CHAT_HISTORY_LIMIT = 10;  // last 5 exchanges = 10 messages
+const MISSION_PROPOSAL_TTL_HOURS = 2;
 
-// ── Build real-time player context ───────────────────
+const parseRequestedDays = (message) => {
+  const match = message.match(/\b([1-9]|[12]\d|30)\s*(day|days|d)\b/i);
+  if (match) return Number(match[1]);
+  return 7;
+};
 
-async function buildUserContext(userId) {
-  const user = await userRepo.findByIdLean(userId);
-  if (!user) return null;
+const renderMissionProposal = (generated, days) => {
+  const quests = (generated.quests || [])
+    .slice(0, 4)
+    .map((q, idx) => `${idx + 1}. ${q.title} (${q.statAffected}, ${q.xp} XP)`)
+    .join('\n');
 
-  const trackers = await trackerRepo.findByUserId(userId);
+  return [
+    `I generated a mission plan for **${days} days**:`,
+    '',
+    `Title: ${generated.title}`,
+    `Rank: ${generated.rank}`,
+    `Reward: ${generated.reward?.xp || 0} XP, ${generated.reward?.coins || 0} coins`,
+    '',
+    'Quests:',
+    quests || '- No quests generated',
+    '',
+    'Reply with **yes** to add this mission to your account, or tell me what to change.',
+  ].join('\n');
+};
 
-  const stats = Object.entries(user.stats || {}).map(([stat, data]) =>
-    `${stat}: Level ${data.level || 1}, XP ${data.value || 0}`
-  ).join(' | ');
+const savePendingMissionProposal = async (userId, payload) => {
+  const expiresAt = new Date(Date.now() + MISSION_PROPOSAL_TTL_HOURS * 60 * 60 * 1000);
+  await AssistantPendingAction.findOneAndUpdate(
+    { userId },
+    {
+      type: 'mission_proposal',
+      payload,
+      expiresAt,
+      createdAt: new Date(),
+    },
+    { upsert: true, new: true }
+  );
+};
 
-  const activeMissions = trackers.map(t =>
-    `"${t.title}" — Day ${t.daycount}/${t.duration}, Streak ${t.streak}, ${t.remainingQuests?.length || 0} quests remaining`
-  ).join('\n  ');
+const clearPendingMissionProposal = async (userId) => {
+  await AssistantPendingAction.deleteOne({ userId, type: 'mission_proposal' });
+};
 
-  const equipCount = user.equiments?.length || 0;
-  const skillCount = user.skills?.length || 0;
-  const completedCount = user.completed_trackers?.length || 0;
+const getPendingMissionProposal = async (userId) => {
+  const pending = await AssistantPendingAction.findOne({ userId, type: 'mission_proposal' }).lean();
+  if (!pending) return null;
+  if (pending.expiresAt && new Date(pending.expiresAt).getTime() < Date.now()) {
+    await clearPendingMissionProposal(userId);
+    return null;
+  }
+  return pending;
+};
 
-  const profile = `Username: ${user.username}
-Level: ${user.level} | XP: ${user.xp} | Rank: ${user.rank} | Coins: ${user.coins}
-Stats: ${stats}
-Equipment owned: ${equipCount} | Skills unlocked: ${skillCount}
-Missions completed: ${completedCount} | Active missions: ${trackers.length}
-Titles: ${(user.titles || []).join(', ') || 'None'}`;
-
-  return {
-    profile,
-    activeMissions: activeMissions || 'No active missions.',
-  };
-}
 
 // ── Chat History Management ──────────────────────────
 
-async function getChatHistory(userId) {
-  // Get recent messages
+export async function getChatHistory(userId) {
+  // Get recent messages (chronological fallback to _id to resolve identical timestamps)
   const messages = await ChatMessage.find({ userId })
-    .sort({ timestamp: -1 })
+    .sort({ timestamp: -1, _id: -1 })
     .limit(CHAT_HISTORY_LIMIT)
     .lean();
 
@@ -79,9 +105,10 @@ async function getChatHistory(userId) {
 }
 
 async function saveChatMessages(userId, userMessage, assistantReply) {
+  const now = Date.now();
   await ChatMessage.insertMany([
-    { userId, role: 'user', content: userMessage },
-    { userId, role: 'assistant', content: assistantReply },
+    { userId, role: 'user', content: userMessage, timestamp: new Date(now - 1) },
+    { userId, role: 'assistant', content: assistantReply, timestamp: new Date(now) },
   ]);
 }
 
@@ -91,9 +118,8 @@ async function maybeSummarizeHistory(userId) {
   if (totalMessages <= SUMMARIZE_THRESHOLD) return;
 
   // Get oldest messages that should be summarized
-  // (keep the most recent CHAT_HISTORY_LIMIT, summarize the rest)
   const oldMessages = await ChatMessage.find({ userId })
-    .sort({ timestamp: 1 })
+    .sort({ timestamp: 1, _id: 1 })
     .limit(totalMessages - CHAT_HISTORY_LIMIT)
     .lean();
 
@@ -131,55 +157,111 @@ async function maybeSummarizeHistory(userId) {
 
 /**
  * Chat with the AI assistant.
- * Sends full context to RAG-Service for semantic retrieval + LLM response.
+ * Sends full context to RAG-Service for LLM response.
  */
 export const chat = async (userId, message) => {
-  // 1. Build real-time player context
-  const userContext = await buildUserContext(userId);
-  if (!userContext) {
+  // 1. Verify user exists
+  const user = await userRepo.findByIdLean(userId);
+  if (!user) {
     return { reply: "I couldn't find your player profile. Please make sure you're logged in.", source: 'error' };
   }
 
-  // 2. Fetch chat history (recent messages + rolling summary)
-  const { messages: chatHistory, summary: chatSummary } = await getChatHistory(userId);
+  const pendingMission = await getPendingMissionProposal(userId);
 
   // 3. Trigger page build on RAG-Service (safety net — Redis consumer usually handles this)
   ragService.triggerPageBuild(userId).catch(err =>
     console.error('[Assistant] Page build trigger error:', err.message)
   );
 
-  // 4. Semantic search via RAG-Service → Pinecone (Top-5)
-  const semanticResults = await ragService.semanticSearch(userId, message, 5);
 
-  // 5. Get last 20 raw events for short-term memory
-  const recentEvents = await ragService.getRecentEvents(userId, 20);
-  const recentEventSummaries = recentEvents.map(e => e.summary);
-
-  // 6. Send everything to RAG-Service for LLM response
+// 5. Send to RAG-Service for Semantic Search + LLM response
   const ragResponse = await ragService.chatWithRAG({
-    userProfile: userContext.profile,
-    activeMissions: userContext.activeMissions,
-    chatHistory,
-    chatSummary,
-    recentEvents: recentEventSummaries,
-    semanticContext: semanticResults,
+    userId: userId.toString(),
     message,
+    hasPendingMission: Boolean(pendingMission?.payload?.generatedMission),
   });
 
   let reply;
   let source;
+  let action;
 
   if (ragResponse && ragResponse.reply) {
     reply = ragResponse.reply;
     source = ragResponse.source || 'semantic';
+    action = ragResponse.action;
   } else {
-    // RAG-Service is down — minimal response with just profile context
-    reply = `I'm having trouble accessing my full memory right now, but based on your current profile:\n\n` +
-      `You're **${userContext.profile.split('\n')[0].replace('Username: ', '')}**, ` +
-      `and you have ${recentEvents.length} recent activities logged. ` +
+    // RAG-Service is down — minimal response
+    reply = `I'm having trouble accessing my full memory right now, but I remember you're **${user.username}**. ` +
       `Try again in a moment for a more detailed analysis!`;
     source = 'degraded';
     console.warn('[Assistant] RAG-Service unavailable, serving degraded response');
+  }
+
+  if (action) {
+    if (action.type === 'cancel_mission') {
+      if (pendingMission?.payload?.generatedMission) {
+        await clearPendingMissionProposal(userId);
+      }
+      await saveChatMessages(userId, message, reply).catch(err =>
+        console.error('[Assistant] Failed to save chat history:', err.message)
+      );
+      return { reply, source: 'action', action: { type: 'mission_proposal_canceled' } };
+    }
+
+    if (action.type === 'confirm_mission') {
+      if (!pendingMission?.payload?.generatedMission) {
+        const errorReply = "I couldn't find a pending mission draft to add. We may have timed out, or I lost track! Ask me to suggest a new mission for you.";
+        await saveChatMessages(userId, message, errorReply).catch(err =>
+          console.error('[Assistant] Failed to save chat history:', err.message)
+        );
+        return { reply: errorReply, source: 'error' };
+      }
+
+      const saved = await createMissionFromGenerated(
+        pendingMission.payload.generatedMission,
+        pendingMission.payload.days || 7
+      );
+      await clearPendingMissionProposal(userId);
+
+      // Automatically enroll the user in the mission they just confirmed
+      await trackerService.joinMission(userId, saved.mission._id);
+
+      await saveChatMessages(userId, message, reply).catch(err =>
+        console.error('[Assistant] Failed to save chat history:', err.message)
+      );
+
+      return {
+        reply,
+        source: 'action',
+        action: {
+          type: 'mission_created',
+          missionId: saved.mission._id,
+          title: saved.mission.title,
+        },
+      };
+    }
+
+    if (action.type === 'propose_mission') {
+      const days = action.days || parseRequestedDays(message);
+      const generated = action.mission;
+      if (generated?.quests?.length) {
+        await savePendingMissionProposal(userId, { generatedMission: generated, days });
+        await saveChatMessages(userId, message, reply).catch(err =>
+          console.error('[Assistant] Failed to save chat history:', err.message)
+        );
+
+        return {
+          reply,
+          source: 'action',
+          action: {
+            type: 'mission_proposed',
+            requiresConfirmation: true,
+            title: generated.title,
+            days,
+          },
+        };
+      }
+    }
   }
 
   // 7. Save chat messages to history

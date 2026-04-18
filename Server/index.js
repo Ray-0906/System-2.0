@@ -24,6 +24,7 @@ import './workers/notificationWorker.js';  // Socket.io push (stays in Node.js)
 
 const app=express();
 const httpServer = createServer(app);
+const PORT = Number(process.env.PORT) || 3000;
 
 // Initialize WebSocket server
 initSocket(httpServer);
@@ -66,10 +67,18 @@ startGraphQLServer(app).catch(err => {
     console.error('Error starting GraphQL server:', err);
 });
 
-httpServer.listen(3000, () => {
+httpServer.on('error', (err) => {
+    if (err?.code === 'EADDRINUSE') {
+        console.error(`Port ${PORT} is already in use. Stop the existing process or set PORT in .env.`);
+        return;
+    }
+    console.error('HTTP server error:', err);
+});
+
+httpServer.listen(PORT, () => {
     connectDB();
     // addEquipments();
     // addSkills();
-    console.log('Server is running on port 3000');
+    console.log(`Server is running on port ${PORT}`);
 });
 export default app;

@@ -38,7 +38,7 @@ export const deleteMissionTracker = async (req, res) => {
 
 export const abandonMissionTracker = async (req, res) => {
   try {
-    const result = await trackerService.abandonTracker(req.user.id, req.body.trackerId);
+    const result = await trackerService.abandonTracker(req.user._id, req.params.id);
     return res.status(200).json(result);
   } catch (err) {
     return handleServiceError(res, err);

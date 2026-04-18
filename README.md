@@ -1,4 +1,4 @@
-# 🧿 System-2.0 – AI-Powered Life Gamification System
+          # 🧿 System-2.0 – AI-Powered Life Gamification System
 
 A full-stack productivity platform that transforms your real-life goals into an RPG-style quest system inspired by *Solo Leveling*. Track daily missions, unlock skills, earn coins, equip artifacts, and level up your stats – all powered by an AI-based quest generation and evaluation engine.
 
@@ -972,3 +972,39 @@ For issues or questions:
 - Check [`CLAUDE.md`](CLAUDE.md) for architecture overview
 - Review test files for usage examples
 - Check seed scripts for data structure references
+
+## ?? AI Assistant (Semantic RAG & ReAct Agent) Architecture
+
+The Growth Assistant is a sophisticated AI system built with **LangGraph** (ReAct pattern) and **Mistral AI**, using a **Semantic RAG (Retrieval-Augmented Generation)** pipeline to provide hyper-personalized coaching and gamified progression.
+
+### ?? Memory & Context Management
+To maintain an infinite memory without exceeding LLM context windows, the agent is fed a progressive, layered context snapshot on *every* request:
+
+1. **Real-time Player Profile:** Instant snapshot of current stats, level, xp, rank, coins, and equipment count.
+2. **Active Missions:** The list of currently active routines, streaks, and remaining quests.
+3. **Conversational Memory:**
+   - *Short-Term:* The last 10 messages (5 exchanges) are passed verbatim.
+   - *Long-Term (Rolling):* Messages older than 10 are deleted and converted into a perpetual, condensed semantic summary (ChatSummary).
+4. **Short-term Activity Memory:** The exact last 20 raw events (completed quests, levelled up, bought item).
+5. **Long-term Semantic Memory (Pinecone):** 
+   - Every 20 events, the Node.js backend triggers Python to bundle, summarize, and embed a "Page Summary" into a Pinecone vector database.
+   - During the chat, the Python edge searches Pinecone natively (Top-3 vectors) to retrieve long-forgotten but semantically relevant history.
+
+### ??? ReAct Tools & Capabilities
+The AI is not just a chatbot�it is an autonomous agent that can interact directly with the game's database using structured tools.
+
+| Tool Name | Purpose | Data Fed to Agent & Execution |
+|---|---|---|
+| generate_mission(description, days) | Designs custom, balanced RPG-style missions with stat allocations, XP rewards, and penalty tiers based on natural language requests. | The agent is given a free-form goal. It invokes this tool, which triggers mission_service.py to create a complex JSON mission draft. The draft is returned to the agent, which proposes it to the user. |
+| confirm_mission() | Accepts the proposed mission. | Triggered when the user says "yes". Emits an intent that routes back to Node.js, which creates the mission and auto-enrolls the user. |
+| cancel_mission() | Rejects the proposed mission. | Triggered when the user says "no" or changes their mind. Node.js clears the temporary draft from the database. |
+
+### ?? Request Workflow
+1. **Frontend:** User types a message in the React ChatWidget.
+2. **Node.js Gateway:** ssistantService.js gathers the player's live profile, recent events, chat messages, and the rolling summary. 
+3. **RAG-Service (Python):**
+   - Node.js sends the combined context payload plus the user's message to the Python FastAPI /chat endpoint.
+   - Python intrinsically runs a semantic vector search in Pinecone and injects the retrieved data into the context object.
+   - A single, compact system prompt is generated summarizing the state.
+4. **LangGraph ReAct Loop:** The ChatMistralAI model is invoked. If it decides to use a tool (e.g., generating a mission), the tool executes locally in Python.
+5. **Action Routing:** The final response text, alongside any structured tool intent (like mission_proposed or mission_created), is passed back to Node.js to update the database, returning the final payload to the React frontend.

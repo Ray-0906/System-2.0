@@ -137,6 +137,60 @@ export const chatWithRAG = async (payload) => {
 };
 
 // ═══════════════════════════════════════════════════════
+// MISSION GENERATION (via RAG-Service)
+// ═══════════════════════════════════════════════════════
+
+/**
+ * Generate a mission from a free-form description.
+ */
+export const generateMission = async (description, days) => {
+  try {
+    const res = await fetch(`${RAG_SERVICE_URL}/mission/generate`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...INTERNAL_HEADERS },
+      body: JSON.stringify({ description, days }),
+      signal: AbortSignal.timeout(REQUEST_TIMEOUT),
+    });
+
+    if (!res.ok) {
+      const errData = await res.json().catch(() => ({}));
+      console.error(`[RAG] Mission generation failed (HTTP ${res.status}):`, errData);
+      return null;
+    }
+
+    return await res.json();
+  } catch (err) {
+    console.error('[RAG] Mission generation error:', err.message);
+    return null;
+  }
+};
+
+/**
+ * Generate a mission from a predefined quest list.
+ */
+export const generateCustomMission = async (quests, days) => {
+  try {
+    const res = await fetch(`${RAG_SERVICE_URL}/mission/generate-custom`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...INTERNAL_HEADERS },
+      body: JSON.stringify({ quests, days }),
+      signal: AbortSignal.timeout(REQUEST_TIMEOUT),
+    });
+
+    if (!res.ok) {
+      const errData = await res.json().catch(() => ({}));
+      console.error(`[RAG] Custom mission generation failed (HTTP ${res.status}):`, errData);
+      return null;
+    }
+
+    return await res.json();
+  } catch (err) {
+    console.error('[RAG] Custom mission generation error:', err.message);
+    return null;
+  }
+};
+
+// ═══════════════════════════════════════════════════════
 // HISTORY SUMMARIZATION
 // ═══════════════════════════════════════════════════════
 

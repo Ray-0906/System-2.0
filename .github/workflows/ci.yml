@@ -126,7 +126,11 @@ jobs:
     - uses: actions/checkout@v4
     
     - name: Build Docker Images
-      run: docker compose build
+      # Create placeholder .env files so docker-compose doesn't crash
+      run: |
+        touch Server/.env
+        touch RAG-Service/.env
+        docker compose build
       
     - name: Start All Services (Detached)
       run: docker compose up -d

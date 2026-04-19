@@ -5,9 +5,9 @@
 import { useState, useRef, useEffect } from 'react';
 import axiosInstance from '../utils/axios';
 import { useUserStore } from '../store/userStore';
-import { Terminal, X, ChevronRight, Activity } from 'lucide-react';
+import { Terminal, X, ChevronRight, Activity, Trash2, Shield, Eye } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
-
+import { motion, AnimatePresence } from 'framer-motion';
 
 export default function ChatWidget() {
   const triggerRefetch = useUserStore(s => s.triggerRefetch);
@@ -15,6 +15,7 @@ export default function ChatWidget() {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
+  const [previewMission, setPreviewMission] = useState(null);
   const bottomRef = useRef(null);
 
   // Fetch chat history once on load
@@ -39,8 +40,21 @@ export default function ChatWidget() {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  const send = async () => {
-    const text = input.trim();
+  const clearChat = async () => {
+    if (!window.confirm("Are you sure you want to clear your chat history?")) return;
+    try {
+      setLoading(true);
+      await axiosInstance.delete('/assistant/history');
+      setMessages([{ role: 'assistant', content: "Memory cleared. What's our next move, Hunter?" }]);
+    } catch (err) {
+      console.error('Failed to clear chat history:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const sendCustom = async (textOverride) => {
+    const text = typeof textOverride === 'string' ? textOverride.trim() : input.trim();
     if (!text || loading) return;
 
     setMessages(prev => [...prev, { role: 'user', content: text }]);
@@ -49,9 +63,8 @@ export default function ChatWidget() {
 
     try {
       const { data } = await axiosInstance.post('/assistant/chat', { message: text });
-      setMessages(prev => [...prev, { role: 'assistant', content: data.reply }]);
-      
-      // Tell UI to refetch if AI changed the database
+      setMessages(prev => [...prev, { role: 'assistant', content: data.reply, action: data.action }]);
+
       if (data.action?.type === 'mission_created' || data.action?.type === 'mission_proposal_canceled') {
         triggerRefetch();
       }
@@ -61,6 +74,8 @@ export default function ChatWidget() {
       setLoading(false);
     }
   };
+
+  const send = () => sendCustom();
 
   const handleKey = (e) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -73,22 +88,21 @@ export default function ChatWidget() {
     return (
       <button
         onClick={() => setOpen(true)}
-        className="fixed bottom-6 right-6 z-50 w-14 h-14 bg-[#050608] border border-[#a855f7]/50 shadow-[0_0_15px_rgba(168,85,247,0.3)] hover:bg-[#a855f7]/10 hover:scale-110 transition-all duration-300 flex items-center justify-center group overflow-hidden"
+        className="fixed bottom-20 right-4 sm:bottom-6 sm:right-6 z-[60] w-12 h-12 sm:w-14 sm:h-14 bg-[#050608] border border-[#a855f7]/50 shadow-[0_0_15px_rgba(168,85,247,0.3)] hover:bg-[#a855f7]/10 hover:scale-110 transition-all duration-300 flex items-center justify-center group overflow-hidden"
         title="SYSTEM ORACLE"
         style={{ clipPath: 'polygon(30% 0%, 100% 0, 100% 70%, 70% 100%, 0 100%, 0% 30%)' }}
       >
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(168,85,247,0.2)_0%,transparent_70%)] opacity-0 group-hover:opacity-100 transition-opacity"></div>
         <div className="absolute top-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-[#a855f7] to-transparent"></div>
         <div className="absolute bottom-0 left-0 w-[1px] h-full bg-gradient-to-b from-[#a855f7] to-transparent"></div>
-        <Terminal className="w-6 h-6 text-[#a855f7] group-hover:animate-pulse relative z-10" />
+        <Terminal className="w-5 h-5 sm:w-6 sm:h-6 text-[#a855f7] group-hover:animate-pulse relative z-10" />
       </button>
     );
   }
 
   return (
-    <div className="fixed bottom-6 right-6 z-50 w-[380px] h-[520px] flex flex-col bg-[#050608]/95 backdrop-blur-xl border border-white/5 shadow-[-10px_-10px_30px_rgba(0,0,0,0.8)] overflow-hidden font-['Rajdhani']"
-      style={{ clipPath: 'polygon(0 0, 100% 0, 100% calc(100% - 20px), calc(100% - 20px) 100%, 0 100%)' }}>
-      
+    <div className="fixed bottom-0 right-0 sm:bottom-6 sm:right-6 z-[60] w-full sm:w-[380px] h-[100dvh] sm:h-[520px] flex flex-col bg-[#050608]/95 backdrop-blur-xl sm:border sm:border-white/5 shadow-[-10px_-10px_30px_rgba(0,0,0,0.8)] overflow-hidden font-['Rajdhani'] sm:[clip-path:polygon(0_0,100%_0,100%_calc(100%-20px),calc(100%-20px)_100%,0_100%)]">
+
       {/* Scanline Background */}
       <div className="absolute inset-0 bg-[linear-gradient(to_right,#1f2937_1px,transparent_1px),linear-gradient(to_bottom,#1f2937_1px,transparent_1px)] bg-[size:1rem_1rem] opacity-10 pointer-events-none z-0"></div>
 
@@ -106,12 +120,21 @@ export default function ChatWidget() {
             </p>
           </div>
         </div>
-        <button
-          onClick={() => setOpen(false)}
-          className="w-8 h-8 flex items-center justify-center text-gray-500 hover:text-white hover:bg-white/5 transition-colors border border-transparent hover:border-white/10"
-        >
-          <X className="w-4 h-4" />
-        </button>
+        <div className="flex items-center gap-1 z-20 relative">
+          <button
+            onClick={clearChat}
+            title="Clear Memory"
+            className="w-8 h-8 flex items-center justify-center text-gray-500 hover:text-red-500 hover:bg-red-500/10 transition-colors border border-transparent hover:border-red-500/30 rounded"
+          >
+            <Trash2 className="w-4 h-4" />
+          </button>
+          <button
+            onClick={() => setOpen(false)}
+            className="w-8 h-8 flex items-center justify-center text-gray-500 hover:text-white hover:bg-white/5 transition-colors border border-transparent hover:border-white/10 rounded"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
         <div className="absolute bottom-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-[#a855f7]/50 to-transparent"></div>
       </div>
 

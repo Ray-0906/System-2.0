@@ -86,6 +86,12 @@ const getPendingMissionProposal = async (userId) => {
 
 // ── Chat History Management ──────────────────────────
 
+export async function clearChatHistory(userId) {
+  await ChatMessage.deleteMany({ userId });
+  await ChatSummary.deleteOne({ userId });
+  return { cleared: true };
+}
+
 export async function getChatHistory(userId) {
   // Get recent messages (chronological fallback to _id to resolve identical timestamps)
   const messages = await ChatMessage.find({ userId })
@@ -257,6 +263,9 @@ export const chat = async (userId, message) => {
             type: 'mission_proposed',
             requiresConfirmation: true,
             title: generated.title,
+            rank: generated.rank,
+            reward: generated.reward,
+            quests: generated.quests.slice(0, 4), // Optional limit for preview
             days,
           },
         };

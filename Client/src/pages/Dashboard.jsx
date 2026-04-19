@@ -73,16 +73,19 @@ const AnimatedBackground = () => {
 
 
 // 2. Animated Progress Bar
-const ProgressBar = ({ value, max }) => {
-  const percentage = max > 0 ? (value / max) * 100 : 0;
+const ProgressBar = ({ value, max, color = 'bg-purple-500' }) => {
+  const percentage = max > 0 ? Math.min((value / max) * 100, 100) : 0;
   return (
-    <div className="w-full bg-gray-700/50 rounded-full h-2.5 overflow-hidden">
+    <div className="w-full bg-gray-900/80 rounded-full h-2.5 overflow-hidden border border-purple-500/20 shadow-inner my-1">
       <motion.div
-        className="bg-gradient-to-r from-purple-500 to-pink-500 h-2.5 rounded-full shadow-[0_0_8px_rgba(192,132,252,0.7)]"
+        className={`bg-gradient-to-r from-purple-600 via-pink-500 to-amber-400 h-full rounded-full relative`}
         initial={{ width: 0 }}
         animate={{ width: `${percentage}%` }}
-        transition={{ duration: 1, ease: "easeOut" }}
-      />
+        transition={{ duration: 1.5, ease: "easeOut" }}
+      >
+        {/* Animated shimmer effect on the bar */}
+        <div className="absolute top-0 inset-x-0 h-full bg-white/20 animate-pulse" />
+      </motion.div>
     </div>
   );
 };
@@ -91,38 +94,58 @@ const ProgressBar = ({ value, max }) => {
 const HunterProfile = ({ user, onEdit }) => (
   <motion.div
     variants={{ hidden: { opacity: 0, y: 50 }, visible: { opacity: 1, y: 0 } }}
-    className="bg-black/30 backdrop-blur-md rounded-xl p-6 shadow-[0_0_25px_rgba(139,92,246,0.2)] border border-purple-500/30 relative overflow-hidden"
+    className="w-full h-full bg-black/40 backdrop-blur-md rounded-xl p-4 md:p-5 border border-purple-500/30 shadow-[0_0_15px_rgba(139,92,246,0.15)] hover:shadow-[0_0_25px_rgba(168,85,247,0.3)] hover:border-purple-500/50 transition-all duration-300 relative overflow-hidden flex flex-col justify-between"
   >
-    <div className="absolute -top-1/4 -right-1/4 w-1/2 h-1/2 bg-purple-600/20 rounded-full blur-3xl"></div>
-    <h2 className="text-xl text-center font-semibold mb-4 border-b border-purple-700/50 pb-2 flex items-center justify-center gap-2 relative">
-      <User size={20} /> HUNTER ID
-      <button onClick={onEdit} className="absolute right-0 top-0 text-purple-300 hover:text-white transition-colors" title="Edit Profile">
+    <div className="absolute -top-1/4 -right-1/4 w-1/2 h-1/2 bg-purple-600/20 rounded-full blur-3xl pointer-events-none"></div>
+    <h2 className="text-xl text-center font-bold tracking-wider mb-4 border-b border-purple-500/30 pb-2 flex items-center justify-center gap-2 relative bg-clip-text text-transparent bg-gradient-to-r from-purple-400 to-pink-400 shrink-0" style={{ fontFamily: "'Rajdhani', 'Orbitron', sans-serif" }}>
+      <User size={20} className="text-purple-400" /> HUNTER ID
+      <button onClick={onEdit} className="absolute right-0 top-0 text-purple-300 hover:text-pink-400 hover:scale-110 transition-all" title="Edit Profile">
         <Pencil size={18} />
       </button>
     </h2>
-    <div className="flex flex-col items-center mb-6 relative z-10">
-      <div className="w-32 h-32 rounded-full overflow-hidden border-4 border-purple-500 shadow-[0_0_15px_rgba(139,92,246,0.7)] mb-4 transform hover:scale-105 transition-transform duration-300">
+    
+      <div className="flex flex-col items-center mb-6 relative z-10 flex-grow justify-center">
+        <div className="w-32 h-32 md:w-40 md:h-40 rounded-full overflow-hidden border-[3px] border-purple-500 shadow-[0_0_15px_rgba(139,92,246,0.5)] hover:shadow-[0_0_25px_rgba(236,72,153,0.6)] hover:scale-105 hover:border-pink-500 transition-all duration-300 mb-6 relative group">
         <img
           src={user?.avatar || "https://readdy.ai/api/search-image?query=Anime%20style%20portrait%20of%20a%20mysterious%20hunter%20with%20dark%20green%20hair%20and%20intense%20eyes%2C%20looking%20directly%20at%20viewer%20with%20a%20serious%20expression%2C%20dark%20atmospheric%20background%20with%20subtle%20shadows%2C%20high%20quality%20digital%20art&width=300&height=300&seq=1&orientation=squarish"}
-          alt="Shadow Monarch Avatar"
+          alt="Hunter Avatar"
           className="w-full h-full object-cover object-top"
           onError={(e) => { e.target.onerror = null; e.target.src = 'https://placehold.co/300x300/1a1a1a/c084fc?text=Hunter'; }}
         />
+        <div className="absolute inset-0 bg-purple-500/20 opacity-0 group-hover:opacity-100 transition-opacity rounded-full mix-blend-screen" />
       </div>
-      <div className="text-center">
-        <p><span className="text-purple-400">IDENT:</span> {user?.username || 'N/A'}</p>
-  <p><span className="text-purple-400">TITLE:</span> <span className="text-yellow-400">{user?.activeTitle || user?.titles?.[0] || "Shadow Soldier"}</span></p>
-        <p><span className="text-purple-400">RANK:</span> <span className="text-yellow-400 font-bold text-lg">{user?.rank || 'E'}</span></p>
-        <p><span className="text-purple-400">COINS:</span> {user?.coins || 0}</p>
+      
+<div className="w-full max-w-[280px] space-y-2 text-sm">     
+        <div className="flex justify-between items-center bg-gray-900/50 p-3 rounded border border-purple-500/20">
+          <span className="text-purple-400/80 text-xs font-semibold tracking-widest">IDENT:</span>
+          <span className="text-purple-100 font-medium truncate ml-2">{user?.username || 'N/A'}</span>
+        </div>
+        <div className="flex justify-between items-center bg-gray-900/50 p-3 rounded border border-purple-500/20">
+          <span className="text-purple-400/80 text-xs font-semibold tracking-widest">TITLE:</span>
+          <span className="text-amber-300 font-medium truncate ml-2">{user?.activeTitle || user?.titles?.[0] || "Shadow"}</span>
+        </div>
+        <div className="flex justify-between items-center bg-gray-900/50 p-3 rounded border border-purple-500/20">
+          <span className="text-purple-400/80 text-xs font-semibold tracking-widest">RANK:</span>
+          <span className="text-pink-400 font-bold text-base drop-shadow-[0_0_5px_rgba(236,72,153,0.5)]">{user?.rank || 'E'}</span>
+        </div>
+        <div className="flex justify-between items-center bg-gray-900/50 p-3 rounded border border-purple-500/20">
+          <span className="text-purple-400/80 text-xs font-semibold tracking-widest">COINS:</span>
+          <span className="text-yellow-400 font-medium">{Number(user?.coins || 0).toLocaleString()}</span>
+        </div>
       </div>
     </div>
-    <div className="mt-4 relative z-10">
-      <div className="flex justify-between items-center mb-2">
-        <span className="text-purple-400">LEVEL:</span>
-        <span className="text-lg font-bold text-white">Lv. {user?.level || 1}</span>
+    
+    <div className="mt-auto relative z-10 pt-4 w-full">
+      <div className="flex justify-between items-end mb-2">
+        <span className="text-purple-400 font-bold tracking-widest text-sm" style={{ fontFamily: "'Rajdhani', 'Orbitron', sans-serif" }}>PLAYER LEVEL</span>
+        <span className="text-xl font-bold text-white drop-shadow-[0_0_8px_rgba(192,132,252,0.8)]" style={{ fontFamily: "'Rajdhani', 'Orbitron', sans-serif" }}>
+          Lv. {user?.level || 1}
+        </span>
       </div>
       <ProgressBar value={user?.xp || 0} max={userLevelThresholds[user?.level || 1] || 500} />
-      <div className="text-right text-xs text-purple-300 mt-1">{user?.xp || 0} / {userLevelThresholds[user?.level || 1] || 500} XP</div>
+      <div className="text-right text-xs text-purple-300/80 mt-2 font-['Exo_2'] font-medium">
+        {Number(user?.xp || 0).toLocaleString()} / {Number(userLevelThresholds[user?.level || 1] || 500).toLocaleString()} XP
+      </div>
     </div>
   </motion.div>
 );
@@ -135,7 +158,7 @@ const StatsDisplay = ({ user, stats }) => {
     let chart; let echartsLocal;
     let disposed = false;
     const init = async () => {
-      if (!chartRef.current || !user) return;
+      if (!chartRef.current || !user || !stats || !stats.length) return;
       const mod = await import(/* webpackChunkName: "echarts" */'echarts');
       echartsLocal = mod;
       if (disposed) return;
@@ -144,18 +167,18 @@ const StatsDisplay = ({ user, stats }) => {
       const mx = Math.max(...statValues, 10);
       chart.setOption({
         backgroundColor: 'transparent',
-        tooltip: { trigger: 'item', backgroundColor: 'rgba(0,0,0,0.7)', borderColor: '#8B5CF6', textStyle:{ color:'#fff'} },
+        tooltip: { trigger: 'item', backgroundColor: 'rgba(0,0,0,0.85)', borderColor: '#a855f7', borderWidth: 1, textStyle:{ color:'#e2e8f0'} },
         radar: {
-          indicator: stats.map(s => ({ name: s.name, max: mx + 5 })),
-          shape: 'polygon', center:['50%','50%'], radius:'75%',
-          axisName:{ color:'rgba(224,204,255,0.9)', fontSize:12, fontFamily:"'Rajdhani', 'Orbitron', monospace", textShadowColor:'rgba(192,132,252,0.5)', textShadowBlur:5 },
-          splitLine:{ lineStyle:{ color:'rgba(170,130,255,0.2)', type:'dashed'}},
-          splitArea:{ show:true, areaStyle:{ color:['rgba(139,92,246,0.05)','rgba(139,92,246,0.1)']}},
-          axisLine:{ lineStyle:{ color:'rgba(170,130,255,0.3)'} }
+          indicator: stats.map(s => ({ name: s.name.substring(0,3), max: mx + 5 })),
+          shape: 'polygon', center:['50%','50%'], radius:'65%',
+          axisName:{ color:'rgba(224,204,255,0.9)', fontSize:10, fontFamily:"'Rajdhani', 'Orbitron', monospace", fontWeight: 600, textShadowColor:'rgba(168,85,247,0.7)', textShadowBlur:8 },
+          splitLine:{ lineStyle:{ color:'rgba(168,85,247,0.2)', type:'solid'}},
+          splitArea:{ show:true, areaStyle:{ color:['rgba(0,0,0,0)','rgba(168,85,247,0.03)']}},
+          axisLine:{ lineStyle:{ color:'rgba(168,85,247,0.4)'} }
         },
-        series:[{ type:'radar', data:[{ value: statValues, name:'Current Levels', symbol:'circle', symbolSize:8,
-          itemStyle:{ color:'#C084FC'}, lineStyle:{ color:'#C084FC', width:3, shadowColor:'rgba(192,132,252,0.8)', shadowBlur:10 },
-          areaStyle:{ color: new echartsLocal.graphic.RadialGradient(0.5,0.5,0.5,[{offset:0,color:'rgba(192,132,252,0.5)'},{offset:1,color:'rgba(139,92,246,0.1)'}]) }
+        series:[{ type:'radar', data:[{ value: statValues, name:'Level Stats', symbol:'circle', symbolSize:6,
+          itemStyle:{ color:'#ec4899'}, lineStyle:{ color:'#a855f7', width:2, shadowColor:'rgba(236,72,153,0.5)', shadowBlur:8 },
+          areaStyle:{ color: new echartsLocal.graphic.RadialGradient(0.5,0.5,0.5,[{offset:0,color:'rgba(236,72,153,0.4)'},{offset:1,color:'rgba(168,85,247,0.1)'}]) }
         }]}]
       });
       const resize = () => chart && chart.resize();
@@ -169,26 +192,39 @@ const StatsDisplay = ({ user, stats }) => {
   return (
     <motion.div
       variants={{ hidden: { opacity: 0, y: 50 }, visible: { opacity: 1, y: 0 } }}
-      className="bg-black/30 backdrop-blur-md rounded-xl p-6 shadow-[0_0_25px_rgba(139,92,246,0.2)] border border-purple-500/30 lg:col-span-2"
+      className="w-full h-full bg-black/40 backdrop-blur-md rounded-xl p-4 md:p-6 border border-purple-500/30 shadow-[0_0_15px_rgba(139,92,246,0.15)] hover:shadow-[0_0_25px_rgba(168,85,247,0.3)] hover:border-purple-500/50 transition-all duration-300 lg:col-span-2 relative overflow-hidden flex flex-col justify-between group/card"
     >
-      <h2 className="text-xl text-center font-semibold mb-4 border-b border-purple-700/50 pb-2 flex items-center justify-center gap-2"><BarChart2 size={20} /> SHADOW STATS</h2>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="flex items-center justify-center min-h-[250px]">
-          <div ref={chartRef} className="w-full h-full"></div>
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-purple-900/10 via-transparent to-transparent pointer-events-none group-hover/card:from-purple-900/20 transition-all duration-500" />
+      <h2 className="text-2xl text-center font-bold tracking-wider mb-4 border-b border-purple-500/30 pb-3 flex items-center justify-center gap-3 relative bg-clip-text text-transparent bg-gradient-to-r from-purple-400 to-pink-400" style={{ fontFamily: "'Rajdhani', 'Orbitron', sans-serif" }}>
+        <BarChart2 size={24} className="text-purple-400" /> SHADOW STATS
+      </h2>
+      <div className="flex flex-col lg:flex-row items-center w-full gap-6 flex-grow py-4">
+        <div className="flex justify-center h-full min-h-[300px] w-full lg:w-[45%] relative group max-w-md mx-auto">
+          <div className="absolute inset-0 bg-purple-500/5 rounded-full blur-3xl group-hover:bg-purple-500/10 transition-colors duration-500 pointer-events-none" />
+          <div ref={chartRef} className="w-[120%] h-[120%] -ml-[10%] -mt-[10%] relative z-10"></div>
         </div>
-        <div className="space-y-4">
-          {stats.map((stat) => (
-            <div key={stat.name}>
-              <div className="flex justify-between items-center mb-1">
-                <span className="text-purple-400">{stat.name}</span>
-                <span className="text-sm text-yellow-400">Lv. {stat.level}</span>
+        <div className="flex flex-col justify-center space-y-4 px-4 w-full lg:w-[55%]">
+          {stats.map((stat) => {
+            const maxVal = statLevelThresholds[stat.level] || 0;
+            return (
+              <div key={stat.name} className="relative z-10 w-full mb-2">
+                <div className="flex justify-between items-end mb-1">
+                  <span className="text-purple-300 font-semibold tracking-wider text-sm drop-shadow truncate" style={{ fontFamily: "'Rajdhani', 'Orbitron', sans-serif" }}>
+                    {stat.name}
+                  </span>
+                  <span className="text-sm font-bold text-amber-300 ml-2" style={{ fontFamily: "'Rajdhani', 'Orbitron', sans-serif" }}>
+                    Lv.{stat.level}
+                  </span>
+                </div>
+                <ProgressBar value={stat.value} max={maxVal} color="bg-purple-500" />
+                <div className="flex justify-end items-center mt-1.5">
+                  <span className="text-xs text-purple-300/70 font-medium font-['Exo_2']">
+                    {Number(stat.value).toLocaleString()} <span className="text-purple-400/50">/</span> {Number(maxVal).toLocaleString()} XP
+                  </span>
+                </div>
               </div>
-              <ProgressBar value={stat.value} max={statLevelThresholds[stat.level] || 500} />
-              <div className="text-right text-[10px] sm:text-xs text-purple-300 mt-1 tracking-wide">
-                {stat.value} / {statLevelThresholds[stat.level] || 0} XP
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
     </motion.div>
@@ -199,33 +235,48 @@ const StatsDisplay = ({ user, stats }) => {
 const InventorySection = ({ title, items, icon: Icon, type }) => (
   <motion.div
     variants={{ hidden: { opacity: 0, y: 50 }, visible: { opacity: 1, y: 0 } }}
-    className="bg-black/30 backdrop-blur-md rounded-xl p-6 shadow-[0_0_25px_rgba(139,92,246,0.2)] border border-purple-500/30 relative overflow-hidden"
+    className="bg-black/40 backdrop-blur-md rounded-xl p-4 md:p-5 border border-purple-500/30 shadow-[0_0_15px_rgba(139,92,246,0.15)] hover:shadow-[0_0_25px_rgba(168,85,247,0.3)] hover:border-purple-500/50 transition-all duration-300 relative overflow-hidden flex flex-col min-h-[300px]"
   >
-    <div className="absolute -bottom-1/4 -left-1/4 w-1/2 h-1/2 bg-purple-600/20 rounded-full blur-3xl"></div>
-    <h2 className="text-xl font-semibold mb-4 border-b border-purple-700/50 pb-2 flex items-center gap-2"><Icon size={20} /> {title}</h2>
-    <div className="relative">
-      <div className="overflow-x-auto pb-4 -mb-4 scrollbar-thin scrollbar-thumb-purple-500/50 scrollbar-track-transparent">
-        <div className="flex gap-4 min-w-max">
+    <div className="absolute -bottom-1/4 -left-1/4 w-1/2 h-1/2 bg-purple-600/10 rounded-full blur-3xl pointer-events-none"></div>
+    <h2 className="text-xl font-bold tracking-wider mb-3 border-b border-purple-500/30 pb-2 flex items-center gap-3 relative bg-clip-text text-transparent bg-gradient-to-r from-purple-400 to-pink-400" style={{ fontFamily: "'Rajdhani', 'Orbitron', sans-serif" }}>
+      <Icon size={20} className="text-purple-400" /> {title}
+    </h2>
+    <div className="relative z-10 flex-1 flex flex-col justify-center min-h-0">
+      <div className="overflow-x-auto pb-4 scrollbar-thin scrollbar-thumb-purple-500/50 scrollbar-track-gray-900/50 hover:scrollbar-thumb-pink-500/60 transition-colors">
+        <div className="flex gap-4 min-w-max px-1">
           {items && items.length > 0 ? (
             items.map((item) => (
-              <div key={item._id || item.name} className="group relative cursor-pointer text-center w-20">
-                <div className="w-20 h-20 bg-gray-900/50 rounded-lg flex items-center justify-center border-2 border-transparent group-hover:border-purple-500 transition-all duration-300 shadow-md group-hover:shadow-[0_0_15px_rgba(192,132,252,0.5)]">
+              <div key={item._id || item.name} className="group relative cursor-pointer text-center w-24">
+                <div className="w-24 h-24 bg-gray-950/80 rounded-xl flex items-center justify-center border border-purple-500/30 group-hover:border-pink-500 transition-all duration-300 shadow-md group-hover:shadow-[0_0_20px_rgba(236,72,153,0.5)] transform group-hover:-translate-y-1 relative overflow-hidden">
+                  <div className="absolute inset-0 bg-gradient-to-t from-purple-500/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
                   <img
                     src={`/pic/${type}/${item.icon}`}
                     alt={item.name}
-                    className="w-12 h-12"
-                    onError={(e) => { e.target.onerror = null; e.target.src = `https://placehold.co/48x48/1a1a1a/c084fc?text=${item.name.charAt(0)}`; }}
+                    className="w-14 h-14 object-contain relative z-10 group-hover:scale-110 transition-transform duration-300"
+                    onError={(e) => { e.target.onerror = null; e.target.src = `https://placehold.co/56x56/1a1a1a/c084fc?text=${item.name.charAt(0)}`; }}
                   />
                 </div>
-                <p className="mt-2 text-center text-xs text-purple-300 truncate">{item.name}</p>
-                <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 w-48 bg-gray-900 border border-purple-500/50 p-3 rounded-lg shadow-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-20">
-                  <p className="font-semibold text-sm text-yellow-400">{item.name}</p>
-                  <p className="text-xs text-purple-300 mt-1">{item.description}</p>
+                <p className="mt-3 text-center text-xs font-semibold text-purple-200 truncate px-1 transition-colors group-hover:text-pink-300" style={{ fontFamily: "'Rajdhani', 'Orbitron', sans-serif" }}>
+                  {item.name}
+                </p>
+                <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-3 w-56 bg-gray-950/95 border border-pink-500/50 p-4 rounded-xl shadow-[0_0_20px_rgba(236,72,153,0.3)] opacity-0 group-hover:opacity-100 transition-all duration-300 pointer-events-none z-30 translate-y-2 group-hover:translate-y-0 backdrop-blur-xl">
+                  <div className="absolute inset-0 bg-gradient-to-br from-purple-500/10 to-transparent rounded-xl pointer-events-none" />
+                  <p className="font-bold text-sm tracking-wide text-transparent bg-clip-text bg-gradient-to-r from-amber-300 to-yellow-500 mb-1" style={{ fontFamily: "'Rajdhani', 'Orbitron', sans-serif" }}>
+                    {item.name}
+                  </p>
+                  <p className="text-xs text-purple-200/90 leading-relaxed font-['Exo_2']">
+                    {item.description}
+                  </p>
                 </div>
               </div>
             ))
           ) : (
-            <p className="text-purple-400/70 text-center w-full">No {title.toLowerCase()} found.</p>
+            <div className="flex flex-col items-center justify-center w-full py-8 opacity-50">
+              <Icon size={32} className="text-purple-500 mb-2" />
+              <p className="text-purple-400 font-medium tracking-widest text-sm" style={{ fontFamily: "'Rajdhani', 'Orbitron', sans-serif" }}>
+                NO {title.toUpperCase()} ACQUIRED
+              </p>
+            </div>
           )}
         </div>
       </div>
@@ -329,16 +380,20 @@ const Dashboard = () => {
     if (user) {
       return (
         <motion.div
-          className="grid gap-6"
+          className="w-full flex flex-col gap-4 max-w-[1300px] h-full"
           variants={containerVariants}
           initial="hidden"
           animate="visible"
         >
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <HunterProfile user={user} onEdit={openEdit} />
-            <StatsDisplay user={user} stats={stats} />
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-stretch pt-4 pb-8 flex-1">
+            <div className="lg:col-span-4 min-h-[450px]">
+              <HunterProfile user={user} onEdit={openEdit} />
+            </div>
+            <div className="lg:col-span-8 min-h-[450px]">
+              <StatsDisplay user={user} stats={stats} />
+            </div>
           </div>
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 pb-12 flex-1">
             <InventorySection title="SHADOW ARTIFACTS" items={user?.equiments || []} icon={Shield} type="arti" />
             <InventorySection title="SHADOW SKILLS" items={user?.skills || []} icon={Swords} type="skill" />
           </div>
@@ -388,23 +443,44 @@ const Dashboard = () => {
   };
 
   return (
-    
-  <div className="min-h-screen text-white p-4 sm:p-6 relative overflow-x-hidden" style={{ fontFamily: "'Rajdhani', 'Orbitron', monospace" }}>
-        <AnimatedBackground />
-        <div className="absolute inset-0 pointer-events-none">
-          <div className="absolute top-20 right-32 w-64 h-64 bg-purple-600/20 blur-3xl rounded-full" />
-          <div className="absolute bottom-24 left-20 w-72 h-72 bg-pink-600/20 blur-3xl rounded-full" />
-        </div>
-        <div className="max-w-7xl mx-auto relative z-10">
-          <motion.h1 
-            className="text-center text-4xl md:text-5xl font-extrabold mb-8 sm:mb-12 tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-purple-500 to-pink-500"
+    <AuthLayout>
+      <div 
+        className="min-h-screen bg-gradient-to-b from-[#030305] to-[#0a0a0f] text-gray-200 font-['Exo_2'] selection:bg-[#a855f7]/30 selection:text-white relative overflow-hidden pb-20 pt-6 md:pt-10"
+        onMouseMove={(e) => {
+          document.documentElement.style.setProperty('--mouse-x', `${e.clientX}px`);
+          document.documentElement.style.setProperty('--mouse-y', `${e.clientY}px`);
+        }}
+      >
+        <div 
+          className="pointer-events-none fixed inset-0 z-0 transition-opacity duration-300 animate-pulse"
+          style={{
+            background: 'radial-gradient(400px circle at var(--mouse-x) var(--mouse-y), rgba(168, 85, 247, 0.15), transparent 80%)'
+          }}
+        />
+        {/* Grid Background */}
+        <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:40px_40px] md:bg-[size:60px_60px] pointer-events-none z-0" />
+        
+        {/* Ambient Glows */}
+        <div className="absolute top-0 right-1/4 w-96 h-96 bg-[#3b82f6] rounded-full mix-blend-screen filter blur-[150px] opacity-10 pointer-events-none animate-pulse" />
+        <div className="absolute bottom-1/4 left-1/4 w-96 h-96 bg-[#a855f7] rounded-full mix-blend-screen filter blur-[150px] opacity-10 pointer-events-none" />
+        
+        <div className="max-w-[1400px] mx-auto w-full relative z-10 p-4 sm:p-6 lg:px-8 flex flex-col h-full min-h-screen overflow-y-auto overflow-x-hidden">
+          <motion.div 
             initial={{ opacity: 0, y: -50 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.7 }}
-            style={{ textShadow: '0 0 15px rgba(192, 132, 252, 0.4)' }}
+            transition={{ duration: 0.7, type: "spring", bounce: 0.4 }}
+            className="flex items-center justify-center mb-4 gap-4 mt-2 w-full max-w-[1200px] shrink-0"
           >
-            SHADOW MONARCH SYSTEM
-          </motion.h1>
+            <div className="flex-1 max-w-[150px] h-[1px] bg-gradient-to-r from-transparent to-purple-500/50 hidden md:block" />
+            <h1 
+              className="text-center text-3xl md:text-3xl lg:text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-400 via-pink-400 to-purple-400 drop-shadow-[0_0_15px_rgba(236,72,153,0.5)]"
+              style={{ fontFamily: "'Rajdhani', 'Orbitron', sans-serif", letterSpacing: '0.15em' }}
+            >
+              SHADOW MONARCH SYSTEM
+            </h1>
+            <div className="flex-1 max-w-[150px] h-[1px] bg-gradient-to-l from-transparent to-purple-500/50 hidden md:block" />
+          </motion.div>
+          
           <AnimatePresence mode="wait">
             <motion.div
               key={isLoading ? 'loading' : error ? 'error' : 'content'}
@@ -412,13 +488,14 @@ const Dashboard = () => {
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               transition={{ duration: 0.5 }}
+              className="w-full flex justify-center flex-1 min-h-0"
             >
               {renderContent()}
             </motion.div>
           </AnimatePresence>
         </div>
       </div>
-   
+    </AuthLayout>
   );
 };
 

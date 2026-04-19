@@ -112,6 +112,8 @@ export const dailyRefresh = async (userId, trackerId, penaltyType) => {
   tracker.remainingQuests = [...tracker.currentQuests];
   tracker.lastUpdated = now;
 
+  let updatedStats = null;
+
   // Apply penalty if streak was broken
   if (penaltyType && tracker.streak > 0) {
     const penaltyByType = tracker.penalty?.[penaltyType];
@@ -132,6 +134,16 @@ export const dailyRefresh = async (userId, trackerId, penaltyType) => {
               user.stats[stat].value = Math.max(0, user.stats[stat].value - statPenalty);
             }
           }
+          
+          let lv = user.level;
+          let uxp = user.xp - statPenalty;
+
+          while (uxp < 0 && lv > 1) {
+            uxp += userLevelThresholds[lv];
+            lv--;
+          }
+          user.xp = Math.max(0, uxp);
+          user.level = lv;
         }
         if (coinPenalty > 0) {
           user.coins = Math.max(0, user.coins - coinPenalty);
@@ -143,6 +155,7 @@ export const dailyRefresh = async (userId, trackerId, penaltyType) => {
         }
 
         await userRepo.save(user);
+        updatedStats = user;
 
         eventBus.emitAsync(Events.PENALTY_APPLIED, {
           userId, trackerId, penaltyType, statPenalty, coinPenalty,
@@ -153,7 +166,7 @@ export const dailyRefresh = async (userId, trackerId, penaltyType) => {
   }
 
   await trackerRepo.save(tracker);
-  return { refreshed: true, tracker };
+  return { refreshed: true, tracker, updatedStats };
 };
 
 /**

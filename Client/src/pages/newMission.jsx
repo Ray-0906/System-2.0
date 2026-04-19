@@ -225,76 +225,101 @@ export default function NewMission() {
             </div>
           </div>
 
-          {mission && (
-            <div className={`${theme.colors.card} p-1 relative overflow-hidden transition-all duration-500 mt-8 mb-8`}
-                 style={{ clipPath: 'polygon(0 0, 100% 0, 100% calc(100% - 20px), calc(100% - 20px) 100%, 0 100%)' }}>
-              <div className={`absolute inset-0 bg-gradient-to-br from-transparent to-[#a855f7]/10 opacity-100 transition-opacity duration-500 pointer-events-none`} />
-              
-              <div className="bg-[#050608] h-full p-8 md:p-10 relative" style={{ clipPath: 'polygon(0 0, 100% 0, 100% calc(100% - 19px), calc(100% - 19px) 100%, 0 100%)' }}>
-                <div className="absolute top-0 left-0 w-full h-[2px] bg-gradient-to-r from-transparent via-[#a855f7] to-transparent"></div>
-                <div className="absolute top-0 right-0 w-64 h-64 bg-[radial-gradient(circle,rgba(168,85,247,0.1)_0%,transparent_70%)] pointer-events-none"></div>
+          <AnimatePresence>
+            {mission && (
+              <motion.div 
+                initial={{ opacity: 0 }} 
+                animate={{ opacity: 1 }} 
+                exit={{ opacity: 0 }} 
+                className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md"
+              >
+                <motion.div 
+                  initial={{ scale: 0.95, opacity: 0, y: 20 }}
+                  animate={{ scale: 1, opacity: 1, y: 0 }}
+                  exit={{ scale: 0.95, opacity: 0, y: 20 }}
+                  className="w-full max-w-4xl max-h-[90vh] overflow-y-auto"
+                >
+                  <div className={`\${theme.colors.card} p-1 relative overflow-hidden transition-all duration-500`}
+                       style={{ clipPath: 'polygon(0 0, 100% 0, 100% calc(100% - 20px), calc(100% - 20px) 100%, 0 100%)' }}>
+                    <div className={`absolute inset-0 bg-gradient-to-br from-transparent to-[#a855f7]/10 opacity-100 transition-opacity duration-500 pointer-events-none`} />
+                    
+                    <div className="bg-[#050608] h-full p-8 md:p-10 relative" style={{ clipPath: 'polygon(0 0, 100% 0, 100% calc(100% - 19px), calc(100% - 19px) 100%, 0 100%)' }}>
+                      <div className="absolute top-0 left-0 w-full h-[2px] bg-gradient-to-r from-transparent via-[#a855f7] to-transparent"></div>
+                      <div className="absolute top-0 right-0 w-64 h-64 bg-[radial-gradient(circle,rgba(168,85,247,0.1)_0%,transparent_70%)] pointer-events-none"></div>
 
-                <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8 relative z-10 border-b border-[#1e2330] pb-6">
-                  <div>
-                    <h3 className="text-[#a855f7] text-[10px] font-black tracking-[0.4em] font-['Rajdhani'] mb-1">SYNTHESIS COMPLETE</h3>
-                    <h2 className="text-2xl md:text-3xl font-black italic tracking-wide text-white drop-shadow-[0_0_10px_rgba(255,255,255,0.2)] uppercase">{mission.title}</h2>
-                    <div className="flex flex-wrap items-center gap-3 text-xs font-bold font-['Rajdhani'] tracking-widest mt-2">
-                      <span className="px-2 py-1 bg-[#090b10] border border-[#1e2330] text-gray-400 flex items-center uppercase">
-                        <ClockIcon className="w-3 h-3 mr-1 text-[#06b6d4]" /> {mission.duration} DAYS
-                      </span>
-                      <span className="px-2 py-1 bg-[#090b10] border border-[#1e2330] text-gray-400 flex items-center uppercase">
-                        <DifficultyIcon difficulty={mission.difficulty} />{mission.difficulty || 'Normal'}
-                      </span>
+                      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8 relative z-10 border-b border-[#1e2330] pb-6">
+                        <div>
+                          <h3 className="text-[#a855f7] text-[10px] font-black tracking-[0.4em] font-['Rajdhani'] mb-1">SYNTHESIS COMPLETE</h3>
+                          <h2 className="text-2xl md:text-3xl font-black italic tracking-wide text-white drop-shadow-[0_0_10px_rgba(255,255,255,0.2)] uppercase">{mission.title}</h2>
+                          <div className="flex flex-wrap items-center gap-3 text-xs font-bold font-['Rajdhani'] tracking-widest mt-2">
+                            <span className="px-2 py-1 bg-[#090b10] border border-[#1e2330] text-gray-400 flex items-center uppercase">
+                              <ClockIcon className="w-3 h-3 mr-1 text-[#06b6d4]" /> {mission.duration} DAYS
+                            </span>
+                            <span className="px-2 py-1 bg-[#090b10] border border-[#1e2330] text-gray-400 flex items-center uppercase">
+                              <DifficultyIcon difficulty={mission.difficulty} />{mission.difficulty || 'Normal'}
+                            </span>
+                          </div>
+                        </div>
+                        <RankBadge rank={mission.rank} />
+                      </div>
+
+                      <div className="space-y-6 relative z-10">
+                        <MissionInfoPanel title="MISSION DIRECTIVE">
+                          <p className={`text-gray-400 font-light text-sm pl-4 border-l-2 border-[#1e2330]`}>{mission.description}</p>
+                        </MissionInfoPanel>
+                        
+                        <div className="mb-10">
+                          <h4 className="text-gray-400 font-black tracking-widest font-['Rajdhani'] text-xs flex items-center gap-2 mb-4">
+                            <Wand2 size={14} className="text-[#a855f7]" /> DAILY PROTOCOL
+                          </h4>
+                          <div className="bg-[#090b10] border border-[#1e2330] p-4 relative">
+                            <div className="absolute left-6 top-4 bottom-4 w-[1px] bg-[#1e2330]"></div>
+                            <QuestList quests={mission.quests}/>
+                          </div>
+                        </div>
+
+                        <div className="bg-[#090b10] border border-[#1e2330] p-4 relative overflow-hidden" style={{ clipPath: 'polygon(0 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%)' }}>
+                          <div className="absolute top-0 right-0 w-16 h-16 bg-[radial-gradient(circle,rgba(34,197,94,0.15)_0%,transparent_70%)]"></div>
+                          <h4 className="text-green-500 font-black tracking-widest font-['Rajdhani'] text-xs flex items-center gap-2 mb-4 border-b border-green-500/20 pb-2">
+                            <Star size={14} /> COMPLETION REWARDS
+                          </h4>
+                          <div className="flex flex-wrap gap-3 font-['Exo_2'] font-bold text-xs uppercase">
+                            <span className={`px-3 py-1.5 bg-[#06b6d4]/10 border border-[#06b6d4]/30 \${theme.colors.reward} shadow-[0_0_10px_rgba(6,182,212,0.2)] tracking-widest`}>
+                              +{mission.reward?.xp || 0} XP
+                            </span>
+                            <span className="px-3 py-1.5 bg-yellow-500/10 border border-yellow-500/30 text-yellow-400 shadow-[0_0_10px_rgba(250,204,21,0.2)] tracking-widest flex items-center">
+                              <CoinIcon className="w-3 h-3 mr-1"/>+{mission.reward?.coins || 0} COINS
+                            </span>
+                          </div>
+                        </div>
+
+                        <div className="pt-6 border-t border-[#1e2330] mt-8 flex flex-col sm:flex-row gap-4 sm:justify-end">
+                          <button 
+                            onClick={() => setMission(null)} 
+                            disabled={status.isAccepting} 
+                            className={`w-full sm:w-auto h-14 px-8 flex items-center justify-center gap-3 bg-[#090b10] border border-[#1e2330] text-gray-400 hover:text-red-400 hover:border-red-500/30 hover:bg-red-500/10 font-['Rajdhani'] font-black tracking-[0.2em] relative overflow-hidden transition-all disabled:opacity-50`}
+                            style={{ clipPath: 'polygon(0 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%)' }}
+                          >
+                            <span className="relative z-10">DISCARD</span>
+                          </button>
+                          
+                          <button 
+                            onClick={acceptMission} 
+                            disabled={status.isAccepting} 
+                            className={`w-full sm:w-auto h-14 px-8 flex items-center justify-center gap-3 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-500 hover:to-emerald-500 text-white font-['Rajdhani'] font-black tracking-[0.2em] relative overflow-hidden transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-[0_0_15px_rgba(34,197,94,0.3)]`}
+                            style={{ clipPath: 'polygon(0 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%)' }}
+                          >
+                            <AcceptIcon isAccepting={status.isAccepting}/>
+                            <span className="relative z-10">{status.isAccepting ? 'PROCESSING...' : 'ACCEPT MISSION'}</span>
+                          </button>
+                        </div>
+                      </div>
                     </div>
                   </div>
-                  <RankBadge rank={mission.rank} />
-                </div>
-
-                <div className="space-y-6 relative z-10">
-                  <MissionInfoPanel title="MISSION DIRECTIVE">
-                    <p className={`text-gray-400 font-light text-sm pl-4 border-l-2 border-[#1e2330]`}>{mission.description}</p>
-                  </MissionInfoPanel>
-                  
-                  <div className="mb-10">
-                    <h4 className="text-gray-400 font-black tracking-widest font-['Rajdhani'] text-xs flex items-center gap-2 mb-4">
-                      <Wand2 size={14} className="text-[#a855f7]" /> DAILY PROTOCOL
-                    </h4>
-                    <div className="bg-[#090b10] border border-[#1e2330] p-4 relative">
-                      <div className="absolute left-6 top-4 bottom-4 w-[1px] bg-[#1e2330]"></div>
-                      <QuestList quests={mission.quests}/>
-                    </div>
-                  </div>
-
-                  <div className="bg-[#090b10] border border-[#1e2330] p-4 relative overflow-hidden" style={{ clipPath: 'polygon(0 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%)' }}>
-                    <div className="absolute top-0 right-0 w-16 h-16 bg-[radial-gradient(circle,rgba(34,197,94,0.15)_0%,transparent_70%)]"></div>
-                    <h4 className="text-green-500 font-black tracking-widest font-['Rajdhani'] text-xs flex items-center gap-2 mb-4 border-b border-green-500/20 pb-2">
-                      <Star size={14} /> COMPLETION REWARDS
-                    </h4>
-                    <div className="flex flex-wrap gap-3 font-['Exo_2'] font-bold text-xs uppercase">
-                      <span className={`px-3 py-1.5 bg-[#06b6d4]/10 border border-[#06b6d4]/30 ${theme.colors.reward} shadow-[0_0_10px_rgba(6,182,212,0.2)] tracking-widest`}>
-                        +{mission.reward?.xp || 0} XP
-                      </span>
-                      <span className="px-3 py-1.5 bg-yellow-500/10 border border-yellow-500/30 text-yellow-400 shadow-[0_0_10px_rgba(250,204,21,0.2)] tracking-widest flex items-center">
-                        <CoinIcon className="w-3 h-3 mr-1"/>+{mission.reward?.coins || 0} COINS
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="pt-6 border-t border-[#1e2330] mt-8 flex sm:justify-end">
-                    <button 
-                      onClick={acceptMission} 
-                      disabled={status.isAccepting} 
-                      className={`w-full sm:w-auto h-14 px-8 flex items-center justify-center gap-3 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-500 hover:to-emerald-500 text-white font-['Rajdhani'] font-black tracking-[0.2em] relative overflow-hidden transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-[0_0_15px_rgba(34,197,94,0.3)]`}
-                      style={{ clipPath: 'polygon(0 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%)' }}
-                    >
-                      <AcceptIcon isAccepting={status.isAccepting}/>
-                      <span className="relative z-10">{status.isAccepting ? 'PROCESSING...' : 'ACCEPT MISSION'}</span>
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
+                </motion.div>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
       </div>
     </AuthLayout>

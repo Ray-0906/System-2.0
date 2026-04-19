@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import * as echarts from 'echarts';
+import { Target, Zap, PersonStanding, Shield, MessageSquare, Box, Crown, Gauge, Heart, Dices, TrendingUp, Trophy, Flame } from 'lucide-react';
 
 import Hero from '../components/Hero';
 import Features from '../components/Features';
@@ -126,12 +127,13 @@ const HomePage = () => {
   }, [isVisible]);
 
   // Particle Field Component
-  const ParticleField = ({ color = 'purple' }) => (
+  const ParticleField = () => (
     <div className="absolute inset-0 overflow-hidden pointer-events-none">
-      {[...Array(30)].map((_, i) => (
+      <div className="absolute inset-0 bg-[linear-gradient(to_right,#1f2937_1px,transparent_1px),linear-gradient(to_bottom,#1f2937_1px,transparent_1px)] bg-[size:4rem_4rem] opacity-[0.05] pointer-events-none mix-blend-screen mask-image:radial-gradient(ellipse_at_center,black_50%,transparent_100%)"></div>
+      {[...Array(20)].map((_, i) => (
         <div
           key={i}
-          className={`absolute w-1 h-1 bg-${color}-400 rounded-full opacity-20`}
+          className="absolute w-[2px] h-[2px] bg-[#a855f7] shadow-[0_0_8px_#a855f7] rounded-full opacity-20"
           style={{
             left: `${Math.random() * 100}%`,
             top: `${Math.random() * 100}%`,
@@ -154,42 +156,52 @@ const HomePage = () => {
           0%, 100% { box-shadow: 0 0 20px rgba(168, 85, 247, 0.3); }
           50% { box-shadow: 0 0 40px rgba(168, 85, 247, 0.6); }
         }
-        @keyframes shimmer {
-          0% { transform: translateX(-100%); }
-          100% { transform: translateX(100%); }
+        @keyframes scanline-vertical {
+          0% { transform: translateY(-100%); }
+          100% { transform: translateY(200%); }
         }
-        .gradient-border {
-          border: 1px solid transparent;
-          background: linear-gradient(145deg, rgba(31, 41, 55, 0.8), rgba(31, 41, 55, 0.8)) padding-box,
-                      linear-gradient(145deg, rgba(168, 85, 247, 0.5), rgba(59, 130, 246, 0.5)) border-box;
+        .cyber-card {
+          clip-path: polygon(0 0, 100% 0, 100% calc(100% - 15px), calc(100% - 15px) 100%, 0 100%);
+          position: relative;
         }
-        .card-3d {
-          transform: perspective(1000px) translateZ(0);
-          transition: transform 0.5s ease, box-shadow 0.5s ease;
+        .cyber-card::after {
+          content: '';
+          position: absolute;
+          bottom: 0;
+          right: 0;
+          width: 15px;
+          height: 15px;
+          background: rgba(168, 85, 247, 0.4);
+          clip-path: polygon(100% 0, 0 100%, 100% 100%);
         }
-        .card-3d:hover {
-          transform: perspective(1000px) translateZ(20px) translateY(-4px);
+        .hover-glow-tech {
+          transition: all 0.3s ease;
+        }
+        .hover-glow-tech:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 0 20px rgba(168, 85, 247, 0.2);
+          border-color: rgba(168, 85, 247, 0.5);
         }
         .pulse-ring::after {
           content: '';
           position: absolute;
           inset: 0;
-          border-radius: 50%;
-          border: 2px solid currentColor;
+          border-radius: inherit;
+          border: 1px solid currentColor;
           opacity: 0;
           transform: scale(0);
           animation: pulse-glow 2s infinite;
         }
       `}</style>
 
-      <div className="min-h-screen bg-black text-white font-sans relative overflow-hidden" ref={containerRef}>
+      <div className="min-h-screen bg-[#030305] text-gray-200 font-['Rajdhani'] relative overflow-hidden" ref={containerRef}>
         {/* Dynamic Background */}
         <div className="absolute inset-0">
-          <div className="absolute inset-0 bg-gradient-to-br from-purple-900/10 via-black to-indigo-900/10" />
+          <div className="absolute inset-0 bg-gradient-to-br from-[#050608] via-black to-[#08080a]" />
           <div
-            className="absolute inset-0 transition-all duration-300"
+            className="absolute inset-0 transition-all duration-300 pointer-events-none"
             style={{
-              background: `radial-gradient(circle at ${mousePosition.x}% ${mousePosition.y}%, rgba(168, 85, 247, 0.08) 0%, transparent 60%)`,
+              background: `radial-gradient(circle at ${mousePosition.x}% ${mousePosition.y}%, rgba(59, 130, 246, 0.05) 0%, transparent 50%)`,
             }}
           />
         </div>
@@ -199,32 +211,28 @@ const HomePage = () => {
         <Features />
 
         {/* Stats & Progression Section */}
-        <div className="py-32 bg-black relative overflow-hidden">
-          <div className="absolute inset-0">
-            <div className="absolute inset-0 bg-gradient-to-br from-indigo-950/10 via-gray-950 to-purple-900/10" />
-            <div
-              className="absolute inset-0 transition-all duration-300"
-              style={{
-                background: `radial-gradient(circle at ${mousePosition.x}% ${mousePosition.y}%, rgba(59, 130, 246, 0.08) 0%, transparent 60%)`,
-              }}
-            />
+        <div className="py-32 bg-transparent relative overflow-hidden">
+          <div className="absolute inset-0 pointer-events-none">
+            <div className="absolute inset-0 bg-[linear-gradient(to_right,#1f2937_1px,transparent_1px),linear-gradient(to_bottom,#1f2937_1px,transparent_1px)] bg-[size:3rem_3rem] opacity-[0.03]"></div>
           </div>
-          <ParticleField color="purple" />
 
           <div className="container mx-auto px-6 relative z-10">
             {/* Section Header */}
             <div className="text-center mb-20 animate-on-scroll">
-              <div className="inline-flex items-center px-6 py-3 mb-8 bg-purple-500/10 backdrop-blur-sm rounded-full text-purple-300 border border-purple-500/30">
-                <div className="w-2 h-2 bg-purple-400 rounded-full mr-3 animate-pulse" />
-                Your Hunter Journey
+              <div className="inline-flex items-center px-4 py-1 mb-6 border border-[#a855f7]/30 bg-[#a855f7]/5 text-[#a855f7] tracking-[0.3em] text-xs font-bold uppercase backdrop-blur-sm shadow-[0_0_10px_rgba(168,85,247,0.1)]">
+                <div className="w-1.5 h-1.5 bg-[#a855f7] rounded-full mr-2 animate-ping" />
+                SYS_DIR: EVOLUTION
               </div>
-              <h2 className="text-5xl md:text-7xl font-bold mb-6 leading-tight">
-                <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-400 via-pink-400 to-indigo-400">
-                  Unleash Your Inner Hunter
+              <h2 className="text-5xl md:text-6xl font-black italic tracking-widest mb-6 font-['Exo_2'] uppercase">
+                <span className="text-transparent bg-clip-text bg-gradient-to-r from-gray-100 via-gray-300 to-gray-500 drop-shadow-[0_0_15px_rgba(255,255,255,0.2)]">
+                  System Intel:
+                </span>{' '}
+                <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#3b82f6] to-[#a855f7] drop-shadow-[0_0_15px_rgba(168,85,247,0.4)]">
+                  Growth
                 </span>
               </h2>
-              <p className="text-xl md:text-2xl text-gray-300 max-w-4xl mx-auto leading-relaxed">
-                Earn rare skills, equip mystical artifacts, and build your unique stat build — powered by your real-life actions.
+              <p className="text-lg md:text-xl text-gray-400 max-w-3xl mx-auto tracking-wide uppercase font-semibold">
+                Acquire rare capabilities, map out stat builds, and ascend ranks through real-world actions.
               </p>
             </div>
 
@@ -232,37 +240,43 @@ const HomePage = () => {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 animate-on-scroll">
               {/* Skills Section */}
               <div className="space-y-8">
-                <h3 className="text-2xl font-bold mb-6 flex items-center text-white group">
-                  <span className="w-12 h-12 rounded-full bg-gradient-to-br from-purple-500/20 to-indigo-500/20 flex items-center justify-center text-purple-400 mr-4 group-hover:scale-110 transition-transform duration-300 pulse-ring">
-                    <i className="fas fa-bullseye text-xl"></i>
-                  </span>
-                  <span className="group-hover:text-transparent group-hover:bg-clip-text group-hover:bg-gradient-to-r group-hover:from-purple-400 group-hover:to-cyan-400 transition-all duration-300">
-                    Skills
+                <h3 className="text-2xl font-black italic tracking-widest text-white group flex items-center font-['Exo_2'] uppercase">
+                  <div className="w-10 h-10 bg-[#121319] border border-white/10 flex items-center justify-center mr-4 text-[#a855f7] relative overflow-hidden">
+                    <div className="absolute inset-0 bg-[#a855f7]/10 animate-pulse"></div>
+                    <Target className="relative z-10 w-5 h-5" />
+                  </div>
+                  <span className="text-transparent bg-clip-text bg-gradient-to-r from-white to-gray-500">
+                    Active Skills
                   </span>
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {[
-                    { title: 'Focus Burst', level: 'Intelligence Lv.15', desc: 'Increases productivity by 30% for 2 hours. Cooldown: 24 hours.', icon: 'fa-bolt', color: 'purple' },
-                    { title: 'Agile Thinking', level: 'Agility Lv.20', desc: 'Reduces decision-making time by 25%. Passive skill.', icon: 'fa-running', color: 'indigo' },
-                    { title: 'Mental Fortitude', level: 'Endurance Lv.25', desc: 'Reduces stress impact by 40% during high-pressure situations.', icon: 'fa-shield-alt', color: 'blue' },
-                    { title: 'Silver Tongue', level: 'Charisma Lv.18', desc: 'Increases persuasion success rate by 35% in social interactions.', icon: 'fa-comments', color: 'pink' },
+                    { title: 'Focus Burst', level: 'INT LV.15', desc: 'Increases productivity by 30% for 2 hours. Cooldown: 24h.', icon: Zap, color: '#a855f7' },
+                    { title: 'Agile Thinking', level: 'AGI LV.20', desc: 'Reduces decision-making time by 25%. Passive.', icon: PersonStanding, color: '#3b82f6' },
+                    { title: 'Mental Fortitude', level: 'END LV.25', desc: 'Reduces stress impact by 40% under pressure.', icon: Shield, color: '#ec4899' },
+                    { title: 'Silver Tongue', level: 'CHA LV.18', desc: 'Increases persuasion success rate by 35%.', icon: MessageSquare, color: '#eab308' },
                   ].map((skill, index) => (
                     <div
                       key={index}
-                      className={`group relative bg-gray-800/30 backdrop-blur-xl rounded-2xl p-6 border border-gray-700/50 hover:border-${skill.color}-500/50 transition-all duration-500 card-3d hover:shadow-${skill.color}-500/20 overflow-hidden`}
+                      className="cyber-card bg-[#050608]/80 backdrop-blur-md p-5 border border-white/5 hover-glow-tech group"
                     >
-                      <div className="absolute -inset-1 bg-gradient-to-r from-${skill.color}-500/20 to-cyan-500/20 rounded-2xl blur-sm opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-                      <div className="relative flex items-center mb-4">
-                        <div className={`w-12 h-12 rounded-2xl bg-gradient-to-br from-${skill.color}-500/20 to-indigo-500/20 flex items-center justify-center text-${skill.color}-400 mr-4 group-hover:scale-110 transition-transform duration-300 pulse-ring`}>
-                          <i className={`fas ${skill.icon} text-xl`}></i>
-                        </div>
-                        <div>
-                          <h4 className={`font-bold text-${skill.color}-400 group-hover:text-${skill.color}-300 transition-colors duration-300`}>{skill.title}</h4>
-                          <div className="text-xs text-gray-400">{skill.level}</div>
-                        </div>
+                      <div className="absolute inset-0 bg-[linear-gradient(to_right,#1f2937_1px,transparent_1px),linear-gradient(to_bottom,#1f2937_1px,transparent_1px)] bg-[size:0.5rem_0.5rem] opacity-5 pointer-events-none mix-blend-screen"></div>
+                      <div className="absolute top-0 left-0 w-1 h-full opacity-50 overflow-hidden" style={{ backgroundColor: skill.color }}>
+                         <div className="absolute inset-0 bg-white/50 animate-scanline-vertical"></div>
                       </div>
-                      <p className="text-sm text-gray-300 group-hover:text-gray-200 transition-colors duration-300">{skill.desc}</p>
-                      <div className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-1000 bg-gradient-to-r from-transparent via-white/10 to-transparent pointer-events-none" />
+                      
+                      <div className="ml-3">
+                        <div className="flex items-center mb-3">
+                          <div className="w-8 h-8 rounded-sm bg-[#121319] border border-white/10 flex items-center justify-center mr-3" style={{ color: skill.color }}>
+                            <i className={`fas ${skill.icon}`}></i>
+                          </div>
+                          <div>
+                            <h4 className="font-bold text-gray-100 group-hover:text-white transition-colors tracking-wide uppercase text-sm">{skill.title}</h4>
+                            <div className="text-[10px] font-black tracking-widest uppercase opacity-70" style={{ color: skill.color }}>{skill.level}</div>
+                          </div>
+                        </div>
+                        <p className="text-xs text-gray-400 group-hover:text-gray-300 transition-colors uppercase font-medium leading-relaxed">{skill.desc}</p>
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -270,37 +284,41 @@ const HomePage = () => {
 
               {/* Artifacts Section */}
               <div className="space-y-8">
-                <h3 className="text-2xl font-bold mb-6 flex items-center text-white group">
-                  <span className="w-12 h-12 rounded-full bg-gradient-to-br from-purple-500/20 to-indigo-500/20 flex items-center justify-center text-purple-400 mr-4 group-hover:scale-110 transition-transform duration-300 pulse-ring">
-                    <i className="fas fa-gem text-xl"></i>
-                  </span>
-                  <span className="group-hover:text-transparent group-hover:bg-clip-text group-hover:bg-gradient-to-r group-hover:from-purple-400 group-hover:to-cyan-400 transition-all duration-300">
-                    Artifacts
+                <h3 className="text-2xl font-black italic tracking-widest text-white group flex items-center font-['Exo_2'] uppercase">
+                  <div className="w-10 h-10 bg-[#121319] border border-white/10 flex items-center justify-center mr-4 text-[#eab308] relative overflow-hidden">
+                    <div className="absolute inset-0 bg-[#eab308]/10 animate-pulse"></div>
+                    <Box className="relative z-10 w-5 h-5" />
+                  </div>
+                  <span className="text-transparent bg-clip-text bg-gradient-to-r from-white to-gray-500">
+                    Artifact Inventory
                   </span>
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {[
-                    { title: 'Crown of Wisdom', rarity: 'Mythic', desc: '+15 Intelligence, +10% learning speed for all new skills.', icon: 'fa-crown', color: 'yellow' },
-                    { title: 'Amulet of Haste', rarity: 'Epic', desc: '+20 Agility, reduces task completion time by 15%.', icon: 'fa-tachometer-alt', color: 'purple' },
-                    { title: 'Heart of Endurance', rarity: 'Rare', desc: '+25 Endurance, +20% recovery rate after completing difficult tasks.', icon: 'fa-heart', color: 'blue' },
-                    { title: 'Dice of Fortune', rarity: 'Common', desc: '+10 Luck, 5% chance to double rewards from completed quests.', icon: 'fa-dice', color: 'green' },
+                    { title: 'Crown of Wisdom', rarity: 'MYTHIC', desc: '+15 INT. +10% learning speed globally.', icon: Crown, color: '#eab308' },
+                    { title: 'Amulet of Haste', rarity: 'EPIC', desc: '+20 AGI. -15% task completion par time.', icon: Gauge, color: '#a855f7' },
+                    { title: 'Heart of Endurance', rarity: 'RARE', desc: '+25 END. +20% stamina recovery rate.', icon: Heart, color: '#3b82f6' },
+                    { title: 'Dice of Fortune', rarity: 'COMMON', desc: '+10 LCK. 5% chance double rewards.', icon: Dices, color: '#10b981' },
                   ].map((artifact, index) => (
                     <div
                       key={index}
-                      className={`group relative bg-gray-800/30 backdrop-blur-xl rounded-2xl p-6 border border-gray-700/50 hover:border-${artifact.color}-500/50 transition-all duration-500 card-3d hover:shadow-${artifact.color}-500/20 overflow-hidden`}
+                      className="cyber-card bg-[#050608]/80 backdrop-blur-md p-5 border border-white/5 hover-glow-tech group"
                     >
-                      <div className="absolute -inset-1 bg-gradient-to-r from-${artifact.color}-500/20 to-cyan-500/20 rounded-2xl blur-sm opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-                      <div className="relative flex items-center mb-4">
-                        <div className={`w-12 h-12 rounded-2xl bg-gradient-to-br from-${artifact.color}-500/20 to-indigo-500/20 flex items-center justify-center text-${artifact.color}-400 mr-4 group-hover:scale-110 transition-transform duration-300 pulse-ring`}>
-                          <i className={`fas ${artifact.icon} text-xl`}></i>
+                      <div className="absolute inset-0 bg-[linear-gradient(to_right,#1f2937_1px,transparent_1px),linear-gradient(to_bottom,#1f2937_1px,transparent_1px)] bg-[size:0.5rem_0.5rem] opacity-5 pointer-events-none mix-blend-screen"></div>
+                      <div className="absolute top-0 right-0 w-full h-[1px] opacity-70" style={{ backgroundImage: `linear-gradient(to left, ${artifact.color}, transparent)` }}></div>
+                      
+                      <div>
+                        <div className="flex items-center mb-3 justify-between">
+                          <div className="flex items-center">
+                             <div className="w-8 h-8 rounded-sm bg-[#121319] border border-white/10 flex items-center justify-center mr-3" style={{ color: artifact.color, boxShadow: `0 0 10px ${artifact.color}33` }}>
+                               <i className={`fas ${artifact.icon}`}></i>
+                             </div>
+                             <h4 className="font-bold text-gray-100 group-hover:text-white transition-colors tracking-wide uppercase text-sm">{artifact.title}</h4>
+                          </div>
                         </div>
-                        <div>
-                          <h4 className={`font-bold text-${artifact.color}-400 group-hover:text-${artifact.color}-300 transition-colors duration-300`}>{artifact.title}</h4>
-                          <div className={`text-xs text-${artifact.color}-600`}>{artifact.rarity}</div>
-                        </div>
+                        <div className="text-[10px] font-black tracking-widest uppercase mb-1" style={{ color: artifact.color }}>CLASS: {artifact.rarity}</div>
+                        <p className="text-xs text-gray-400 group-hover:text-gray-300 transition-colors uppercase font-medium leading-relaxed">{artifact.desc}</p>
                       </div>
-                      <p className="text-sm text-gray-300 group-hover:text-gray-200 transition-colors duration-300">{artifact.desc}</p>
-                      <div className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-1000 bg-gradient-to-r from-transparent via-white/10 to-transparent pointer-events-none" />
                     </div>
                   ))}
                 </div>
@@ -308,90 +326,93 @@ const HomePage = () => {
             </div>
 
             {/* Stats Section */}
-            <div className="mt-16 animate-on-scroll">
-              <h3 className="text-2xl font-bold mb-6 flex items-center justify-center text-white group">
-                <span className="w-12 h-12 rounded-full bg-gradient-to-br from-purple-500/20 to-indigo-500/20 flex items-center justify-center text-purple-400 mr-4 group-hover:scale-110 transition-transform duration-300 pulse-ring">
-                  <i className="fas fa-chart-line text-xl"></i>
-                </span>
-                <span className="group-hover:text-transparent group-hover:bg-clip-text group-hover:bg-gradient-to-r group-hover:from-purple-400 group-hover:to-cyan-400 transition-all duration-300">
-                  Your Current Stats
+            <div className="mt-20 animate-on-scroll relative">
+              <div className="absolute -left-10 top-1/2 -translate-y-1/2 w-1 h-32 bg-gradient-to-b from-transparent via-[#a855f7] to-transparent opacity-50"></div>
+              
+              <h3 className="text-2xl font-black italic tracking-widest mb-8 flex items-center justify-center text-white group font-['Exo_2'] uppercase">
+                <div className="flex items-center justify-center mr-4 relative">
+                  <div className="w-12 h-1 bg-[#3b82f6] absolute -left-14 opacity-50"></div>
+                    <TrendingUp className="text-[#3b82f6] relative z-10 w-6 h-6" />
+                  <div className="w-12 h-1 bg-[#3b82f6] absolute -right-14 opacity-50"></div>
+                </div>
+                <span className="text-transparent bg-clip-text bg-gradient-to-r from-gray-100 to-gray-500">
+                  Real-time Diagnostics
                 </span>
               </h3>
-              <div className="relative bg-gray-800/30 backdrop-blur-xl rounded-2xl p-8 border border-gray-700/50 hover:border-purple-500/50 transition-all duration-500 card-3d hover:shadow-purple-500/20 overflow-hidden">
-                <div className="absolute -inset-1 bg-gradient-to-r from-purple-500/20 to-cyan-500/20 rounded-2xl blur-sm opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-                <div className="absolute inset-0 opacity-5">
-                  <div
-                    className="absolute inset-0"
-                    style={{
-                      backgroundImage: `radial-gradient(circle at ${mousePosition.x}% ${mousePosition.y}%, rgba(168, 85, 247, 0.1) 0%, transparent 50%)`,
-                    }}
-                  />
-                </div>
-                <div className="relative grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
+              
+              <div className="cyber-card bg-[#0a0b10] border border-white/10 p-8 md:p-12 relative overflow-hidden group">
+                <div className="absolute inset-0 bg-[#3b82f6]/5 opacity-0 group-hover:opacity-100 transition-opacity duration-1000 pointer-events-none"></div>
+                <div className="absolute inset-0 bg-[linear-gradient(to_right,#1f2937_1px,transparent_1px),linear-gradient(to_bottom,#1f2937_1px,transparent_1px)] bg-[size:4rem_4rem] opacity-[0.03] mix-blend-screen pointer-events-none"></div>
+
+                <div className="relative grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
                   {/* Radar Chart */}
-                  <div className="relative h-80 w-full">
-                    <div ref={statsChartRef} className="h-full w-full" />
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      <div className="w-12 h-12 rounded-full bg-gradient-to-br from-purple-500/30 to-cyan-500/30 backdrop-blur-sm border border-purple-400/50 animate-pulse flex items-center justify-center">
-                        <i className="fas fa-star text-purple-400"></i>
-                      </div>
+                  <div className="relative h-80 w-full flex justify-center">
+                    <div className="absolute inset-0 rounded-full border border-white/5 bg-[#121319]/50 animate-[spin_60s_linear_infinite]" style={{ clipPath: 'circle(48% at 50% 50%)' }}>
+                       <div className="absolute top-0 right-1/2 w-[1px] h-1/2 bg-gradient-to-b from-[#a855f7] to-transparent origin-bottom animate-ping"></div>
                     </div>
+                    <div ref={statsChartRef} className="h-full w-full relative z-10" />
                   </div>
+                  
                   {/* Stats Details */}
-                  <div className="space-y-6">
+                  <div className="space-y-8">
                     {/* Level Progress */}
-                    <div>
-                      <div className="flex justify-between mb-1">
-                        <span className="text-sm font-medium text-purple-400">Level</span>
-                        <span className="text-sm font-medium text-purple-400">24</span>
+                    <div className="bg-[#121319] border border-white/5 p-4 relative overflow-hidden">
+                      <div className="absolute top-0 left-0 w-1 h-full bg-[#a855f7]"></div>
+                      <div className="flex justify-between mb-2">
+                        <span className="text-xs font-black tracking-[0.2em] text-[#a855f7] uppercase">Player Level</span>
+                        <span className="text-xs font-black tracking-[0.2em] text-white">LV. 24</span>
                       </div>
-                      <div className="relative w-full bg-gray-700/50 rounded-full h-2.5 overflow-hidden">
+                      <div className="w-full bg-[#050608] h-2 relative overflow-hidden border border-white/10">
+                        <div className="absolute inset-0 bg-[repeating-linear-gradient(90deg,transparent,transparent_2px,rgba(0,0,0,0.8)_2px,rgba(0,0,0,0.8)_4px)] z-10 pointer-events-none"></div>
                         <div
-                          className="bg-gradient-to-r from-purple-600 to-indigo-600 h-2.5 rounded-full transition-all duration-1000"
+                          className="bg-gradient-to-r from-[#a855f7] to-[#d8b4fe] h-full shadow-[0_0_10px_#a855f7]"
                           style={{ width: '65%' }}
                         />
-                        <div className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-1000 bg-gradient-to-r from-transparent via-white/10 to-transparent" />
                       </div>
-                      <div className="flex justify-between mt-1">
-                        <span className="text-xs text-gray-400">65% to Level 25</span>
-                        <span className="text-xs text-gray-400">12,450 / 19,000 XP</span>
+                      <div className="flex justify-between mt-2">
+                        <span className="text-[10px] uppercase font-bold text-gray-500 tracking-widest">65% SYNCHRONIZED</span>
+                        <span className="text-[10px] uppercase font-bold text-[#a855f7] tracking-widest">12,450 / 19,000 XP</span>
                       </div>
                     </div>
+                    
                     {/* Rank Progress */}
-                    <div>
-                      <div className="flex justify-between mb-1">
-                        <span className="text-sm font-medium text-blue-400">Rank</span>
-                        <span className="text-sm font-medium text-blue-400">C</span>
+                    <div className="bg-[#121319] border border-white/5 p-4 relative overflow-hidden">
+                      <div className="absolute top-0 left-0 w-1 h-full bg-[#3b82f6]"></div>
+                      <div className="flex justify-between mb-2">
+                        <span className="text-xs font-black tracking-[0.2em] text-[#3b82f6] uppercase">Current Rank</span>
+                        <span className="text-xs font-black tracking-[0.2em] text-white">CLASS C</span>
                       </div>
-                      <div className="relative w-full bg-gray-700/50 rounded-full h-2.5 overflow-hidden">
+                      <div className="w-full bg-[#050608] h-2 relative overflow-hidden border border-white/10">
+                        <div className="absolute inset-0 bg-[repeating-linear-gradient(90deg,transparent,transparent_2px,rgba(0,0,0,0.8)_2px,rgba(0,0,0,0.8)_4px)] z-10 pointer-events-none"></div>
                         <div
-                          className="bg-gradient-to-r from-blue-600 to-cyan-600 h-2.5 rounded-full transition-all duration-1000"
+                          className="bg-gradient-to-r from-[#3b82f6] to-[#60a5fa] h-full shadow-[0_0_10px_#3b82f6]"
                           style={{ width: '40%' }}
                         />
-                        <div className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-1000 bg-gradient-to-r from-transparent via-white/10 to-transparent" />
                       </div>
-                      <div className="flex justify-between mt-1">
-                        <span className="text-xs text-gray-400">Progress to Rank B</span>
-                        <span className="text-xs text-gray-400">40%</span>
+                      <div className="flex justify-between mt-2">
+                        <span className="text-[10px] uppercase font-bold text-gray-500 tracking-widest">PROMOTION RUN TO CLASS B</span>
+                        <span className="text-[10px] uppercase font-bold text-[#3b82f6] tracking-widest">40%</span>
                       </div>
                     </div>
+
                     {/* Achievements & Streak */}
                     <div className="grid grid-cols-2 gap-4">
-                      <div className="group relative bg-gray-800/30 backdrop-blur-xl rounded-xl p-4 border border-gray-700/50 hover:border-yellow-500/50 transition-all duration-300 card-3d hover:shadow-yellow-500/20">
-                        <div className="absolute -inset-1 bg-gradient-to-r from-yellow-500/20 to-cyan-500/20 rounded-xl blur-sm opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-                        <div className="relative flex items-center mb-2">
-                          <i className="fas fa-trophy text-yellow-500 mr-2 pulse-ring"></i>
-                          <span className="font-medium text-gray-300 group-hover:text-yellow-400 transition-colors duration-300">Achievements</span>
+                      <div className="bg-[#121319] border border-white/5 p-4 flex flex-col items-center justify-center relative overflow-hidden group/ach">
+                        <div className="absolute inset-0 bg-yellow-500/5 opacity-0 group-hover/ach:opacity-100 transition duration-300"></div>
+                        <div className="text-yellow-500 mb-2">
+                          <Trophy className="drop-shadow-[0_0_5px_rgba(234,179,8,0.5)] w-6 h-6 text-yellow-500" />
                         </div>
-                        <div className="text-2xl font-bold text-white group-hover:text-yellow-300 transition-colors duration-300">32 / 100</div>
+                        <div className="text-xs font-bold tracking-[0.2em] text-gray-400 mb-1">ACHIEVEMENTS</div>
+                        <div className="text-xl font-black text-white font-['Exo_2']">32 <span className="text-gray-600 text-sm">/ 100</span></div>
                       </div>
-                      <div className="group relative bg-gray-800/30 backdrop-blur-xl rounded-xl p-4 border border-gray-700/50 hover:border-orange-500/50 transition-all duration-300 card-3d hover:shadow-orange-500/20">
-                        <div className="absolute -inset-1 bg-gradient-to-r from-orange-500/20 to-cyan-500/20 rounded-xl blur-sm opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-                        <div className="relative flex items-center mb-2">
-                          <i className="fas fa-fire text-orange-500 mr-2 pulse-ring"></i>
-                          <span className="font-medium text-gray-300 group-hover:text-orange-400 transition-colors duration-300">Current Streak</span>
+                      
+                      <div className="bg-[#121319] border border-white/5 p-4 flex flex-col items-center justify-center relative overflow-hidden group/str">
+                        <div className="absolute inset-0 bg-[#ef4444]/5 opacity-0 group-hover/str:opacity-100 transition duration-300"></div>
+                        <div className="text-[#ef4444] mb-2">
+                          <Flame className="drop-shadow-[0_0_5px_rgba(239,68,68,0.5)] w-6 h-6 text-red-500" />
                         </div>
-                        <div className="text-2xl font-bold text-white group-hover:text-orange-300 transition-colors duration-300">14 days</div>
+                        <div className="text-xs font-bold tracking-[0.2em] text-gray-400 mb-1">STREAK LOG</div>
+                        <div className="text-xl font-black text-white font-['Exo_2']">14 <span className="text-gray-600 text-sm">DAYS</span></div>
                       </div>
                     </div>
                   </div>

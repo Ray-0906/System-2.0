@@ -1,44 +1,22 @@
 import { useEffect } from 'react';
-import { Star, Award, BarChart2, CheckCircle, Skull } from 'lucide-react';
+import { Star, Award, BarChart2, CheckCircle, Skull, Zap } from 'lucide-react';
 import { useNotificationStore } from '../store/notificationStore';
-
-// Solo Leveling-inspired theme
-const theme = {
-  fonts: {
-    primary: "'Orbitron', sans-serif",
-  },
-  colors: {
-    penalty: 'bg-gradient-to-r from-red-600/90 to-pink-600/90',
-    xp: 'bg-gradient-to-r from-indigo-600/90 to-blue-600/90',
-    level: 'bg-gradient-to-r from-yellow-600/90 to-amber-600/90',
-    coins: 'bg-gradient-to-r from-blue-600/90 to-cyan-600/90',
-    stat: 'bg-gradient-to-r from-purple-600/90 to-indigo-600/90',
-    missionSuccess: 'bg-gradient-to-r from-green-600/90 to-emerald-600/90',
-    missionError: 'bg-gradient-to-r from-red-600/90 to-pink-600/90',
-    default: 'bg-gradient-to-r from-gray-800 to-gray-900',
-    border: 'border-indigo-400/50',
-    shadow: 'shadow-indigo-500/50',
-    text: 'text-white',
-    iconPenalty: 'text-red-300',
-    iconXP: 'text-yellow-300',
-    iconLevel: 'text-white',
-    iconCoins: 'text-blue-300',
-    iconStat: 'text-purple-300',
-    iconMission: 'text-green-300',
-  },
-  animations: {
-    fadeInUp: 'animate-fade-in-up',
-  },
-};
 
 // Animation keyframes
 const styles = `
-  @keyframes fadeInUp {
-    from { opacity: 0; transform: translateY(20px); }
-    to { opacity: 1; transform: translateY(0); }
+  @keyframes fadeInUpTech {
+    from { opacity: 0; transform: translateY(10px) translateX(20px); filter: blur(4px); }
+    to { opacity: 1; transform: translateY(0) translateX(0); filter: blur(0); }
   }
-  .animate-fade-in-up {
-    animation: fadeInUp 0.5s ease-out;
+  .animate-fade-in-up-tech {
+    animation: fadeInUpTech 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
+  @keyframes scanline {
+    0% { transform: translateY(-100%); }
+    100% { transform: translateY(200%); }
+  }
+  .animate-scanline {
+    animation: scanline 2s linear infinite;
   }
 `;
 
@@ -64,7 +42,7 @@ export default function NotificationPopup() {
       console.warn('Failed to load audio file:', error);
     }
 
-    const timer = setTimeout(() => shift(), 2500);
+    const timer = setTimeout(() => shift(), 3000);
     return () => clearTimeout(timer);
   }, [queue, shift]);
 
@@ -73,7 +51,7 @@ export default function NotificationPopup() {
   return (
     <>
       <style>{styles}</style>
-      <div className="fixed top-6 right-2 flex flex-col gap-2 z-50">
+      <div className="fixed top-20 right-6 flex flex-col gap-3 z-50 pointer-events-none">
         {queue.map((notif, index) => {
           if (!notif || !notif.type) {
             console.warn('Invalid or missing notification:', notif);
@@ -82,85 +60,107 @@ export default function NotificationPopup() {
 
           let message = '';
           let icon = null;
-          let bgStyle = theme.colors.default;
+          let bgColor = 'bg-gray-500';
+          let textColor = 'text-gray-500';
+          let notifTypeLabel = 'SYS.MSG';
           const isPenalty = notif.isPenalty || (notif.delta < 0 && notif.type !== 'mission');
 
           switch (notif.type) {
             case 'xp':
               message = `${notif.delta > 0 ? '+' : ''}${notif.delta} XP → ${notif.newValue || 'N/A'}`;
-              icon = isPenalty ? (
-                <Skull className={`w-5 h-5 mr-2 ${theme.colors.iconPenalty} drop-shadow-[0_0_4px_rgba(239,68,68,0.6)]`} />
-              ) : (
-                <Star className={`w-5 h-5 mr-2 ${theme.colors.iconXP} drop-shadow-[0_0_4px_rgba(234,179,8,0.6)]`} />
-              );
-              bgStyle = isPenalty ? theme.colors.penalty : theme.colors.xp;
+              icon = isPenalty ? <Skull className="w-4 h-4" /> : <Star className="w-4 h-4" />;
+              bgColor = isPenalty ? 'bg-red-500' : 'bg-[#a855f7]';
+              textColor = isPenalty ? 'text-red-500' : 'text-[#a855f7]';
+              notifTypeLabel = isPenalty ? 'EXP.PENALTY' : 'EXP.GAINED';
               break;
+
             case 'level':
-              message = `Level ${isPenalty ? 'Down' : 'Up'}! → ${notif.newValue || 'N/A'}`;
-              icon = isPenalty ? (
-                <Skull className={`w-5 h-5 mr-2 ${theme.colors.iconPenalty} drop-shadow-[0_0_4px_rgba(239,68,68,0.6)]`} />
-              ) : (
-                <Award className={`w-5 h-5 mr-2 ${theme.colors.iconLevel} drop-shadow-[0_0_4px_rgba(255,255,255,0.8)]`} />
-              );
-              bgStyle = isPenalty ? theme.colors.penalty : theme.colors.level;
+              message = `LEVEL ${isPenalty ? 'DOWN' : 'UP'}! → ${notif.newValue || 'N/A'}`;
+              icon = isPenalty ? <Skull className="w-4 h-4" /> : <Award className="w-4 h-4" />;
+              bgColor = isPenalty ? 'bg-red-500' : 'bg-yellow-500';
+              textColor = isPenalty ? 'text-red-500' : 'text-yellow-500';
+              notifTypeLabel = isPenalty ? 'SYS.DEGRADE' : 'SYS.UPGRADE';
               break;
+
             case 'coins':
-              message = `${notif.delta > 0 ? '+' : ''}${notif.delta} Coins → ${notif.newValue || 'N/A'}`;
-              icon = isPenalty ? (
-                <Skull className={`w-5 h-5 mr-2 ${theme.colors.iconPenalty} drop-shadow-[0_0_4px_rgba(239,68,68,0.6)]`} />
-              ) : (
-                <Award className={`w-5 h-5 mr-2 ${theme.colors.iconCoins} drop-shadow-[0_0_4px_rgba(59,130,246,0.6)]`} />
-              );
-              bgStyle = isPenalty ? theme.colors.penalty : theme.colors.coins;
+              message = `${notif.delta > 0 ? '+' : ''}${notif.delta} COINS → ${notif.newValue || 'N/A'}`;
+              icon = isPenalty ? <Skull className="w-4 h-4" /> : <Award className="w-4 h-4" />;
+              bgColor = isPenalty ? 'bg-red-500' : 'bg-[#3b82f6]';
+              textColor = isPenalty ? 'text-red-500' : 'text-[#3b82f6]';
+              notifTypeLabel = isPenalty ? 'FUNDS.LOST' : 'FUNDS.ACQUIRED';
               break;
+
             case 'stat':
-              message = `${notif.key || 'Stat'} ${notif.delta !== 0 ? (notif.delta > 0 ? `+${notif.delta}` : notif.delta) : ''} → ${notif.newValue || 'N/A'}`;
-              icon = isPenalty ? (
-                <Skull className={`w-5 h-5 mr-2 ${theme.colors.iconPenalty} drop-shadow-[0_0_4px_rgba(239,68,0.6)]`} />
-              ) : (
-                <BarChart2 className={`w-5 h-5 mr-2 ${theme.colors.iconStat} drop-shadow-[0_0_4px_rgba(168,85,247,0.6)]`} />
-              );
-              bgStyle = isPenalty ? theme.colors.penalty : theme.colors.stat;
+              message = `${notif.key || 'STAT'} ${notif.delta !== 0 ? (notif.delta > 0 ? `+${notif.delta}` : notif.delta) : ''} → ${notif.newValue || 'N/A'}`;
+              icon = isPenalty ? <Skull className="w-4 h-4" /> : <BarChart2 className="w-4 h-4" />;
+              bgColor = isPenalty ? 'bg-red-500' : 'bg-[#ec4899]';
+              textColor = isPenalty ? 'text-red-500' : 'text-[#ec4899]';
+              notifTypeLabel = isPenalty ? 'STAT.DECREASE' : 'STAT.INCREASE';
               break;
+
             case 'mission':
-              if (notif.key === 'deleted') {
-                message = `Mission Deleted: ${notif.newValue}`;
-                icon = <Skull className={`w-5 h-5 mr-2 ${theme.colors.iconPenalty} drop-shadow-[0_0_4px_rgba(239,68,68,0.6)]`} />;
-                bgStyle = theme.colors.missionError;
-              } else if (notif.key === 'accepted') {
-                message = `Mission Accepted: ${notif.newValue}`;
-                icon = <CheckCircle className={`w-5 h-5 mr-2 ${theme.colors.iconMission} drop-shadow-[0_0_4px_rgba(34,197,94,0.6)]`} />;
-                bgStyle = theme.colors.missionSuccess;
-              } else if (notif.key === 'generated') {
-                message = `Mission Generated: ${notif.newValue}`;
-                icon = <CheckCircle className={`w-5 h-5 mr-2 ${theme.colors.iconMission} drop-shadow-[0_0_4px_rgba(34,197,94,0.6)]`} />;
-                bgStyle = theme.colors.missionSuccess;
-              } else if (notif.key === 'error') {
-                message = `Mission Error: ${notif.newValue}`;
-                icon = <Skull className={`w-5 h-5 mr-2 ${theme.colors.iconPenalty} drop-shadow-[0_0_4px_rgba(239,68,68,0.6)]`} />;
-                bgStyle = theme.colors.missionError;
+              if (notif.key === 'deleted' || notif.key === 'error') {
+                message = notif.key === 'deleted' ? `MISSION PURGED: ${notif.newValue}` : `MISSION ERR: ${notif.newValue}`;
+                icon = <Skull className="w-4 h-4" />;
+                bgColor = 'bg-red-500';
+                textColor = 'text-red-500';
+                notifTypeLabel = 'MISSION.FAIL';
               } else {
-                message = `Mission Event: ${notif.newValue}`;
-                icon = <CheckCircle className={`w-5 h-5 mr-2 ${theme.colors.iconMission}`} />;
-                bgStyle = theme.colors.missionSuccess;
+                message = notif.key === 'accepted' ? `MISSION ACCEPTED: ${notif.newValue}` : 
+                          notif.key === 'generated' ? `NEW TARGET: ${notif.newValue}` : 
+                          `MISSION UPDATED: ${notif.newValue}`;
+                icon = <CheckCircle className="w-4 h-4" />;
+                bgColor = 'bg-[#10b981]';
+                textColor = 'text-[#10b981]';
+                notifTypeLabel = 'MISSION.UPDATE';
               }
               break;
+
             default:
-              message = 'Unknown notification';
-              icon = <Skull className="w-5 h-5 mr-2 text-gray-300" />;
+              message = 'UNKNOWN NOTIFICATION';
+              icon = <Zap className="w-4 h-4" />;
+              bgColor = 'bg-gray-500';
+              textColor = 'text-gray-500';
+              notifTypeLabel = 'SYS.MSG';
           }
 
           return (
             <div
               key={index}
-              className={`w-[300px] ${bgStyle} ${theme.colors.text} px-4 py-2 rounded-md ${theme.colors.shadow} ${theme.colors.border} ${theme.animations.fadeInUp}`}
+              className="flex items-stretch w-[320px] bg-[#050608]/95 backdrop-blur-xl border border-white/5 shadow-[0_0_20px_rgba(0,0,0,0.8)] animate-fade-in-up-tech group overflow-hidden pointer-events-auto"
               style={{
-                fontFamily: theme.fonts.primary,
-                animationDelay: `${index * 0.1}s`,
+                fontFamily: "'Rajdhani', sans-serif",
+                animationDelay: `${index * 0.05}s`,
+                clipPath: 'polygon(0 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%)'
               }}
             >
-              {icon}
-              <span className="text-sm">{message}</span>
+              {/* Left Accent Bar */}
+              <div className={`w-1.5 shrink-0 ${bgColor} relative overflow-hidden`}>
+                 <div className="absolute inset-0 bg-white/20 animate-scanline"></div>
+              </div>
+              
+              <div className="p-3 flex items-center gap-3 w-full relative">
+                {/* Background scanning grid */}
+                <div className="absolute inset-0 bg-[linear-gradient(to_right,#1f2937_1px,transparent_1px),linear-gradient(to_bottom,#1f2937_1px,transparent_1px)] bg-[size:0.5rem_0.5rem] opacity-[0.03] pointer-events-none z-0"></div>
+                
+                <div className={`w-8 h-8 shrink-0 flex items-center justify-center bg-[#121319] border border-white/5 relative z-10 ${textColor}`}>
+                  {icon}
+                  <div className={`absolute inset-0 ${bgColor} opacity-10 blur-sm`}></div>
+                </div>
+                
+                <div className="flex flex-col relative z-10 flex-1 min-w-0 pr-2">
+                  <div className={`text-[9px] font-black tracking-[0.2em] uppercase mb-0.5 opacity-80 ${textColor}`}>
+                     {notifTypeLabel}
+                  </div>
+                  <span className="text-[13px] font-bold tracking-wide text-gray-200 truncate block">
+                     {message}
+                  </span>
+                </div>
+                
+                {/* Corner Decoration */}
+                <div className={`absolute top-1 right-1 w-1.5 h-1.5 rounded-full ${bgColor} animate-pulse`}></div>
+                <div className="absolute bottom-1 right-1 w-[4px] h-[4px] border-b border-r border-white/20"></div>
+              </div>
             </div>
           );
         })}

@@ -110,3 +110,30 @@
     @apply font-sans;
   }
 }
+
+/* Custom Global Scrollbar - Cyberpunk / Sci-fi Theme */
+::-webkit-scrollbar {
+  width: 14px;
+  height: 14px;
+}
+
+::-webkit-scrollbar-track {
+  background: #030712; /* matching tailwind gray-950 */
+  border-left: 1px solid rgba(255, 255, 255, 0.02);
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(168, 85, 247, 0.5); /* tailwind purple-500 with opacity */
+  border-radius: 9999px;
+  border: 3px solid #030712; /* matching track color to simulate margin */
+  background-clip: padding-box; /* keeps background strictly inside the border */
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(168, 85, 247, 0.9); /* brighter purple on hover */
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(168, 85, 247, 0.5) #030712;
+}

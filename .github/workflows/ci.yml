@@ -1,0 +1,118 @@
+name: System 2.0 CI
+
+on:
+  push:
+    branches: [ main, beta ]
+  pull_request:
+    branches: [ main, beta ]
+
+jobs:
+  test-server:
+    name: Backend Server Tests
+    runs-on: ubuntu-latest
+    
+    # The server needs MongoDB and Redis to run properly without crashing
+    services:
+      mongodb:
+        image: mongo:latest
+        ports:
+          - 27017:27017
+        options: >-
+          --health-cmd "echo 'db.runCommand(\"ping\").ok' | mongosh localhost:27017/test --quiet"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      redis:
+        image: redis:alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        cache: 'npm'
+        cache-dependency-path: 'Server/package-lock.json'
+        
+    - name: Install dependencies
+      working-directory: ./Server
+      run: npm install
+      
+    - name: Run Server Tests (Vitest)
+      working-directory: ./Server
+      env:
+        MONGO_URI: mongodb://localhost:27017/soloLvlTest
+        REDIS_URL: redis://localhost:6379
+        JWT_SECRET: test_action_secret
+      run: npm test --if-present
+
+  build-client:
+    name: Frontend Client Build & Tests
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        cache: 'npm'
+        cache-dependency-path: 'Client/package-lock.json'
+        
+    - name: Install dependencies
+      working-directory: ./Client
+      run: npm install
+      
+    - name: Lint Code
+      working-directory: ./Client
+      run: npm run lint --if-present
+      
+    - name: Run Client Tests
+      working-directory: ./Client
+      run: npm test --if-present
+      
+    - name: Build Dist
+      working-directory: ./Client
+      run: npm run build
+
+  test-rag-service:
+    name: RAG Python Service Tests
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python 3.11
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+        cache: 'pip'
+        
+    - name: Install dependencies
+      working-directory: ./RAG-Service
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install pytest httpx pytest-asyncio
+        
+    - name: Run Python Tests
+      working-directory: ./RAG-Service
+      # Runs pytest if a tests directory or test files exist, otherwise gracefully skips
+      run: |
+        if ls test_*.py */test_*.py 1> /dev/null 2>&1; then
+          pytest
+        elif [ -d "tests" ]; then
+          pytest tests/
+        else
+          echo "No test files found, but environment built successfully."
+        fi

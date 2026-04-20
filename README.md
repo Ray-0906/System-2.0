@@ -900,6 +900,52 @@ user level advanced: YES
 
 ---
 
+## ☸️ Kubernetes Orchestration
+
+System 2.0 is fully containerized and includes a robust Kubernetes orchestration layer for testing and production deployments. 
+
+The environment uses **GitHub Secrets** internally for variable injection in CI/CD, but for local testing with `kind` (Kubernetes in Docker) or Minikube, you can easily deploy it from your laptop.
+
+### 1. Build Docker Images Locally
+Make sure you build the required Docker images so your Kubernetes cluster can find them:
+```bash
+docker build -t system2-client:latest ./Client
+docker build -t system2-server:latest ./Server
+docker build -t system2-rag:latest ./RAG-Service
+```
+
+### 2. Load Images into your Cluster (If using \`kind\`)
+If you are running the cluster inside Docker using `kind`, you must load the images:
+```bash
+kind load docker-image system2-client:latest system2-server:latest system2-rag:latest
+```
+
+### 3. Setup Secrets
+The K8s YAML files in the `k8s/` directory currently use `${{ secrets.VARIABLE }}` placeholders. For local execution, you should temporarily replace these with your actual Base64-encoded values or dynamically inject them via `envsubst`:
+```bash
+# Example of generating a base64 secret:
+echo -n "your_mongodb_uri" | base64
+```
+
+### 4. Deploy the Cluster
+Apply all the orchestration files to spin up the React frontend, Node backend, Python RAG Service, and the internal Redis message queue:
+```bash
+kubectl apply -f k8s/
+```
+
+### 5. Access the App Locally
+Because external Cloud LoadBalancers are unavailable on local simulated clusters, use port-forwarding to access the architecture over `localhost`:
+```bash
+# Terminal 1: Expose the Backend API
+kubectl port-forward svc/system2-server-service 3000:3000
+
+# Terminal 2: Expose the Frontend App
+kubectl port-forward svc/system2-client-service 5173:5173
+```
+Your platform is now fully running at `http://localhost:5173` via Kubernetes!
+
+---
+
 ## 🚀 Deployment & Performance
 
 ### Production Considerations

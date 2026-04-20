@@ -1,0 +1,37 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: rag-service-secrets
+type: Opaque
+stringData:
+  PINECONE_API_KEY: "${{ secrets.PINECONE_API_KEY }}"
+  PINECONE_INDEX: "${{ secrets.PINECONE_INDEX }}"
+  MISTRAL_API_KEY: "${{ secrets.MISTRAL_API_KEY }}"
+  MONGO_URI: "${{ secrets.MONGO_URI }}"
+  REDIS_URL: "redis://redis-service:6379" # Keeping internal redis mapping, or change to ${secrets.REDIS_URL} if external
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: system2-rag
+  labels:
+    app: system2-rag
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: system2-rag
+  template:
+    metadata:
+      labels:
+        app: system2-rag
+    spec:
+      containers:
+      - name: system2-rag
+        image: ${{ secrets.DOCKER_USERNAME }}/system2-rag:latest # Pulled from your Docker Hub registry
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 8100
+        envFrom:
+        - secretRef:
+            name: rag-service-secrets

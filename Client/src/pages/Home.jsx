@@ -268,7 +268,7 @@ const HomePage = () => {
                       <div className="ml-3">
                         <div className="flex items-center mb-3">
                           <div className="w-8 h-8 rounded-sm bg-[#121319] border border-white/10 flex items-center justify-center mr-3" style={{ color: skill.color }}>
-                            <i className={`fas ${skill.icon}`}></i>
+                            <skill.icon className="w-4 h-4" />
                           </div>
                           <div>
                             <h4 className="font-bold text-gray-100 group-hover:text-white transition-colors tracking-wide uppercase text-sm">{skill.title}</h4>
@@ -311,7 +311,7 @@ const HomePage = () => {
                         <div className="flex items-center mb-3 justify-between">
                           <div className="flex items-center">
                              <div className="w-8 h-8 rounded-sm bg-[#121319] border border-white/10 flex items-center justify-center mr-3" style={{ color: artifact.color, boxShadow: `0 0 10px ${artifact.color}33` }}>
-                               <i className={`fas ${artifact.icon}`}></i>
+                               <artifact.icon className="w-4 h-4" />
                              </div>
                              <h4 className="font-bold text-gray-100 group-hover:text-white transition-colors tracking-wide uppercase text-sm">{artifact.title}</h4>
                           </div>

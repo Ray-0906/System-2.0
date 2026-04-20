@@ -183,15 +183,17 @@ const Signup = () => {
         <div className="relative z-20 flex items-center justify-center min-h-screen p-5">
           <form
             onSubmit={handleSubmit(onSubmit)}
-            className="w-full max-w-sm bg-black/80 border border-cyan-400/30 p-8 rounded-2xl shadow-xl space-y-6 backdrop-blur"
+            className="w-full max-w-md relative bg-gray-950/80 border border-gray-800 p-10 rounded-xl shadow-[0_0_50px_rgba(138,43,226,0.15)] space-y-6 backdrop-blur-md overflow-hidden before:absolute before:inset-0 before:bg-gradient-to-br before:from-cyan-500/5 before:to-purple-500/5 before:pointer-events-none"
             noValidate
             aria-label="Signup form"
           >
-            <h2 className="text-3xl font-black text-center text-cyan-400 tracking-wider drop-shadow-md">
-              HUNTER'S GATE
+            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-cyan-500 to-transparent opacity-70"></div>
+            <div className="absolute bottom-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-purple-500 to-transparent opacity-70"></div>
+            <h2 className="relative z-10 text-4xl font-black text-center text-cyan-400 tracking-[0.2em] drop-shadow-[0_0_10px_rgba(8,145,178,0.8)]">
+              SYSTEM
             </h2>
-            <p className="text-sm uppercase text-purple-500 text-center tracking-widest">
-              Shadow Monarch System
+            <p className="relative z-10 text-xs uppercase text-purple-400 text-center tracking-widest font-bold">
+              Player Registration
             </p>
 
             {error && (
@@ -200,20 +202,20 @@ const Signup = () => {
               </p>
             )}
 
-            <div className="space-y-2">
+            <div className="space-y-2 relative z-10">
               <label
                 htmlFor="username"
-                className="block text-sm font-semibold uppercase text-cyan-400 tracking-wider"
+                className="block text-xs font-bold uppercase text-cyan-300 tracking-wider"
               >
-                Hunter Name
+                Player ID Name
               </label>
               <input
                 id="username"
                 type="text"
-                placeholder="Username"
-                className={`w-full p-3 rounded bg-gray-800 border ${
-                  errors.username ? "border-red-500" : "border-gray-700"
-                } focus:outline-none focus:border-cyan-400`}
+                placeholder="Enter Player Name"
+                className={`w-full p-4 rounded-lg bg-gray-900/50 backdrop-blur-sm border ${
+                  errors.username ? "border-red-500/80 focus:border-red-400 focus:ring-red-400/50" : "border-gray-700/80 focus:border-cyan-400 focus:ring-cyan-400/50"
+                } focus:outline-none focus:ring-1 text-cyan-50 placeholder-gray-500 transition-all duration-300`}
                 {...register("username")}
                 aria-invalid={errors.username ? "true" : "false"}
                 aria-describedby={errors.username ? "username-error" : undefined}
@@ -225,20 +227,20 @@ const Signup = () => {
               )}
             </div>
 
-            <div className="space-y-2">
+            <div className="space-y-2 relative z-10">
               <label
                 htmlFor="email"
-                className="block text-sm font-semibold uppercase text-cyan-400 tracking-wider"
+                className="block text-xs font-bold uppercase text-cyan-300 tracking-wider"
               >
-                Hunter ID
+                Email Address
               </label>
               <input
                 id="email"
                 type="email"
-                placeholder="Email"
-                className={`w-full p-3 rounded bg-gray-800 border ${
-                  errors.email ? "border-red-500" : "border-gray-700"
-                } focus:outline-none focus:border-cyan-400`}
+                placeholder="Enter Email"
+                className={`w-full p-4 rounded-lg bg-gray-900/50 backdrop-blur-sm border ${
+                  errors.email ? "border-red-500/80 focus:border-red-400 focus:ring-red-400/50" : "border-gray-700/80 focus:border-cyan-400 focus:ring-cyan-400/50"
+                } focus:outline-none focus:ring-1 text-cyan-50 placeholder-gray-500 transition-all duration-300`}
                 {...register("email")}
                 aria-invalid={errors.email ? "true" : "false"}
                 aria-describedby={errors.email ? "email-error" : undefined}
@@ -250,20 +252,20 @@ const Signup = () => {
               )}
             </div>
 
-            <div className="space-y-2">
+            <div className="space-y-2 relative z-10">
               <label
                 htmlFor="password"
-                className="block text-sm font-semibold uppercase text-cyan-400 tracking-wider"
+                className="block text-xs font-bold uppercase text-cyan-300 tracking-wider"
               >
                 Access Code
               </label>
               <input
                 id="password"
                 type="password"
-                placeholder="Password"
-                className={`w-full p-3 rounded bg-gray-800 border ${
-                  errors.password ? "border-red-500" : "border-gray-700"
-                } focus:outline-none focus:border-cyan-400`}
+                placeholder="••••••••"
+                className={`w-full p-4 rounded-lg bg-gray-900/50 backdrop-blur-sm border ${
+                  errors.password ? "border-red-500/80 focus:border-red-400 focus:ring-red-400/50" : "border-gray-700/80 focus:border-cyan-400 focus:ring-cyan-400/50"
+                } focus:outline-none focus:ring-1 text-cyan-50 placeholder-gray-500 transition-all duration-300`}
                 {...register("password")}
                 aria-invalid={errors.password ? "true" : "false"}
                 aria-describedby={errors.password ? "password-error" : undefined}
@@ -278,19 +280,23 @@ const Signup = () => {
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-gradient-to-r from-cyan-400 to-purple-600 hover:brightness-110 active:scale-95 focus:outline-none focus:ring-2 focus:ring-purple-400 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 py-3 rounded font-semibold uppercase text-white shadow-md"
+              className="w-full relative z-10 bg-gradient-to-r from-cyan-600 to-purple-600 hover:from-cyan-500 hover:to-purple-500 active:scale-[0.98] focus:outline-none focus:ring-2 focus:ring-purple-500/50 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 py-4 rounded-lg font-black tracking-[0.15em] uppercase text-white shadow-[0_0_20px_rgba(8,145,178,0.4)] hover:shadow-[0_0_30px_rgba(138,43,226,0.6)]"
               aria-label="Submit signup form"
             >
-              Sign Up
+              Awaken
             </button>
 
-            <div className="text-center text-sm text-white/70">or</div>
+            <div className="relative z-10 flex items-center justify-center space-x-2 text-sm text-gray-500 font-bold uppercase tracking-widest">
+              <span className="w-12 h-[1px] bg-gray-700"></span>
+              <span>or</span>
+              <span className="w-12 h-[1px] bg-gray-700"></span>
+            </div>
 
             <button
               type="button"
               onClick={handleGoogleLogin}
               disabled={loading}
-              className="w-full py-3 border border-purple-600/50 rounded bg-black/60 hover:bg-purple-600/20 flex justify-center items-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full relative z-10 py-3 border border-gray-700 rounded-lg bg-gray-900/50 hover:bg-gray-800/80 hover:border-gray-500 flex justify-center items-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300"
               aria-label="Sign up with Google"
             >
               <svg className="w-5 h-5" viewBox="0 0 24 24" aria-hidden="true">
@@ -314,14 +320,14 @@ const Signup = () => {
               Sign Up with Google
             </button>
 
-            <div className="text-center text-sm text-white/70">
-              Hunter?{" "}
+            <div className="relative z-10 text-center text-xs uppercase font-bold tracking-widest text-gray-500 mt-6">
+              Already Awakened?{" "}
               <Link
                 to="/login"
-                className="font-semibold text-cyan-400 hover:text-purple-500 transition-colors duration-300 bg-transparent border-none cursor-pointer hover:drop-shadow-[0_0_10px_rgba(138,43,226,0.5)]"
+                className="text-cyan-400 hover:text-cyan-300 transition-colors duration-300 ml-1 hover:drop-shadow-[0_0_8px_rgba(8,145,178,0.8)]"
                 aria-label="Log in to existing account"
               >
-                Access the Guild
+                Access System
               </Link>
             </div>
           </form>

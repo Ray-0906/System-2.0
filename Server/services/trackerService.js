@@ -95,6 +95,7 @@ export const joinMission = async (userId, missionId) => {
  */
 export const dailyRefresh = async (userId, trackerId, penaltyType) => {
   const tracker = await trackerRepo.findById(trackerId);
+  // reached here for daily refresh
   if (!tracker) throw new ServiceError('Tracker not found', 404);
   if (tracker.userId.toString() !== userId.toString()) {
     throw new ServiceError('Unauthorized', 403);
@@ -115,7 +116,7 @@ export const dailyRefresh = async (userId, trackerId, penaltyType) => {
   let updatedStats = null;
 
   // Apply penalty if streak was broken
-  if (penaltyType && tracker.streak > 0) {
+  if (penaltyType) {
     const penaltyByType = tracker.penalty?.[penaltyType];
     const legacyPenalty = tracker.penalty;
     if (penaltyByType || legacyPenalty) {

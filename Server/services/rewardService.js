@@ -44,7 +44,9 @@ export const applyStatGain = async (user, stat, xp) => {
   const statMultiplier = multipliers[stat] || 1.0;
   const totalXP = Math.round(xp * statMultiplier);
   user.stats[stat].value += totalXP;
+  user.xp += totalXP;
   recalcStatLevel(user, stat);
+  recalcUserLevel(user);
   return totalXP;
 };
 
@@ -72,4 +74,11 @@ export const applySidequestReward = async (user, evaluated) => {
     recalcStatLevel(user, evaluated.stat);
   }
   recalcUserLevel(user);
+
+  return {
+    xp: scaledXP,
+    coins: scaledCoins,
+    stat: evaluated.stat,
+    statValueGain: Math.round(gain * (multipliers[evaluated.stat] || 1.0)),
+  };
 };

@@ -8,6 +8,7 @@ import { Equiment } from '../Models/inventory.js';
 import { Skill } from '../Models/skill.js';
 
 const STAT_KEYS = ['strength', 'intelligence', 'agility', 'endurance', 'charisma'];
+const COIN_PENALTY_FACTOR = 0.95;
 const DEFAULT_MULTIPLIERS = {
   strength: 1.0,
   intelligence: 1.0,
@@ -16,6 +17,8 @@ const DEFAULT_MULTIPLIERS = {
   charisma: 1.0,
   coins: 1.0,
 };
+
+const round2 = (value) => Math.round(value * 100) / 100;
 
 /**
  * Recalculate all multipliers for a user based on their equipment and skills.
@@ -26,6 +29,8 @@ const DEFAULT_MULTIPLIERS = {
  * @returns {Object} The updated multipliers
  */
 export const recalcMultipliers = async (userId, equimentIds = [], skillIds = []) => {
+  const existingState = await UserState.findOne({ userId });
+  const coinPenaltyActive = Boolean(existingState?.temporary?.coinPenaltyActive);
   const multipliers = { ...DEFAULT_MULTIPLIERS };
 
   // 1. Aggregate equipment effects
@@ -77,13 +82,24 @@ export const recalcMultipliers = async (userId, equimentIds = [], skillIds = [])
 
   // 3. Round multipliers to 2 decimal places
   for (const key of Object.keys(multipliers)) {
-    multipliers[key] = Math.round(multipliers[key] * 100) / 100;
+    multipliers[key] = round2(multipliers[key]);
   }
 
-  // 4. Upsert into UserState
+  // 4. Preserve active temporary streak-break coin penalty across recalculations.
+  if (coinPenaltyActive) {
+    multipliers.coins = round2((multipliers.coins || 1.0) * COIN_PENALTY_FACTOR);
+  }
+
+  // 5. Upsert into UserState
   const userState = await UserState.findOneAndUpdate(
     { userId },
-    { multipliers, updatedAt: new Date() },
+    {
+      multipliers,
+      temporary: {
+        coinPenaltyActive,
+      },
+      updatedAt: new Date(),
+    },
     { upsert: true, new: true }
   );
 
@@ -100,6 +116,66 @@ export const getMultipliers = async (userId) => {
   if (userState) return userState.multipliers;
 
   // Create default entry
-  const newState = await UserState.create({ userId, multipliers: { ...DEFAULT_MULTIPLIERS } });
+  const newState = await UserState.create({
+    userId,
+    multipliers: { ...DEFAULT_MULTIPLIERS },
+    temporary: { coinPenaltyActive: false },
+  });
   return newState.multipliers;
+};
+
+/**
+ * Apply a temporary -5% coin multiplier penalty once per streak break.
+ * This penalty stays active until the next completed daily cycle.
+ * @param {string} userId
+ * @returns {Promise<Object>} Updated multipliers
+ */
+export const applyTemporaryCoinPenalty = async (userId) => {
+  let userState = await UserState.findOne({ userId });
+
+  if (!userState) {
+    userState = await UserState.create({
+      userId,
+      multipliers: { ...DEFAULT_MULTIPLIERS },
+      temporary: { coinPenaltyActive: false },
+    });
+  }
+
+  if (userState.temporary?.coinPenaltyActive) {
+    return userState.multipliers;
+  }
+
+  userState.multipliers.coins = round2((userState.multipliers.coins || 1.0) * COIN_PENALTY_FACTOR);
+  userState.temporary = {
+    ...(userState.temporary || {}),
+    coinPenaltyActive: true,
+  };
+  userState.updatedAt = new Date();
+  await userState.save();
+
+  return userState.multipliers;
+};
+
+/**
+ * Clear temporary streak-break coin penalty on next completed daily cycle.
+ * @param {string} userId
+ * @returns {Promise<Object|null>} Updated multipliers or null if user state doesn't exist
+ */
+export const clearTemporaryCoinPenalty = async (userId) => {
+  const userState = await UserState.findOne({ userId });
+  if (!userState) return null;
+
+  if (!userState.temporary?.coinPenaltyActive) {
+    return userState.multipliers;
+  }
+
+  userState.multipliers.coins = round2((userState.multipliers.coins || 1.0) / COIN_PENALTY_FACTOR);
+  userState.temporary = {
+    ...(userState.temporary || {}),
+    coinPenaltyActive: false,
+  };
+  userState.updatedAt = new Date();
+  await userState.save();
+
+  return userState.multipliers;
 };

@@ -3,6 +3,7 @@ import { Outlet, useLocation } from "react-router-dom";
 
 import Sidebar from "./components/sidebar";
 import NotificationPopup from "./utils/Notification";
+import ChatWidget from "./components/ChatWidget";
 import "./App.css";
 import { useLoadUser } from "./utils/userLoader";
 import SoloLoading from "./components/Loading";
@@ -41,6 +42,7 @@ export default function App() {
         <NotificationPopup />
         <Outlet />
       </main>
+      {!isHome && <ChatWidget />}
     </div>
   );
 }

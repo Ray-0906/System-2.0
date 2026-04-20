@@ -10,6 +10,9 @@ const UserStateSchema = new mongoose.Schema({
     charisma:     { type: Number, default: 1.0 },
     coins:        { type: Number, default: 1.0 },
   },
+  temporary: {
+    coinPenaltyActive: { type: Boolean, default: false },
+  },
   updatedAt: { type: Date, default: Date.now },
 });
 

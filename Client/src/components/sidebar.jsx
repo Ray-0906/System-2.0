@@ -94,17 +94,17 @@ const NavLinks = memo(({ user, onLinkClick, onLogout, isLoggingOut, error }) => 
                   to={item.to}
                   onClick={onLinkClick}
                   className={
-                    `group flex items-center gap-3 text-sm font-medium px-3 py-2 rounded-lg transition-all duration-300 relative overflow-hidden ` +
+                    `group flex items-center gap-4 text-[13px] font-bold tracking-[0.2em] uppercase px-4 py-3 border-l-2 transition-all duration-300 relative overflow-hidden ` +
                     (active
-                      ? 'bg-gradient-to-r from-purple-600/30 to-pink-600/20 text-purple-100 ring-1 ring-purple-400/40 shadow-[0_0_10px_rgba(139,92,246,0.25)]'
-                      : 'text-purple-300 hover:text-purple-100 hover:bg-purple-500/10')
+                      ? 'border-[#3b82f6] bg-[#3b82f6]/5 text-white'
+                      : 'border-transparent text-gray-500 hover:text-gray-300 hover:bg-white/[0.02]')
                   }
                 >
-                  <span className={"p-1.5 rounded-md bg-black/30 border border-purple-500/20 shadow-inner shadow-black/50 transition-colors " + (active ? 'bg-purple-600/40 border-purple-400/50' : 'group-hover:bg-purple-700/30')}>
+                  <div className={"relative z-10 transition-colors " + (active ? 'text-[#3b82f6] drop-shadow-[0_0_8px_rgba(59,130,246,0.8)]' : 'group-hover:text-gray-300 group-hover:scale-110')}>
                     <item.icon className="w-4 h-4" />
-                  </span>
-                  <span className="tracking-wide">{item.label}</span>
-                  {active && <span className="absolute inset-y-0 left-0 w-[3px] bg-gradient-to-b from-purple-400 to-pink-500 rounded-r" />}
+                  </div>
+                  <span className="relative z-10 truncate">{item.label}</span>
+                  {active && <div className="absolute inset-0 bg-gradient-to-r from-[#3b82f6]/10 to-transparent pointer-events-none" />}
                 </Link>
               </motion.div>
             );
@@ -114,9 +114,9 @@ const NavLinks = memo(({ user, onLinkClick, onLogout, isLoggingOut, error }) => 
             <Link
               to="/login"
               onClick={onLinkClick}
-              className="block text-center w-full py-2 px-4 text-sm font-semibold tracking-wide rounded-lg bg-gradient-to-r from-purple-600 to-pink-500 hover:from-purple-500 hover:to-pink-400 text-white transition-all duration-300 ease-out hover:shadow-[0_0_12px_rgba(236,72,153,0.4)]"
+              className="block text-center w-full py-3 px-4 text-xs font-bold tracking-[0.2em] border border-[#a855f7]/50 text-[#a855f7] hover:bg-[#a855f7]/10 transition-colors uppercase"
             >
-              Login
+              ACCESS SYSTEM
             </Link>
           </motion.div>
         )}
@@ -124,17 +124,17 @@ const NavLinks = memo(({ user, onLinkClick, onLogout, isLoggingOut, error }) => 
   {/* Sidequests now included in main nav list above */}
       
       {user && (
-        <motion.div variants={itemVariants} className="mt-auto">
+        <motion.div variants={itemVariants} className="mt-8">
           <button
             onClick={onLogout}
             disabled={isLoggingOut}
-            className="w-full flex items-center justify-center gap-2 py-2.5 px-4 text-sm tracking-wide font-semibold rounded-lg bg-gradient-to-r from-red-600/90 to-rose-600/80 hover:from-red-600 hover:to-rose-600 text-white transition-all duration-300 ease-out hover:shadow-[0_0_12px_rgba(239,68,68,0.4)] disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full flex items-center justify-center gap-3 py-3 px-4 text-xs tracking-[0.2em] font-bold border border-red-500/50 text-red-500 hover:bg-red-500/10 transition-colors uppercase disabled:opacity-50 disabled:cursor-not-allowed group"
             aria-label="Logout"
           >
-            <LogOut className="w-4 h-4" />
-            <span>{isLoggingOut ? "Logging out..." : "Logout"}</span>
+            <LogOut className="w-4 h-4 group-hover:scale-110 transition-transform" />
+            <span>{isLoggingOut ? "DISCONNECTING..." : "DISCONNECT LOG"}</span>
           </button>
-          {error && <p className="text-red-400 text-sm mt-2 text-center">{error}</p>}
+          {error && <p className="text-red-400 text-[10px] tracking-widest mt-3 xl text-center uppercase font-bold">{error}</p>}
         </motion.div>
       )}
     </motion.nav>
@@ -187,12 +187,14 @@ const Sidebar = memo(() => {
     <ErrorBoundary>
       <motion.button
         onClick={toggleSidebar}
-        className="fixed top-4 right-4 z-50 p-3 rounded-full text-white transition-colors duration-300 bg-black/25 backdrop-blur-md border border-white/10 hover:bg-black/40 shadow-[0_0_8px_rgba(139,92,246,0.25)]"
+        className="fixed top-4 right-4 z-50 p-3 text-[#3b82f6] bg-[#050608] border border-[#3b82f6]/50 shadow-[0_0_15px_rgba(59,130,246,0.3)] hover:bg-[#3b82f6]/10 transition-all duration-300"
         aria-label={isOpen ? "Close sidebar" : "Open sidebar"}
         disabled={isLoggingOut}
-        whileHover={{ scale: 1.1 }}
-        whileTap={{ scale: 0.9 }}
+        style={{ clipPath: 'polygon(0 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%)' }}
+        whileHover={{ scale: 1.05 }}
+        whileTap={{ scale: 0.95 }}
       >
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(59,130,246,0.2)_0%,transparent_70%)] opacity-0 hover:opacity-100 transition-opacity"></div>
         <AnimatePresence mode="wait">
           <motion.div
             key={isOpen ? "x" : "menu"}
@@ -222,13 +224,21 @@ const Sidebar = memo(() => {
               initial="closed"
               animate="open"
               exit="closed"
-              className="fixed top-0 right-0 h-full w-72 bg-gradient-to-br from-gray-950/95 via-[#0d0f17]/95 to-gray-900/90 backdrop-blur-xl border-l border-purple-500/30 z-40 shadow-[0_0_35px_-5px_rgba(139,92,246,0.35)]"
-              style={{ fontFamily: "'Rajdhani', 'Orbitron', monospace" }}
+              className="fixed top-0 right-0 h-full w-72 bg-[#050608]/95 backdrop-blur-2xl border-l border-white/5 z-40 shadow-[-10px_0_30px_rgba(0,0,0,0.8)] font-['Rajdhani']"
             >
-              <div className="p-6 flex flex-col h-full overflow-y-auto scrollbar-thin scrollbar-track-transparent scrollbar-thumb-purple-600/30 hover:scrollbar-thumb-purple-500/50">
-                <div className="flex items-center justify-between mb-8">
-                  <Link to="/" onClick={toggleSidebar} className="group">
-                    <h2 className="text-transparent bg-clip-text bg-gradient-to-r from-purple-400 via-fuchsia-400 to-pink-500 text-xl font-extrabold tracking-wider drop-shadow-[0_0_8px_rgba(139,92,246,0.45)] group-hover:from-purple-300 group-hover:to-pink-400 transition-all">
+              {/* Scanline & Glow Overlay */}
+              <div className="absolute inset-0 bg-[linear-gradient(to_right,#1f2937_1px,transparent_1px),linear-gradient(to_bottom,#1f2937_1px,transparent_1px)] bg-[size:2rem_2rem] opacity-10 pointer-events-none"></div>
+              <div className="absolute top-0 right-0 w-full h-[1px] bg-gradient-to-r from-transparent via-[#3b82f6]/30 to-transparent"></div>
+              <div className="absolute bottom-0 left-0 w-[1px] h-full bg-gradient-to-b from-[#a855f7]/30 to-transparent"></div>
+
+              <div className="p-6 flex flex-col h-full overflow-y-auto relative z-10 scrollbar-none">
+                <div className="flex items-center justify-between mb-10 pb-4 border-b border-white/5">
+                  <Link to="/" onClick={toggleSidebar} className="group flex flex-col">
+                    <span className="text-[#3b82f6] text-[10px] font-black tracking-[0.4em] mb-1 flex items-center gap-2">
+                      <div className="w-1.5 h-1.5 bg-[#3b82f6] rounded-full animate-ping"></div>
+                      MAIN MENU
+                    </span>
+                    <h2 className="text-white text-2xl font-black italic tracking-wider font-['Exo_2'] drop-shadow-[0_0_10px_rgba(255,255,255,0.2)] group-hover:text-[#a855f7] transition-colors">
                       SYSTEM 2.0
                     </h2>
                   </Link>
@@ -240,9 +250,9 @@ const Sidebar = memo(() => {
                   isLoggingOut={isLoggingOut}
                   error={error}
                 />
-                <div className="mt-6 pt-5 border-t border-purple-600/20 text-center space-y-2">
-                  <p className="text-[10px] tracking-wide text-purple-400/70">Shadow Monarch System</p>
-                  <p className="text-[9px] uppercase tracking-[0.2em] text-purple-500/40">v2.0</p>
+                <div className="mt-8 pt-6 border-t border-white/5 text-center space-y-2">
+                  <p className="text-[10px] tracking-[0.3em] font-bold text-gray-600">SHADOW MONARCH HUD</p>
+                  <p className="text-[9px] uppercase tracking-[0.4em] text-[#a855f7]/50 font-bold">v2.0 // ONLINE</p>
                 </div>
               </div>
             </motion.aside>

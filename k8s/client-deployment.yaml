@@ -1,0 +1,35 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: client-config
+data:
+  VITE_CLOUDINARY_CLOUD: "${{ secrets.VITE_CLOUDINARY_CLOUD }}"
+  VITE_CLOUDINARY_PRESET: "${{ secrets.VITE_CLOUDINARY_PRESET }}"
+  VITE_GOOGLE_CLIENT_ID: "${{ secrets.VITE_GOOGLE_CLIENT_ID }}"
+  VITE_SERVER_URL: "http://localhost:3000"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: system2-client
+  labels:
+    app: system2-client
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: system2-client
+  template:
+    metadata:
+      labels:
+        app: system2-client
+    spec:
+      containers:
+      - name: system2-client
+        image: ${{ secrets.DOCKER_USERNAME }}/system2-client:latest # Pulled from your Docker Hub registry
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 5173
+        envFrom:
+        - configMapRef:
+            name: client-config

@@ -1,16 +1,21 @@
-import { User } from "../Models/user.js";
-import { Tracker } from "../Models/tracker.js";
-import { evaluateHunterScore, applyRankAscension } from "../services/rankService.js";
+/**
+ * RankController — thin HTTP layer for rank ascension evaluation.
+ * Business logic lives in rankService.js (already extracted).
+ */
+import { userRepo } from '../repositories/userRepository.js';
+import { trackerRepo } from '../repositories/trackerRepository.js';
+import { evaluateHunterScore, applyRankAscension } from '../services/rankService.js';
+import { handleServiceError } from '../utils/serviceError.js';
+import { ServiceError } from '../utils/serviceError.js';
+import eventBus, { Events } from '../events/eventBus.js';
 
 export const evaluateRankAscension = async (req, res) => {
   try {
     const userId = req.user.id;
-    const user = await User.findById(userId);
-    if (!user) return res.status(404).json({ error: 'User not found' });
+    const user = await userRepo.findById(userId);
+    if (!user) throw new ServiceError('User not found', 404);
 
-    const trackers = await Tracker.find({ userId });
-
-    // Use shared service for score calculation
+    const trackers = await trackerRepo.findByUserId(userId);
     const { totalHunterScore, components, newRank, details } = evaluateHunterScore(user, trackers);
 
     const report = {
@@ -31,17 +36,16 @@ export const evaluateRankAscension = async (req, res) => {
       },
     };
 
-    // Use shared service for rank ascension
     const { ascended, reward } = applyRankAscension(user, newRank);
 
     if (ascended) {
-      await user.save();
+      await userRepo.save(user);
+      eventBus.emitAsync(Events.RANK_ASCENDED, { userId, newRank, reward });
       return res.status(200).json({ ascended: true, newRank, reward, report });
     }
 
     return res.status(200).json({ ascended: false, currentRank: user.rank, report });
-  } catch (error) {
-    console.error('Rank Ascension Error:', error);
-    res.status(500).json({ error: 'Server error during rank evaluation' });
+  } catch (err) {
+    return handleServiceError(res, err);
   }
 };

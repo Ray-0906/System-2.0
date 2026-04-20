@@ -1,4 +1,5 @@
 import express from 'express';
+import { createServer } from 'http';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import { connectDB } from './config/db.js';
@@ -16,7 +17,17 @@ import rankRoutes from './Routes/rankRoutes.js';
 import sidequestRoutes from './Routes/sidequestRoutes.js';
 import titleRoutes from './Routes/titleRoutes.js';
 import userRoutes from './Routes/userRoutes.js';
+import assistantRoutes from './Routes/assistantRoutes.js';
+import './events/eventLogger.js';  // Activate event logging
+import { initSocket } from './socket/socketManager.js';
+import './workers/notificationWorker.js';  // Socket.io push (stays in Node.js)
+
 const app=express();
+const httpServer = createServer(app);
+const PORT = Number(process.env.PORT) || 3000;
+
+// Initialize WebSocket server
+initSocket(httpServer);
  
 
 // Middleware
@@ -49,16 +60,25 @@ app.use('/inventory',isAuthenticated,equimentRoutes);
 app.use('/sidequest', isAuthenticated, sidequestRoutes);
 app.use('/titles', isAuthenticated, titleRoutes);
 app.use('/user', isAuthenticated, userRoutes);
+app.use('/assistant', isAuthenticated, assistantRoutes);
 
 // GraphQL server
 startGraphQLServer(app).catch(err => {
     console.error('Error starting GraphQL server:', err);
 });
 
-app.listen(3000, () => {
+httpServer.on('error', (err) => {
+    if (err?.code === 'EADDRINUSE') {
+        console.error(`Port ${PORT} is already in use. Stop the existing process or set PORT in .env.`);
+        return;
+    }
+    console.error('HTTP server error:', err);
+});
+
+httpServer.listen(PORT, () => {
     connectDB();
     // addEquipments();
     // addSkills();
-    console.log('Server is running on port 3000');
+    console.log(`Server is running on port ${PORT}`);
 });
 export default app;

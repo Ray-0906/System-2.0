@@ -13,12 +13,10 @@
   "description": "",
   "dependencies": {
     "@apollo/server": "^4.12.1",
-    "@langchain/community": "^0.3.45",
-    "@langchain/core": "^0.3.57",
-    "@langchain/mistralai": "^0.2.0",
     "bcrypt": "^6.0.0",
     "bcryptjs": "^3.0.2",
     "body-parser": "^2.2.0",
+    "bullmq": "^5.73.4",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
     "dotenv": "^16.5.0",
@@ -27,10 +25,11 @@
     "graphql": "^16.11.0",
     "graphql-tag": "^2.12.6",
     "graphql-type-json": "^0.3.2",
+    "ioredis": "^5.10.1",
     "jsonwebtoken": "^9.0.2",
-    "langchain": "^0.3.27",
     "mongodb": "^6.16.0",
     "mongoose": "^8.15.1",
+    "socket.io": "^4.8.3",
     "zod": "^3.25.76"
   },
   "devDependencies": {

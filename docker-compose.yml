@@ -1,0 +1,36 @@
+services:
+  client:
+    build: 
+      context: ./Client
+    container_name: system2-client
+    ports:
+      - "5173:5173"
+    environment:
+      # Enable polling for Vite on Windows Docker to ensure hot-reloading works
+      - WATCHPACK_POLLING=true
+    # The client runs in the browser, so its .env should still point to localhost:3000 for the server
+
+  server:
+    build:
+      context: ./Server
+    container_name: system2-server
+    ports:
+      - "3000:3000"
+    env_file:
+      - required: false
+        path: ./Server/.env
+    environment:
+      # Automatically reroute the server to hit the RAG service inside the Docker network
+      - RAG_SERVICE_URL=http://rag-service:8100
+    depends_on:
+      - rag-service
+
+  rag-service:
+    build: 
+      context: ./RAG-Service
+    container_name: system2-rag
+    ports:
+      - "8100:8100"
+    env_file:
+      - required: false
+        path: ./RAG-Service/.env

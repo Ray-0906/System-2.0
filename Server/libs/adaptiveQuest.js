@@ -4,15 +4,28 @@ import {Quest} from '../Models/quest.js'; // Adjust path as needed
  // Adjust path as needed
  // Assuming a Quest model exists
 
-import { ChatMistralAI } from '@langchain/mistralai';
 import 'dotenv/config';
 
-const model = new ChatMistralAI({
-  model: 'mistral-large-latest',
-  temperature: 0.6,
-  maxTokens: 500,
-  apiKey: process.env.MISTRAL_API_KEY ,
-});
+// ── Mistral API call (direct fetch, no Langchain) ────
+async function callMistral(prompt) {
+  const res = await fetch('https://api.mistral.ai/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${process.env.MISTRAL_API_KEY}`,
+    },
+    body: JSON.stringify({
+      model: 'mistral-large-latest',
+      temperature: 0.6,
+      max_tokens: 500,
+      messages: [{ role: 'user', content: prompt }],
+    }),
+    signal: AbortSignal.timeout(30_000),
+  });
+  if (!res.ok) throw new Error(`Mistral API ${res.status}`);
+  const data = await res.json();
+  return data.choices?.[0]?.message?.content || '';
+}
 
 export async function upgradeQuests(userId, trackerId) {
   // Find the user's tracker and populate related fields
@@ -48,9 +61,9 @@ export async function upgradeQuests(userId, trackerId) {
   const prompt = `You are a quest designer for a Solo Leveling-style gamification app. Based on the following quests, create upgraded versions with increased difficulty, keeping the original titles as a base and aligning with fitness goals. Do not add new quests, only upgrade the existing ones. Output a JSON array of objects, each with 'title', 'statAffected', and 'xp' (1-50), reflecting a harder challenge. Quests: ${JSON.stringify(currentQuests.map(q => ({ title: q.title, statAffected: q.statAffected, xp: q.xp })))}
   Example: If a quest is "20 push-ups" (strength, 20 xp), upgrade to "30 push-ups" (strength, 30 xp) or "10 advanced pike push-ups" (strength, 35 xp).`;
 
-  const response = await model.invoke(prompt);
-  const match = response.content.match(/```json\n([\s\S]+?)\n```/);
-  const jsonStr = match ? match[1].trim() : response.content.trim();
+  const responseText = await callMistral(prompt);
+  const match = responseText.match(/```json\n([\s\S]+?)\n```/);
+  const jsonStr = match ? match[1].trim() : responseText.trim();
   const newQuests = JSON.parse(jsonStr);
 
   // Validate and save new quests

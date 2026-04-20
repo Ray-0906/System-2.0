@@ -31,11 +31,11 @@ const router = createBrowserRouter([
     path: '/',
     element: <App />,
     children: [
+      { path: '/', element: <HomePage /> },
       {
         element: <ProtectedRoute allowGuest={true} />,
         children: [
           { path: '/login', element: <Login /> },
-          { path: '/', element: <HomePage /> },
           { path: '/signup', element: <Signup /> },
         ]
       },

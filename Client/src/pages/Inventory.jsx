@@ -147,6 +147,7 @@ const Inventory = () => {
   const [sort, setSort] = useState("rarity");
   const [page, setPage] = useState(1);
   const [message, setMessage] = useState(null);
+  const [showFilters, setShowFilters] = useState(false);
 
   // Filter by rarity and ownership
   const filtered = useMemo(() => {
@@ -281,11 +282,36 @@ const Inventory = () => {
                 </div>
               </div>
 
-              {message && <Alert message={message} onDismiss={handleDismiss} />}
+              
+              {/* Mobile Filter Toggle */}
+              <div className="lg:hidden flex items-center justify-between gap-3 mb-4">
+                <div className="relative flex-1">
+                  <input 
+                    value={search} 
+                    onChange={e=>{ setSearch(e.target.value); setPage(1);} } 
+                    placeholder="SEARCH GEAR..." 
+                    className="w-full bg-[#0a0a0f]/80 border border-[#a855f7]/30 rounded-lg px-4 py-3 text-sm font-bold tracking-widest text-white focus:outline-none focus:border-[#a855f7] focus:ring-1 focus:ring-[#a855f7] placeholder:text-white/30 backdrop-blur-md" 
+                  />
+                  <div className="absolute right-3 top-1/2 -translate-y-1/2 text-[#a855f7]">⌕</div>
+                </div>
+                <button
+                  onClick={() => setShowFilters(!showFilters)}
+                  className={`shrink-0 flex items-center justify-center p-3 rounded-lg border backdrop-blur-md transition-all ${
+                    showFilters || selectedRarity !== 'All' || filterOwned || sort !== 'rarity'
+                      ? 'bg-[#a855f7]/20 border-[#a855f7] text-[#a855f7] shadow-[0_0_15px_rgba(168,85,247,0.3)]'
+                      : 'bg-[#0a0a0f]/80 border-white/10 text-white/50 hover:bg-white/5 hover:border-[#a855f7]/50'
+                  }`}
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" /></svg>
+                </button>
+              </div>
+
               <div className="flex flex-col lg:flex-row gap-8 relative z-10 font-['Rajdhani']">
                 
                 {/* Sidebar Container */}
-                <aside className="lg:w-72 shrink-0 space-y-6 bg-[#0a0a0f]/80 border border-[#a855f7]/20 rounded-xl p-5 backdrop-blur-md shadow-[0_0_20px_rgba(0,0,0,0.5)] h-fit relative overflow-hidden group">
+                <aside className={`lg:w-72 shrink-0 space-y-6 bg-[#0a0a0f]/80 border border-[#a855f7]/20 rounded-xl p-5 backdrop-blur-md shadow-[0_0_20px_rgba(0,0,0,0.5)] h-fit relative overflow-hidden group ${
+                  showFilters ? 'block mb-6' : 'hidden lg:block'
+                }`}>
                   <div className="absolute inset-0 bg-gradient-to-br from-[#a855f7]/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
                   
                   <div className="flex items-center gap-2 mb-6 pb-4 border-b border-white/5">
@@ -493,15 +519,17 @@ const Inventory = () => {
                                   <span className="text-lg text-yellow-400 font-black font-['Exo_2']">{equipment.cost.toLocaleString()}</span>
                                 </div>
                                 <button
-                                  disabled={!canBuy}
-                                  onClick={() => handleBuy(equipment.id, equipment.name, equipment.icon, equipment.description, equipment.cost)}
+                                  disabled={!canBuy && !owned}
+                                  onClick={() => {
+                                      if (canBuy && !owned) handleBuy(equipment.id, equipment.name, equipment.icon, equipment.description, equipment.cost);
+                                  }}
                                   className={`
-                                    px-6 py-2 rounded-lg text-[11px] font-black tracking-[0.1em] uppercase transition-all duration-300
+                                    px-6 py-2.5 rounded-sm text-[11px] font-black tracking-[0.1em] uppercase transition-all duration-300
                                     ${owned
-                                      ? 'bg-green-500/10 text-green-400 border border-green-500/30 cursor-default'
+                                      ? 'bg-transparent text-green-400 border border-green-500/50 cursor-default shadow-[inset_0_0_10px_rgba(34,197,94,0.2)]'
                                       : canBuy
-                                        ? 'bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white border border-[#a855f7]/50 shadow-[0_0_15px_rgba(168,85,247,0.4)] hover:shadow-[0_0_25px_rgba(168,85,247,0.6)] hover:scale-105'
-                                        : 'bg-white/5 text-white/30 cursor-not-allowed border border-white/10'}
+                                        ? 'bg-transparent text-[#a855f7] border border-[#a855f7]/70 hover:bg-[#a855f7]/10 hover:text-purple-300 hover:border-purple-400 shadow-[inset_0_0_10px_rgba(168,85,247,0.1)] hover:shadow-[0_0_15px_rgba(168,85,247,0.3)]'
+                                        : 'bg-transparent text-gray-500 border border-gray-600/50 cursor-not-allowed'}
                                   `}
                                 >
                                   {owned ? 'ACQUIRED' : 'PURCHASE'}

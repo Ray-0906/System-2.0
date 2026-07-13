@@ -7,7 +7,7 @@ import { ServiceError } from '../utils/serviceError.js';
 
 export const getHistory = async (req, res) => {
   try {
-    const result = await getChatHistory(req.user._id || req.user.id);
+    const result = await getChatHistory(req.user._id);
     return res.status(200).json(result);
   } catch (err) {
     return handleServiceError(res, err);
@@ -16,7 +16,7 @@ export const getHistory = async (req, res) => {
 
 export const clearHistory = async (req, res) => {
   try {
-    const result = await clearChatHistory(req.user._id || req.user.id);
+    const result = await clearChatHistory(req.user._id);
     return res.status(200).json(result);
   } catch (err) {
     return handleServiceError(res, err);
@@ -29,7 +29,7 @@ export const chatWithAssistant = async (req, res) => {
     if (!message || !message.trim()) {
       throw new ServiceError('Message is required', 400);
     }
-    const result = await chat(req.user._id || req.user.id, message.trim());
+    const result = await chat(req.user._id, message.trim());
     return res.status(200).json(result);
   } catch (err) {
     return handleServiceError(res, err);

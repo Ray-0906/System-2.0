@@ -81,7 +81,7 @@ Task title: ${title}\nDescription: ${description || ''}\nEffort hint: ${hintEffo
 
 export const createSidequest = async (req, res) => {
   try {
-    const userId = req.user?.id;
+    const userId = req.user._id;
     if (!userId) throw new ServiceError('Unauthorized', 401);
 
     const { title, description, deadline, hintEffort } = req.body;
@@ -108,7 +108,7 @@ export const createSidequest = async (req, res) => {
 
 export const getUserSidequests = async (req, res) => {
   try {
-    const userId = req.user?.id;
+    const userId = req.user._id;
     if (!userId) throw new ServiceError('Unauthorized', 401);
 
     const filter = { userId };
@@ -123,7 +123,7 @@ export const getUserSidequests = async (req, res) => {
 
 export const completeSidequest = async (req, res) => {
   try {
-    const userId = req.user?.id;
+    const userId = req.user._id;
     if (!userId) throw new ServiceError('Unauthorized', 401);
 
     const sq = await Sidequest.findOne({ _id: req.params.id, userId });

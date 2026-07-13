@@ -131,6 +131,13 @@ class MissionGenerationResponse(BaseModel):
     rank: Literal['E', 'D', 'C', 'B', 'A', 'S']
 
 
+class QuestUpgradeRequest(BaseModel):
+    quests: list[dict]
+
+
+class QuestUpgradeResponse(BaseModel):
+    quests: list[MissionQuest]
+
 # ── Assistant Action Routing ─────────────────────────
 
 class AssistantActionRequest(BaseModel):

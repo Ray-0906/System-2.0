@@ -25,7 +25,7 @@ export const createCustomMission = async (req, res) => {
 
 export const deleteMission = async (req, res) => {
   try {
-    const result = await missionService.deleteMission(req.user.id, req.body.missionId);
+    const result = await missionService.deleteMission(req.user._id, req.body.missionId);
     return res.status(200).json(result);
   } catch (err) {
     return handleServiceError(res, err);

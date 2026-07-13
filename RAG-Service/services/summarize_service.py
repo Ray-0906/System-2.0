@@ -5,23 +5,11 @@ Used to preserve long-term conversational memory after the 30-day TTL
 deletes raw messages from MongoDB. The summary persists forever.
 """
 
-import os
 import logging
-from mistralai.client import Mistral
+from langchain_core.messages import HumanMessage
+from services.llm import get_chat_model
 
 logger = logging.getLogger("rag.summarize")
-
-_client: Mistral | None = None
-
-
-def get_client() -> Mistral:
-    global _client
-    if _client is None:
-        api_key = os.environ.get("MISTRAL_API_KEY", "")
-        if not api_key:
-            raise RuntimeError("MISTRAL_API_KEY not set")
-        _client = Mistral(api_key=api_key)
-    return _client
 
 
 def summarize_chat_history(
@@ -35,9 +23,6 @@ def summarize_chat_history(
     The result is a rolling summary that carries forward the key topics,
     preferences, and patterns the player has discussed.
     """
-    client = get_client()
-
-    # Format messages for the summarizer
     conversation = "\n".join(
         f"{'Player' if m['role'] == 'user' else 'Assistant'}: {m['content']}"
         for m in messages
@@ -60,17 +45,11 @@ Keep it under 200 words. Write in third person ("The player...").
 ## Summary:"""
 
     try:
-        response = client.chat.complete(
-            model="mistral-small-latest",
-            messages=[{"role": "user", "content": prompt}],
-            temperature=0.3,
-            max_tokens=300,
-        )
-        summary = response.choices[0].message.content.strip()
+        response = get_chat_model().invoke([HumanMessage(content=prompt)])
+        summary = response.content.strip()
         logger.info(f"Summarized {len(messages)} messages → {len(summary)} chars")
         return summary
 
     except Exception as e:
         logger.error(f"Summarization failed: {e}")
-        # Fallback: return existing summary unchanged
         return existing_summary or "No conversation history available."

@@ -15,12 +15,12 @@ All AI work now lives in Python.
 
 import os
 import logging
-import threading
 from datetime import datetime, timezone
 from pymongo import MongoClient
-from mistralai.client import Mistral
+from langchain_core.messages import HumanMessage
 
 from services.embedding_service import embed_and_store
+from services.llm import get_chat_model
 
 logger = logging.getLogger("rag.page_builder")
 
@@ -30,9 +30,6 @@ PAGE_SIZE = 20
 
 _mongo_client: MongoClient | None = None
 _db = None
-_mistral: Mistral | None = None
-_user_build_locks: dict[str, threading.Lock] = {}
-_user_build_locks_guard = threading.Lock()
 
 
 def get_db():
@@ -49,25 +46,7 @@ def get_db():
     return _db
 
 
-def get_mistral():
-    """Get Mistral client for summarization."""
-    global _mistral
-    if _mistral is None:
-        api_key = os.environ.get("MISTRAL_API_KEY", "")
-        if not api_key:
-            raise RuntimeError("MISTRAL_API_KEY not set")
-        _mistral = Mistral(api_key=api_key)
-    return _mistral
 
-
-def _get_user_lock(user_id: str) -> threading.Lock:
-    """Get or create a lock used to serialize page builds per user."""
-    with _user_build_locks_guard:
-        lock = _user_build_locks.get(user_id)
-        if lock is None:
-            lock = threading.Lock()
-            _user_build_locks[user_id] = lock
-        return lock
 
 
 # ── Summarization ─────────────────────────────────────
@@ -92,14 +71,8 @@ def summarize_events(events: list[dict]) -> dict:
     )
 
     try:
-        client = get_mistral()
-        response = client.chat.complete(
-            model="mistral-small-latest",
-            messages=[{"role": "user", "content": prompt}],
-            temperature=0.1,
-        )
-
-        text = response.choices[0].message.content or ""
+        response = get_chat_model().invoke([HumanMessage(content=prompt)])
+        text = response.content or ""
 
         # Parse JSON from response
         import json
@@ -136,12 +109,6 @@ def build_pages(user_id: str) -> dict:
     Returns { pagesBuilt: int, errors: int }
     """
     from bson import ObjectId
-
-    user_lock = _get_user_lock(user_id)
-    acquired = user_lock.acquire(blocking=False)
-    if not acquired:
-        logger.info(f"Skipped build for user {user_id[-6:]}: build already in progress")
-        return {"pagesBuilt": 0, "errors": 0, "busy": True}
 
     try:
         db = get_db()
@@ -246,5 +213,6 @@ def build_pages(user_id: str) -> dict:
             logger.info(f"Built {pages_built} pages for user {user_id[-6:]} ({errors} errors)")
 
         return {"pagesBuilt": pages_built, "errors": errors}
-    finally:
-        user_lock.release()
+    except Exception as e:
+        logger.error(f"Failed to build pages for {user_id}: {e}")
+        return {"pagesBuilt": 0, "errors": 1}

@@ -1,12 +1,12 @@
 /**
  * Shared level-up utility functions.
- * Unified to use the CUMULATIVE model (stat value grows, level = milestone).
+ * Unified to use the THRESHOLD model (XP is subtracted on level-up).
  */
 import { statLevelThresholds, userLevelThresholds } from '../libs/levelling.js';
 
 /**
- * Recalculate user level based on cumulative XP.
- * Cumulative model: XP is NOT subtracted on level-up.
+ * Recalculate user level based on XP.
+ * Threshold model: XP IS subtracted on level-up.
  * @param {Object} user - Mongoose user document
  * @returns {boolean} Whether a level-up occurred
  */
@@ -24,8 +24,8 @@ export const recalcUserLevel = (user) => {
 };
 
 /**
- * Recalculate a specific stat's level based on cumulative value.
- * Cumulative model: stat value is NOT subtracted on level-up.
+ * Recalculate a specific stat's level based on value.
+ * Threshold model: stat value IS subtracted on level-up.
  * @param {Object} user - Mongoose user document
  * @param {string} stat - Stat key (e.g., 'strength')
  * @returns {boolean} Whether a stat level-up occurred

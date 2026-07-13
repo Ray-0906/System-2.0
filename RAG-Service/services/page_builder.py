@@ -17,9 +17,10 @@ import os
 import logging
 from datetime import datetime, timezone
 from pymongo import MongoClient
-from mistralai.client import Mistral
+from langchain_core.messages import HumanMessage
 
 from services.embedding_service import embed_and_store
+from services.llm import get_chat_model
 
 logger = logging.getLogger("rag.page_builder")
 
@@ -29,7 +30,6 @@ PAGE_SIZE = 20
 
 _mongo_client: MongoClient | None = None
 _db = None
-_mistral: Mistral | None = None
 
 
 def get_db():
@@ -46,15 +46,7 @@ def get_db():
     return _db
 
 
-def get_mistral():
-    """Get Mistral client for summarization."""
-    global _mistral
-    if _mistral is None:
-        api_key = os.environ.get("MISTRAL_API_KEY", "")
-        if not api_key:
-            raise RuntimeError("MISTRAL_API_KEY not set")
-        _mistral = Mistral(api_key=api_key)
-    return _mistral
+
 
 
 # ── Summarization ─────────────────────────────────────
@@ -79,14 +71,8 @@ def summarize_events(events: list[dict]) -> dict:
     )
 
     try:
-        client = get_mistral()
-        response = client.chat.complete(
-            model="mistral-small-latest",
-            messages=[{"role": "user", "content": prompt}],
-            temperature=0.1,
-        )
-
-        text = response.choices[0].message.content or ""
+        response = get_chat_model().invoke([HumanMessage(content=prompt)])
+        text = response.content or ""
 
         # Parse JSON from response
         import json

@@ -15,7 +15,6 @@ All AI work now lives in Python.
 
 import os
 import logging
-import threading
 from datetime import datetime, timezone
 from pymongo import MongoClient
 from mistralai.client import Mistral
@@ -31,8 +30,6 @@ PAGE_SIZE = 20
 _mongo_client: MongoClient | None = None
 _db = None
 _mistral: Mistral | None = None
-_user_build_locks: dict[str, threading.Lock] = {}
-_user_build_locks_guard = threading.Lock()
 
 
 def get_db():
@@ -58,16 +55,6 @@ def get_mistral():
             raise RuntimeError("MISTRAL_API_KEY not set")
         _mistral = Mistral(api_key=api_key)
     return _mistral
-
-
-def _get_user_lock(user_id: str) -> threading.Lock:
-    """Get or create a lock used to serialize page builds per user."""
-    with _user_build_locks_guard:
-        lock = _user_build_locks.get(user_id)
-        if lock is None:
-            lock = threading.Lock()
-            _user_build_locks[user_id] = lock
-        return lock
 
 
 # ── Summarization ─────────────────────────────────────
@@ -136,12 +123,6 @@ def build_pages(user_id: str) -> dict:
     Returns { pagesBuilt: int, errors: int }
     """
     from bson import ObjectId
-
-    user_lock = _get_user_lock(user_id)
-    acquired = user_lock.acquire(blocking=False)
-    if not acquired:
-        logger.info(f"Skipped build for user {user_id[-6:]}: build already in progress")
-        return {"pagesBuilt": 0, "errors": 0, "busy": True}
 
     try:
         db = get_db()
@@ -246,5 +227,6 @@ def build_pages(user_id: str) -> dict:
             logger.info(f"Built {pages_built} pages for user {user_id[-6:]} ({errors} errors)")
 
         return {"pagesBuilt": pages_built, "errors": errors}
-    finally:
-        user_lock.release()
+    except Exception as e:
+        logger.error(f"Failed to build pages for {user_id}: {e}")
+        return {"pagesBuilt": 0, "errors": 1}

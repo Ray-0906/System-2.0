@@ -19,7 +19,7 @@ import os
 from langchain_core.messages import HumanMessage, SystemMessage, AIMessage, ToolMessage
 from langchain_core.tools import tool
 from langchain_mistralai import ChatMistralAI
-from langgraph.prebuilt import create_react_agent
+from langchain.agents import create_agent
 from services import mission_service
 
 logger = logging.getLogger("rag.chat")
@@ -232,9 +232,9 @@ def _compose_reply(state: dict):
     system_prompt = build_system_prompt(state)
 
     tools = [generate_mission, confirm_mission, cancel_mission]
-    agent = create_react_agent(client, tools)
+    agent = create_agent(model=client, tools=tools, system_prompt=system_prompt)
 
-    messages = [SystemMessage(content=system_prompt)]
+    messages = []
     for msg in state.get("chat_history", []):
         content = msg.get("content", "")
         if msg.get("role") == "user":
@@ -252,24 +252,31 @@ def _compose_reply(state: dict):
 
     action = None
     for msg in reversed(out_messages):
-        if isinstance(msg, ToolMessage):
-            # Parse the tool intent natively using LangGraph artifacts (Fixes fragile intent bug)
-            artifact = getattr(msg, "artifact", None)
-            if artifact and isinstance(artifact, dict):
-                intent = artifact.get("intent")
-                if intent == "propose_mission":
-                    action = {
-                        "type": "propose_mission",
-                        "mission": artifact.get("mission"),
-                        "days": artifact.get("days")
-                    }
-                    break
-                elif intent == "confirm_mission":
-                    action = {"type": "confirm_mission"}
-                    break
-                elif intent == "cancel_mission":
-                    action = {"type": "cancel_mission"}
-                    break
+        if hasattr(msg, "tool_calls") and msg.tool_calls:
+            for call in reversed(msg.tool_calls):
+                intent = call.get("name")
+                if intent == "generate_mission":
+                    # Tool returns the artifact directly, but the agent's tool_call doesn't have it natively here.
+                    # We can fetch the structured output from the ToolMessage that followed it.
+                    pass
+        
+        # Or even simpler, check the ToolMessage directly
+        if isinstance(msg, ToolMessage) and msg.artifact:
+            artifact = msg.artifact
+            intent = artifact.get("intent")
+            if intent == "propose_mission":
+                action = {
+                    "type": "propose_mission",
+                    "mission": artifact.get("mission"),
+                    "days": artifact.get("days")
+                }
+                break
+            elif intent == "confirm_mission":
+                action = {"type": "confirm_mission"}
+                break
+            elif intent == "cancel_mission":
+                action = {"type": "cancel_mission"}
+                break
 
     logger.info("Chat response: %s chars, Action: %s", len(reply), action)
     return {"reply": reply, "action": action}

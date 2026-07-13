@@ -11,7 +11,7 @@ import eventBus, { Events } from '../events/eventBus.js';
 
 export const evaluateRankAscension = async (req, res) => {
   try {
-    const userId = req.user.id;
+    const userId = req.user._id;
     const user = await userRepo.findById(userId);
     if (!user) throw new ServiceError('User not found', 404);
 

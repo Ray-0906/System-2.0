@@ -1,5 +1,6 @@
 import express from 'express';
 import jwt from 'jsonwebtoken';
+import rateLimit from 'express-rate-limit';
 import { OAuth2Client } from 'google-auth-library';
 import { User } from '../Models/user.js';
 import { login, logout, signup, testAuth } from '../Controllers/userController.js';
@@ -91,9 +92,16 @@ router.post('/google', async (req, res) => {
   }
 });
 
+// Rate limit auth endpoints: 10 attempts per 15 min per IP
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  message: { msg: 'Too many attempts. Please try again later.' },
+});
+
 // Normal auth
-router.post('/register', signup);
-router.post('/login', login);
+router.post('/register', authLimiter, signup);
+router.post('/login', authLimiter, login);
 router.get('/logout', logout);
 router.get('/test', isAuthenticated, testAuth);
 

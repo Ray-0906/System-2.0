@@ -190,6 +190,31 @@ export const generateCustomMission = async (quests, days) => {
   }
 };
 
+/**
+ * Ask RAG-Service to upgrade quests.
+ */
+export const upgradeQuests = async (quests) => {
+  try {
+    const res = await fetch(`${RAG_SERVICE_URL}/quest/upgrade`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...INTERNAL_HEADERS },
+      body: JSON.stringify({ quests }),
+      signal: AbortSignal.timeout(REQUEST_TIMEOUT),
+    });
+
+    if (!res.ok) {
+      const errData = await res.json().catch(() => ({}));
+      console.error(`[RAG] Quest upgrade failed (HTTP ${res.status}):`, errData);
+      return null;
+    }
+
+    return await res.json();
+  } catch (err) {
+    console.error('[RAG] Quest upgrade error:', err.message);
+    return null;
+  }
+};
+
 // ═══════════════════════════════════════════════════════
 // HISTORY SUMMARIZATION
 // ═══════════════════════════════════════════════════════

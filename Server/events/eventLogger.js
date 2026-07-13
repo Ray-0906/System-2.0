@@ -3,7 +3,7 @@
  * Every significant user action gets logged as a human-readable event.
  *
  * After logging:
- *   1. Redis PUBLISH → RAG-Service (Python) for page building
+ *   1. Redis XADD → Stream for RAG-Service (Python) page building
  *   2. BullMQ enqueue → Notification Worker (Node.js) for Socket.io push
  *
  * Import this file once in index.js to activate logging.
@@ -13,7 +13,7 @@ import { EventLog } from '../Models/eventLog.js';
 import { enqueue } from '../queue/eventQueue.js';
 import { redisClient } from '../queue/connection.js';
 
-const RAG_CHANNEL = 'system2:events';
+const RAG_STREAM_KEY = 'system2:events:stream';
 
 // ── Summary builders (pure functions) ────────────────
 
@@ -68,12 +68,14 @@ for (const [event, buildSummary] of Object.entries(summaries)) {
         summary: buildSummary(payload),
       });
 
-      // 1. Redis PUBLISH → RAG-Service Python consumer (page building)
+      // 1. Redis XADD → Stream for RAG-Service Python consumer (page building)
       if (redisClient) {
-        redisClient.publish(RAG_CHANNEL, JSON.stringify({
-          userId: payload.userId.toString(),
-          type: event,
-        })).catch(err => console.error('[EventLogger] Redis publish failed:', err.message));
+        redisClient.xadd(RAG_STREAM_KEY, '*',
+          'data', JSON.stringify({
+            userId: payload.userId.toString(),
+            type: event,
+          })
+        ).catch(err => console.error('[EventLogger] Redis XADD failed:', err.message));
       }
 
       // 2. BullMQ enqueue → Notification Worker (Socket.io push)

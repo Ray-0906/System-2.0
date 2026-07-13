@@ -1,35 +1,12 @@
 import mongoose from 'mongoose';
 import {Tracker} from '../Models/tracker.js';
-import {Quest} from '../Models/quest.js'; // Adjust path as needed
- // Adjust path as needed
- // Assuming a Quest model exists
-
+import {Quest} from '../Models/quest.js';
+import { upgradeQuests as ragUpgradeQuests } from '../services/ragService.js';
 import 'dotenv/config';
-
-// ── Mistral API call (direct fetch, no Langchain) ────
-async function callMistral(prompt) {
-  const res = await fetch('https://api.mistral.ai/v1/chat/completions', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${process.env.MISTRAL_API_KEY}`,
-    },
-    body: JSON.stringify({
-      model: 'mistral-large-latest',
-      temperature: 0.6,
-      max_tokens: 500,
-      messages: [{ role: 'user', content: prompt }],
-    }),
-    signal: AbortSignal.timeout(30_000),
-  });
-  if (!res.ok) throw new Error(`Mistral API ${res.status}`);
-  const data = await res.json();
-  return data.choices?.[0]?.message?.content || '';
-}
 
 export async function upgradeQuests(userId, trackerId) {
   // Find the user's tracker and populate related fields
-  const tracker = await Tracker.findOne({ _id:trackerId })
+  const tracker = await Tracker.findOne({ _id: trackerId, userId })
     .populate('currentQuests remainingQuests questCompletion');
 
   if (!tracker) {
@@ -58,13 +35,13 @@ export async function upgradeQuests(userId, trackerId) {
   const maxXp = Math.min(50, Math.max(1, Math.round(newDifficulty)));
 
   // Generate new quests using AI based on previous ones
-  const prompt = `You are a quest designer for a Solo Leveling-style gamification app. Based on the following quests, create upgraded versions with increased difficulty, keeping the original titles as a base and aligning with fitness goals. Do not add new quests, only upgrade the existing ones. Output a JSON array of objects, each with 'title', 'statAffected', and 'xp' (1-50), reflecting a harder challenge. Quests: ${JSON.stringify(currentQuests.map(q => ({ title: q.title, statAffected: q.statAffected, xp: q.xp })))}
-  Example: If a quest is "20 push-ups" (strength, 20 xp), upgrade to "30 push-ups" (strength, 30 xp) or "10 advanced pike push-ups" (strength, 35 xp).`;
-
-  const responseText = await callMistral(prompt);
-  const match = responseText.match(/```json\n([\s\S]+?)\n```/);
-  const jsonStr = match ? match[1].trim() : responseText.trim();
-  const newQuests = JSON.parse(jsonStr);
+  const mappedQuests = currentQuests.map(q => ({ title: q.title, statAffected: q.statAffected, xp: q.xp }));
+  const response = await ragUpgradeQuests(mappedQuests);
+  
+  if (!response || !response.quests) {
+    throw new Error('Failed to upgrade quests via RAG-Service');
+  }
+  const newQuests = response.quests;
 
   // Validate and save new quests
   const validatedQuests = newQuests.map(quest => ({

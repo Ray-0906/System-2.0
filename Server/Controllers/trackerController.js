@@ -29,7 +29,7 @@ export const dailyRefresh = async (req, res) => {
 
 export const deleteMissionTracker = async (req, res) => {
   try {
-    const result = await trackerService.deleteTracker(req.user.id, req.params.id);
+    const result = await trackerService.deleteTracker(req.user._id, req.params.id);
     return res.status(200).json(result);
   } catch (err) {
     return handleServiceError(res, err);

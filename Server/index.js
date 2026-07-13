@@ -75,10 +75,12 @@ httpServer.on('error', (err) => {
     console.error('HTTP server error:', err);
 });
 
-httpServer.listen(PORT, () => {
-    connectDB();
+(async () => {
+    await connectDB();
     // addEquipments();
     // addSkills();
-    console.log(`Server is running on port ${PORT}`);
-});
+    httpServer.listen(PORT, () => {
+        console.log(`Server is running on port ${PORT}`);
+    });
+})();
 export default app;

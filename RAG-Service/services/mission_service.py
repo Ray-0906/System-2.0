@@ -186,3 +186,22 @@ def generate_custom_mission(quests: list[str], days: int) -> dict:
     prompt_text = _build_custom_prompt(quests, days)
     content = _call_mistral(prompt_text)
     return _parse_and_validate(content)
+
+def upgrade_quests(quests: list[dict]) -> dict:
+    if not quests:
+        raise ValueError("Quests must be a non-empty array.")
+    
+    quests_json = json.dumps(quests)
+    prompt = f"""You are a quest designer for a Solo Leveling-style gamification app. Based on the following quests, create upgraded versions with increased difficulty, keeping the original titles as a base and aligning with fitness goals. Do not add new quests, only upgrade the existing ones. Output a JSON array of objects, each with 'title', 'statAffected', and 'xp' (1-50), reflecting a harder challenge. Quests: {quests_json}
+Example: If a quest is "20 push-ups" (strength, 20 xp), upgrade to "30 push-ups" (strength, 30 xp) or "10 advanced pike push-ups" (strength, 35 xp)."""
+
+    content = _call_mistral(prompt)
+    json_text = _extract_json(content)
+    parsed = json.loads(json_text)
+    
+    validated_quests = []
+    for q in parsed:
+        quest = MissionQuest.model_validate(q)
+        validated_quests.append(quest.model_dump())
+        
+    return {"quests": validated_quests}

@@ -8,7 +8,7 @@ import { trackerRepo } from '../repositories/trackerRepository.js';
 import { questRepo } from '../repositories/questRepository.js';
 import { userRepo } from '../repositories/userRepository.js';
 import { missionRepo } from '../repositories/missionRepository.js';
-import { userLevelThresholds } from '../libs/levelling.js';
+import { userLevelThresholds, statLevelThresholds } from '../libs/levelling.js';
 import eventBus, { Events } from '../events/eventBus.js';
 import { applyTemporaryCoinPenalty } from './multiplierService.js';
 
@@ -132,7 +132,14 @@ export const dailyRefresh = async (userId, trackerId, penaltyType) => {
           const stats = Object.keys(user.stats);
           for (const stat of stats) {
             if (user.stats[stat]) {
-              user.stats[stat].value = Math.max(0, user.stats[stat].value - statPenalty);
+              let sv = user.stats[stat].value - statPenalty;
+              let sl = user.stats[stat].level;
+              while (sv < 0 && sl > 1) {
+                sv += statLevelThresholds[sl];
+                sl--;
+              }
+              user.stats[stat].value = Math.max(0, sv);
+              user.stats[stat].level = sl;
             }
           }
           
@@ -161,6 +168,18 @@ export const dailyRefresh = async (userId, trackerId, penaltyType) => {
         eventBus.emitAsync(Events.PENALTY_APPLIED, {
           userId, trackerId, penaltyType, statPenalty, coinPenalty,
         });
+
+        // On mission fail: delete the tracker entirely
+        if (penaltyType === 'missionFail') {
+          await questRepo.deleteByIds(tracker.currentQuests || []);
+          user.trackers = user.trackers.filter(t => t.toString() !== trackerId);
+          user.current_missions = user.current_missions.filter(
+            m => m.toString() !== tracker.missionId?.toString()
+          );
+          await userRepo.save(user);
+          await trackerRepo.deleteById(trackerId);
+          return { refreshed: true, deleted: true, updatedStats: user };
+        }
       }
     }
     tracker.streak = 0;

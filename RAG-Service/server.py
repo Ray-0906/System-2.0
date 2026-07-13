@@ -1,23 +1,9 @@
-"""
-RAG-Service — Semantic RAG Microservice for System 2.0
-
-A standalone FastAPI service that handles all AI operations:
-  - Pinecone vector storage and semantic search
-  - Mistral embeddings (1024-dim)
-  - Mistral LLM chat completion with layered prompts
-  - Chat history summarization for long-term memory
-
-Run:
-  pip install -r requirements.txt
-  uvicorn server:app --port 8100
-
-The Node.js server calls this service via HTTP.
-"""
 from dotenv import load_dotenv
 load_dotenv()
 
 import os
 import logging
+from contextlib import asynccontextmanager
 from fastapi import FastAPI, HTTPException, Header, Depends
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -29,7 +15,7 @@ from models.schemas import (
     HealthResponse,
     MissionGenerationRequest, MissionGenerationResponse,
     CustomMissionGenerationRequest,
-    ChatAction
+    ChatAction, QuestUpgradeRequest, QuestUpgradeResponse
 )
 from services import embedding_service, chat_service, summarize_service, page_builder, mission_service
 from workers.event_consumer import start_consumer
@@ -59,11 +45,22 @@ def verify_internal_request(x_rag_secret: str | None = Header(default=None)):
     if expected and x_rag_secret != expected:
         raise HTTPException(status_code=401, detail="Unauthorized")
 
+
+# ── Lifespan ──────────────────────────────────────────
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Start the Redis event consumer on startup."""
+    start_consumer()
+    logger.info("RAG-Service ready")
+    yield
+
 # ── App ───────────────────────────────────────────────
 app = FastAPI(
     title="System 2.0 RAG Service",
     description="Semantic RAG microservice — Pinecone + Mistral",
     version="2.0.0",
+    lifespan=lifespan,
 )
 
 app.add_middleware(
@@ -72,15 +69,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-
-# ── Startup ───────────────────────────────────────────
-
-@app.on_event("startup")
-async def startup():
-    """Start the Redis event consumer in a background thread."""
-    start_consumer()
-    logger.info("RAG-Service ready")
 
 
 # ── Endpoints ─────────────────────────────────────────
@@ -238,6 +226,17 @@ async def generate_custom_mission(req: CustomMissionGenerationRequest, _: None =
     except Exception as e:
         logger.error(f"Custom mission generation error: {e}")
         raise HTTPException(500, f"Custom mission generation failed: {str(e)}")
+
+
+@app.post("/quest/upgrade", response_model=QuestUpgradeResponse)
+async def upgrade_quests(req: QuestUpgradeRequest, _: None = Depends(verify_internal_request)):
+    """Upgrade quests to a higher difficulty."""
+    try:
+        result = mission_service.upgrade_quests(req.quests)
+        return QuestUpgradeResponse.model_validate(result)
+    except Exception as e:
+        logger.error(f"Quest upgrade error: {e}")
+        raise HTTPException(500, f"Quest upgrade failed: {str(e)}")
 
 
 @app.post("/history/summarize", response_model=SummarizeResponse)

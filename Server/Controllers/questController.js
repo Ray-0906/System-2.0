@@ -8,7 +8,7 @@ import { handleServiceError } from '../utils/serviceError.js';
 export const completeQuest = async (req, res) => {
   try {
     const { questId, trackerid } = req.body;
-    const result = await completeQuestService(req.user.id, questId, trackerid);
+    const result = await completeQuestService(req.user._id, questId, trackerid);
     return res.status(200).json(result);
   } catch (err) {
     return handleServiceError(res, err);
@@ -17,7 +17,7 @@ export const completeQuest = async (req, res) => {
 
 export const upgradeTracker = async (req, res) => {
   try {
-    const result = await upgradeTrackerQuests(req.user.id, req.body.trackerId);
+    const result = await upgradeTrackerQuests(req.user._id, req.body.trackerId);
     return res.status(200).json(result);
   } catch (err) {
     return handleServiceError(res, err);

@@ -20,7 +20,7 @@ const AddMission = lazy(() => import('./pages/newMission.jsx'));
 const Inventory = lazy(() => import('./pages/Inventory.jsx'));
 const SkillPage = lazy(() => import('./pages/Skills.jsx'));
 const AddCustomMission = lazy(() => import('./pages/addCustomMission.jsx'));
-const DemoDash = lazy(() => import('./pages/DemoDash.jsx'));
+
 const AscensionTrial = lazy(() => import('./pages/Ascension.jsx'));
 const Leaderboard = lazy(() => import('./pages/Leaderboard.jsx'));
 const Sidequests = lazy(() => import('./pages/Sidequests.jsx'));
@@ -43,7 +43,7 @@ const router = createBrowserRouter([
         element: <ProtectedRoute />,
         children: [
           { path: '/dashboard', element:<Dashboard /> },
-          { path: '/demo', element: <DemoDash /> },
+
           { path: '/report', element: <AscensionTrial /> },
           { path: '/skills', element: <SkillPage /> },
           { path: '/inventory', element: <Inventory /> },

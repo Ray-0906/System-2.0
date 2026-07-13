@@ -56,43 +56,20 @@ def get_mistral():
 # ── Embedding ─────────────────────────────────────────
 
 
-def embed_text(text: str, retries: int = 3) -> list[float]:
+def embed_text(text: str) -> list[float]:
     """
     Embed text into a 1024-dim vector using Mistral.
-    Retries with exponential backoff on failure.
     """
     embeddings = get_mistral()
-    for attempt in range(retries):
-        try:
-            vector = embeddings.embed_query(text)
-            logger.debug(f"Embedded {len(text)} chars → {len(vector)}-dim vector")
-            return vector
-        except Exception as e:
-            wait = 2**attempt
-            logger.warning(
-                f"Embed attempt {attempt + 1}/{retries} failed: {e}. Retrying in {wait}s..."
-            )
-            if attempt < retries - 1:
-                time.sleep(wait)
-            else:
-                raise RuntimeError(f"Embedding failed after {retries} attempts: {e}")
+    vector = embeddings.embed_query(text)
+    logger.debug(f"Embedded {len(text)} chars → {len(vector)}-dim vector")
+    return vector
 
 
-def embed_texts(texts: list[str], retries: int = 3) -> list[list[float]]:
+def embed_texts(texts: list[str]) -> list[list[float]]:
     """Batch embed multiple texts."""
     embeddings = get_mistral()
-    for attempt in range(retries):
-        try:
-            return embeddings.embed_documents(texts)
-        except Exception as e:
-            wait = 2**attempt
-            logger.warning(f"Batch embed attempt {attempt + 1}/{retries} failed: {e}")
-            if attempt < retries - 1:
-                time.sleep(wait)
-            else:
-                raise RuntimeError(
-                    f"Batch embedding failed after {retries} attempts: {e}"
-                )
+    return embeddings.embed_documents(texts)
 
 
 # ── Pinecone Storage ──────────────────────────────────
@@ -102,7 +79,6 @@ def embed_and_store(
     pinecone_id: str,
     text: str,
     metadata: dict,
-    retries: int = 3,
 ) -> bool:
     """
     Embed text and upsert vector to Pinecone.
@@ -114,34 +90,27 @@ def embed_and_store(
     # Include the summary text in metadata for retrieval
     full_metadata = {**metadata, "summary": text}
 
-    for attempt in range(retries):
-        try:
-            index.upsert(
-                vectors=[
-                    {
-                        "id": pinecone_id,
-                        "values": vector,
-                        "metadata": full_metadata,
-                    }
-                ]
-            )
-            logger.info(f"Upserted vector: {pinecone_id}")
-            return True
-        except Exception as e:
-            wait = 2**attempt
-            logger.warning(f"Upsert attempt {attempt + 1}/{retries} failed: {e}")
-            if attempt < retries - 1:
-                time.sleep(wait)
-            else:
-                logger.error(f"Upsert failed after {retries} attempts: {e}")
-                return False
+    try:
+        index.upsert(
+            vectors=[
+                {
+                    "id": pinecone_id,
+                    "values": vector,
+                    "metadata": full_metadata,
+                }
+            ]
+        )
+        logger.info(f"Upserted vector: {pinecone_id}")
+        return True
+    except Exception as e:
+        logger.error(f"Upsert failed: {e}")
+        return False
 
 
 def semantic_search(
     query: str,
     user_id: str,
     top_k: int = 5,
-    retries: int = 3,
 ) -> list[dict]:
     """
     Embed query and search Pinecone for the most relevant page summaries.
@@ -150,45 +119,39 @@ def semantic_search(
     index = get_pinecone()
     query_vector = embed_text(query)
 
-    for attempt in range(retries):
-        try:
-            results = index.query(
-                vector=query_vector,
-                top_k=top_k,
-                filter={"userId": {"$eq": user_id}},
-                include_metadata=True,
+    try:
+        results = index.query(
+            vector=query_vector,
+            top_k=top_k,
+            filter={"userId": {"$eq": user_id}},
+            include_metadata=True,
+        )
+
+        matches = []
+        for match in results.get("matches", []):
+            meta = match.get("metadata", {})
+            matches.append(
+                {
+                    "pageIndex": meta.get("pageIndex", -1),
+                    "summary": meta.get("summary", ""),
+                    "score": match.get("score", 0.0),
+                    "timeFrom": meta.get("timeFrom", ""),
+                    "timeTo": meta.get("timeTo", ""),
+                }
             )
 
-            matches = []
-            for match in results.get("matches", []):
-                meta = match.get("metadata", {})
-                matches.append(
-                    {
-                        "pageIndex": meta.get("pageIndex", -1),
-                        "summary": meta.get("summary", ""),
-                        "score": match.get("score", 0.0),
-                        "timeFrom": meta.get("timeFrom", ""),
-                        "timeTo": meta.get("timeTo", ""),
-                    }
-                )
+        logger.info(
+            f"Search for user {user_id}: {len(matches)} results (top score: {matches[0]['score']:.3f})"
+            if matches
+            else f"Search for user {user_id}: 0 results"
+        )
+        return matches
 
-            logger.info(
-                f"Search for user {user_id}: {len(matches)} results (top score: {matches[0]['score']:.3f})"
-                if matches
-                else f"Search for user {user_id}: 0 results"
-            )
-            return matches
-
-        except Exception as e:
-            wait = 2**attempt
-            logger.warning(f"Search attempt {attempt + 1}/{retries} failed: {e}")
-            if attempt < retries - 1:
-                time.sleep(wait)
-            else:
-                logger.error(
-                    f"Search failed after {retries} attempts, returning empty: {e}"
-                )
-                return []  # Graceful degradation
+    except Exception as e:
+        logger.error(
+            f"Search failed, returning empty: {e}"
+        )
+        return []  # Graceful degradation
 
 
 def delete_user_vectors(user_id: str) -> int:

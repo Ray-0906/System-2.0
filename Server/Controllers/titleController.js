@@ -38,8 +38,8 @@ function meetsRequirements(user, title) {
 export const listTitles = async (req, res) => {
   try {
     const titles = await Title.find({ hidden: false }).sort({ tier: 1 });
-    const user = await userRepo.findByIdLean(req.user.id);
-    const trackerDocs = await trackerRepo.findByUserId(req.user.id, 'streak');
+    const user = await userRepo.findByIdLean(req.user._id);
+    const trackerDocs = await trackerRepo.findByUserId(req.user._id, 'streak');
     user.trackersData = trackerDocs;
 
     const unlocked = new Set(user.titles || []);
@@ -62,7 +62,7 @@ export const listTitles = async (req, res) => {
 
 export const unlockEligibleTitles = async (req, res) => {
   try {
-    const user = await userRepo.findById(req.user.id);
+    const user = await userRepo.findById(req.user._id);
     if (!user) throw new ServiceError('User not found', 404);
 
     const titles = await Title.find({});
@@ -77,7 +77,7 @@ export const unlockEligibleTitles = async (req, res) => {
     if (added.length > 0) {
       await userRepo.save(user);
       for (const titleName of added) {
-        eventBus.emitAsync(Events.TITLE_UNLOCKED, { userId: req.user.id, titleName });
+        eventBus.emitAsync(Events.TITLE_UNLOCKED, { userId: req.user._id, titleName });
       }
     }
 
@@ -90,7 +90,7 @@ export const unlockEligibleTitles = async (req, res) => {
 export const equipTitle = async (req, res) => {
   try {
     const { name } = req.body;
-    const user = await userRepo.findById(req.user.id);
+    const user = await userRepo.findById(req.user._id);
     if (!user) throw new ServiceError('User not found', 404);
     if (!user.titles.includes(name)) throw new ServiceError('Title not unlocked', 400);
 

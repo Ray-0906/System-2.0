@@ -19,10 +19,10 @@ const RAG_STREAM_KEY = 'system2:events:stream';
 
 const summaries = {
   [Events.QUEST_COMPLETED]: (d) =>
-    `Completed a quest. Gained ${d.xp} ${d.stat} XP. Current streak: ${d.streak}.`,
+    `Completed quest "${d.questTitle || 'unknown'}". Gained ${d.xp} ${d.stat} XP. Current streak: ${d.streak}.`,
 
   [Events.DAILY_COMPLETED]: (d) =>
-    `Finished all daily quests! Streak: ${d.streak}, Day ${d.daycount}. Earned ${d.gainedXP} XP and ${d.gainCoin} coins.`,
+    `Finished all daily quests for "${d.missionTitle || 'unknown mission'}"! Streak: ${d.streak}, Day ${d.daycount}. Earned ${d.gainedXP} XP and ${d.gainCoin} coins.`,
 
   [Events.MISSION_COMPLETED]: (d) =>
     `Completed mission "${d.missionTitle}". Full duration achieved!`,
@@ -44,7 +44,7 @@ const summaries = {
     `Ascended to rank ${d.newRank}! Reward: ${d.reward?.xp || 0} XP, ${d.reward?.coins || 0} coins.`,
 
   [Events.PENALTY_APPLIED]: (d) =>
-    `Penalty applied (${d.penaltyType || 'streak break'}). Lost ${d.statPenalty} stat XP and ${d.coinPenalty} coins.`,
+    `Penalty applied on "${d.missionTitle || 'unknown mission'}" (${d.penaltyType || 'streak break'}). Lost ${d.statPenalty} stat XP and ${d.coinPenalty} coins.`,
 
   [Events.SIDEQUEST_COMPLETED]: (d) =>
     `Completed sidequest "${d.title}" (${d.evaluated?.difficulty}). Stat: ${d.evaluated?.stat}.`,

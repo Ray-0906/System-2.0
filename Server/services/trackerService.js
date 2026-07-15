@@ -166,7 +166,7 @@ export const dailyRefresh = async (userId, trackerId, penaltyType) => {
         updatedStats = user;
 
         eventBus.emitAsync(Events.PENALTY_APPLIED, {
-          userId, trackerId, penaltyType, statPenalty, coinPenalty,
+          userId, trackerId, missionTitle: tracker.title, penaltyType, statPenalty, coinPenalty,
         });
 
         // On mission fail: delete the tracker entirely

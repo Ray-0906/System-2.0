@@ -68,7 +68,7 @@ export const completeQuest = async (userId, questId, trackerId) => {
 
       // Emit daily completed event
       eventBus.emitAsync(Events.DAILY_COMPLETED, {
-        userId, trackerId, streak: tracker.streak, daycount: tracker.daycount,
+        userId, trackerId, missionTitle: tracker.title, streak: tracker.streak, daycount: tracker.daycount,
         gainedXP, gainCoin: gainedCoins,
       });
 
@@ -92,7 +92,7 @@ export const completeQuest = async (userId, questId, trackerId) => {
 
     // Emit quest completed event
     eventBus.emitAsync(Events.QUEST_COMPLETED, {
-      userId, questId, stat: statAffected, xp: appliedStatXP, streak: tracker.streak,
+      userId, questId, questTitle: questData?.title || 'Unknown Quest', stat: statAffected, xp: appliedStatXP, streak: tracker.streak,
     });
 
     return {

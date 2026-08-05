@@ -3,6 +3,7 @@ import { PlusCircle, CheckCircle, Skull, Star, ListTodo, Trash2, ArrowLeft, Grip
 import { Link, useNavigate } from 'react-router-dom';
 import axiosInstance from '../utils/axios';
 import { useNotificationStore } from '../store/notificationStore';
+import { useUserStore } from '../store/userStore';
 import PropTypes from 'prop-types';
 import debounce from 'lodash/debounce';
 import AuthLayout from '../components/AuthLayout';
@@ -441,6 +442,7 @@ const AddCustomMission = () => {
       await axiosInstance.post('/mission/join', { missionId: missionResult.mission._id });
       setMessage({ type: 'success', text: 'DIRECTIVE AUTHORIZED AND ACCEPTED.' });
       pushNotification({ type: 'mission', key: 'accepted', delta: 0, newValue: missionResult.mission.title });
+      useUserStore.getState().triggerRefetch();
       setMissionResult(null);
       setTasks(['']);
       setDuration(7);

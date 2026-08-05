@@ -18,8 +18,11 @@ export default function ChatWidget() {
   const [previewMission, setPreviewMission] = useState(null);
   const bottomRef = useRef(null);
 
-  // Fetch chat history once on load
+  const [historyLoaded, setHistoryLoaded] = useState(false);
+
+  // Fetch chat history only when user opens the chat (not on mount)
   useEffect(() => {
+    if (!open || historyLoaded) return;
     const fetchHistory = async () => {
       try {
         const { data } = await axiosInstance.get('/assistant/history');
@@ -31,10 +34,12 @@ export default function ChatWidget() {
       } catch (err) {
         console.error('Failed to load chat history:', err);
         setMessages([{ role: 'assistant', content: "Hey Hunter! 💀 I'm your Growth Assistant. Ask me anything about your stats, missions, streaks, or get suggestions for your next move." }]);
+      } finally {
+        setHistoryLoaded(true);
       }
     };
     fetchHistory();
-  }, []);
+  }, [open, historyLoaded]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });

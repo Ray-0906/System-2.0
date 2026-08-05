@@ -24,18 +24,22 @@ export const performClientLogout = () => {
 
 let isRefreshing = false; // Prevent multiple parallel logout triggers
 
+// Paths where a 401 is expected and should NOT trigger logout
+const AUTH_PATHS = ['/auth/login', '/auth/register', '/auth/google', '/auth/logout'];
+
 axiosInstance.interceptors.response.use(
   (res) => res,
   async (error) => {
-    if (error?.response?.status === 401) {
+    const requestUrl = error?.config?.url || '';
+    const isAuthRoute = AUTH_PATHS.some((p) => requestUrl.includes(p));
+
+    if (error?.response?.status === 401 && !isAuthRoute) {
       if (!isRefreshing) {
         isRefreshing = true;
         try {
-          // Attempt server logout to clear cookie if still present
           try { await axiosInstance.get('/auth/logout'); } catch { /* ignore */ }
         } finally {
           performClientLogout();
-          // Soft redirect without relying on react-router hook context
           if (window.location.pathname !== '/login') {
             window.location.replace('/login');
           }

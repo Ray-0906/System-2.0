@@ -59,7 +59,6 @@ const Signup = () => {
         useUserStore.getState().setUser(user);
         localStorage.setItem('user', JSON.stringify(user));
       }
-      useUserStore.getState().triggerRefetch();
       navigate('/dashboard');
     } catch (err) {
       const errorMessage =
@@ -83,7 +82,6 @@ const Signup = () => {
           useUserStore.getState().setUser(data.user);
           localStorage.setItem('user', JSON.stringify(data.user));
         }
-        useUserStore.getState().triggerRefetch();
         navigate('/dashboard');
       } catch (err) {
         setError('Google signup failed. Please try again.');

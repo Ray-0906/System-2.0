@@ -48,7 +48,6 @@ const Login = () => {
         useUserStore.getState().setUser(user);
         localStorage.setItem('user', JSON.stringify(user));
       }
-      useUserStore.getState().triggerRefetch();
       navigate('/dashboard');
     } catch (err) {
       const serverMsg = err.response?.data?.msg || err.response?.data?.message;
@@ -71,7 +70,6 @@ const Login = () => {
           useUserStore.getState().setUser(data.user);
           localStorage.setItem('user', JSON.stringify(data.user));
         }
-        useUserStore.getState().triggerRefetch();
         navigate('/dashboard');
       } catch (err) {
         setError('Google login failed. Please try again.');

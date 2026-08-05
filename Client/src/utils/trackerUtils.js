@@ -1,6 +1,6 @@
 import { isSameDay, subDays, differenceInCalendarDays } from 'date-fns';
 import axiosInstance from './axios';
-import { processPenaltyResponse } from './processQuestres';
+import { processPenaltyResponse } from './processQuestResponse';
 import { useTrackerStore } from '../store/trackerStore';
 import { useNotificationStore } from '../store/notificationStore';
 import { useUserStore } from '../store/userStore';

@@ -22,23 +22,18 @@ export const useUserStore = create((set) => ({
       };
     }),
 
-  updateUserProgress: ({ xp, level, stat, statValue, statLevel }) =>
+  updateUserProgress: ({ xp, level, coins, stat, statValue, statLevel }) =>
     set((state) => {
       if (!state.user) return {};
-      return {
-        user: {
-          ...state.user,
-          xp,
-          level,
-          stats: {
-            ...state.user.stats,
-            [stat]: {
-              value: statValue,
-              level: statLevel,
-            },
-          },
-        },
-      };
+      const updated = { ...state.user, xp, level };
+      if (coins !== undefined) updated.coins = coins;
+      if (stat) {
+        updated.stats = {
+          ...state.user.stats,
+          [stat]: { value: statValue, level: statLevel },
+        };
+      }
+      return { user: updated };
     }),
 
   updateXP: (xp) => set((state) => (state.user ? { user: { ...state.user, xp } } : {})),

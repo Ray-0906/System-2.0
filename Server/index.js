@@ -50,6 +50,14 @@ if (isProd) {
 app.get('/', (req, res) => {
     res.send('Welcome to the server!');
 });
+
+app.get('/health', (req, res) => {
+    res.status(200).json({
+        status: "healthy",
+        service: "system2-server",
+        timestamp: new Date().toISOString()
+    });
+});
 app.use('/rank', isAuthenticated, rankRoutes);
 app.use('/mission',isAuthenticated,missionRoutes);
 app.use('/auth',authRoutes);

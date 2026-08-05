@@ -3,7 +3,7 @@ import { useQuery, gql } from '@apollo/client';
 import { ArrowLeft, CheckCircle, Loader2, Trash2, Target, Zap, ShieldAlert, Clock, Activity, Crosshair } from 'lucide-react'; // Added System Icons
 import axiosInstance from '../utils/axios';
 import { useTrackerStore } from '../store/trackerStore';
-import { processQuestResponse } from '../utils/processQuestres';
+import { processQuestResponse } from '../utils/processQuestResponse';
 import { useState, useEffect } from 'react';
 import { useUserStore } from '../store/userStore';
 import MissionInfoPanel from '../components/MissionInfoPanel';

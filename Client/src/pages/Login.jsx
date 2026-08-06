@@ -49,6 +49,8 @@ const Login = () => {
         localStorage.setItem('user', JSON.stringify(user));
       }
       navigate('/dashboard');
+      // Delayed refetch: give browser time to store cross-origin cookie
+      setTimeout(() => useUserStore.getState().triggerRefetch(), 300);
     } catch (err) {
       const serverMsg = err.response?.data?.msg || err.response?.data?.message;
       let errorMessage = "An unexpected error occurred. Please try again later.";
@@ -71,6 +73,7 @@ const Login = () => {
           localStorage.setItem('user', JSON.stringify(data.user));
         }
         navigate('/dashboard');
+        setTimeout(() => useUserStore.getState().triggerRefetch(), 300);
       } catch (err) {
         setError('Google login failed. Please try again.');
       } finally {

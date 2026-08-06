@@ -232,7 +232,11 @@ const StatsDisplay = ({ user, stats }) => {
 };
 
 // 5. Inventory Section (for Skills & Artifacts)
-const InventorySection = ({ title, items, icon: Icon, type }) => (
+const InventorySection = ({ title, items, icon: Icon, type }) => {
+  // Filter out unpopulated items (raw ObjectIds from login response)
+  const populated = (items || []).filter((item) => item && typeof item === 'object' && item.icon);
+
+  return (
   <motion.div
     variants={{ hidden: { opacity: 0, y: 50 }, visible: { opacity: 1, y: 0 } }}
     className="bg-black/40 backdrop-blur-md rounded-xl p-4 md:p-5 border border-purple-500/30 shadow-[0_0_15px_rgba(139,92,246,0.15)] hover:shadow-[0_0_25px_rgba(168,85,247,0.3)] hover:border-purple-500/50 transition-all duration-300 relative overflow-hidden flex flex-col min-h-[300px]"
@@ -244,16 +248,16 @@ const InventorySection = ({ title, items, icon: Icon, type }) => (
     <div className="relative z-10 flex-1 flex flex-col justify-center min-h-0">
       <div className="overflow-x-auto pb-4 scrollbar-thin scrollbar-thumb-purple-500/50 scrollbar-track-gray-900/50 hover:scrollbar-thumb-pink-500/60 transition-colors">
         <div className="flex gap-4 min-w-max px-1">
-          {items && items.length > 0 ? (
-            items.map((item) => (
+          {populated.length > 0 ? (
+            populated.map((item) => (
               <div key={item._id || item.name} className="group relative cursor-pointer text-center w-24">
                 <div className="w-24 h-24 bg-gray-950/80 rounded-xl flex items-center justify-center border border-purple-500/30 group-hover:border-pink-500 transition-all duration-300 shadow-md group-hover:shadow-[0_0_20px_rgba(236,72,153,0.5)] transform group-hover:-translate-y-1 relative overflow-hidden">
                   <div className="absolute inset-0 bg-gradient-to-t from-purple-500/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
                   <img
                     src={`/pic/${type}/${item.icon}`}
-                    alt={item.name}
+                    alt={item.name || '?'}
                     className="w-14 h-14 object-contain relative z-10 group-hover:scale-110 transition-transform duration-300"
-                    onError={(e) => { e.target.onerror = null; e.target.src = `https://placehold.co/56x56/1a1a1a/c084fc?text=${item.name.charAt(0)}`; }}
+                    onError={(e) => { e.target.onerror = null; e.target.src = `https://placehold.co/56x56/1a1a1a/c084fc?text=${(item.name || '?').charAt(0)}`; }}
                   />
                 </div>
                 <p className="mt-3 text-center text-xs font-semibold text-purple-200 truncate px-1 transition-colors group-hover:text-pink-300" style={{ fontFamily: "'Rajdhani', 'Orbitron', sans-serif" }}>
@@ -282,7 +286,8 @@ const InventorySection = ({ title, items, icon: Icon, type }) => (
       </div>
     </div>
   </motion.div>
-);
+  );
+};
 
 // --- Main Dashboard Component ---
 

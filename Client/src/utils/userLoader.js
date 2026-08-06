@@ -48,12 +48,19 @@ export const useLoadUser = () => {
             })
           );
           await Promise.allSettled(trackerPromises);
-        } else {
+        } else if (!cached) {
+          // Only clear if we had no cached data either — this means
+          // the user is genuinely not authenticated, not a cookie race.
           localStorage.removeItem('user');
         }
+        // If getUser returned null BUT we have cached data, keep it.
+        // This handles the cross-origin cookie race after login: the cookie
+        // hasn't been stored yet, so GraphQL returns null, but the login
+        // response already gave us valid user data in localStorage.
       } catch (e) {
-        // Likely unauthorized; clear any stale data
-        localStorage.removeItem('user');
+        if (!cached) {
+          localStorage.removeItem('user');
+        }
       } finally {
         // Always mark as initialized after network fetch completes
         setInitialized();

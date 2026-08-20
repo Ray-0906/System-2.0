@@ -148,9 +148,7 @@ def semantic_search(
         return matches
 
     except Exception as e:
-        logger.error(
-            f"Search failed, returning empty: {e}"
-        )
+        logger.error(f"Search failed, returning empty: {e}")
         return []  # Graceful degradation
 
 

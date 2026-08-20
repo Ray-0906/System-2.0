@@ -1,4 +1,5 @@
 from dotenv import load_dotenv
+
 load_dotenv()
 
 import os
@@ -8,16 +9,30 @@ from fastapi import FastAPI, HTTPException, Header, Depends
 from fastapi.middleware.cors import CORSMiddleware
 
 from models.schemas import (
-    EmbedPageRequest, EmbedPageResponse,
-    SearchRequest, SearchResponse, SearchResult,
-    ChatRequest, ChatResponse,
-    SummarizeRequest, SummarizeResponse,
+    EmbedPageRequest,
+    EmbedPageResponse,
+    SearchRequest,
+    SearchResponse,
+    SearchResult,
+    ChatRequest,
+    ChatResponse,
+    SummarizeRequest,
+    SummarizeResponse,
     HealthResponse,
-    MissionGenerationRequest, MissionGenerationResponse,
+    MissionGenerationRequest,
+    MissionGenerationResponse,
     CustomMissionGenerationRequest,
-    ChatAction, QuestUpgradeRequest, QuestUpgradeResponse
+    ChatAction,
+    QuestUpgradeRequest,
+    QuestUpgradeResponse,
 )
-from services import embedding_service, chat_service, summarize_service, page_builder, mission_service
+from services import (
+    embedding_service,
+    chat_service,
+    summarize_service,
+    page_builder,
+    mission_service,
+)
 from workers.event_consumer import start_consumer
 
 # ── Logging ───────────────────────────────────────────
@@ -48,12 +63,14 @@ def verify_internal_request(x_rag_secret: str | None = Header(default=None)):
 
 # ── Lifespan ──────────────────────────────────────────
 
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Start the Redis event consumer on startup."""
     start_consumer()
     logger.info("RAG-Service ready")
     yield
+
 
 # ── App ───────────────────────────────────────────────
 app = FastAPI(
@@ -72,6 +89,7 @@ app.add_middleware(
 
 
 # ── Endpoints ─────────────────────────────────────────
+
 
 @app.post("/pages/embed", response_model=EmbedPageResponse)
 async def embed_page(req: EmbedPageRequest, _: None = Depends(verify_internal_request)):
@@ -111,6 +129,7 @@ async def embed_page(req: EmbedPageRequest, _: None = Depends(verify_internal_re
         raise HTTPException(500, f"Embedding failed: {str(e)}")
 
 
+# not used now as the semantic search is done in the chat endpoint itself ...
 @app.post("/search", response_model=SearchResponse)
 async def search(req: SearchRequest, _: None = Depends(verify_internal_request)):
     """
@@ -151,22 +170,25 @@ async def chat(req: ChatRequest, _: None = Depends(verify_internal_request)):
     """
     try:
         # 1. & 2. Fetch context from MongoDB natively and run Semantic Search in parallel
-        from services.db_service import build_user_context, get_chat_history, get_recent_events
+        from services.db_service import (
+            build_user_context,
+            get_chat_history,
+            get_recent_events,
+        )
         import asyncio
 
+        # does a semantic serach on queery and gets the top k  result for context building  t-4 memory
         def do_search():
             try:
                 raw_results = embedding_service.semantic_search(
-                    query=req.message,
-                    user_id=req.userId,
-                    top_k=5
+                    query=req.message, user_id=req.userId, top_k=5
                 )
                 return [
                     {
                         "summary": r["summary"],
                         "score": r["score"],
                         "timeFrom": r.get("timeFrom", ""),
-                        "timeTo": r.get("timeTo", "")
+                        "timeTo": r.get("timeTo", ""),
                     }
                     for r in raw_results
                 ]
@@ -179,7 +201,12 @@ async def chat(req: ChatRequest, _: None = Depends(verify_internal_request)):
         chat_history_task = get_chat_history(req.userId)
         recent_events_task = get_recent_events(req.userId)
 
-        search_results, (user_profile, active_missions_str), chat_history_data, recent_events_str = await asyncio.gather(
+        (
+            search_results,
+            (user_profile, active_missions_str),
+            chat_history_data,
+            recent_events_str,
+        ) = await asyncio.gather(
             search_task, user_context_task, chat_history_task, recent_events_task
         )
 
@@ -199,7 +226,9 @@ async def chat(req: ChatRequest, _: None = Depends(verify_internal_request)):
         if result.get("action"):
             action_data = ChatAction(**result["action"])
 
-        return ChatResponse(reply=result["reply"], source="semantic", action=action_data)
+        return ChatResponse(
+            reply=result["reply"], source="semantic", action=action_data
+        )
 
     except Exception as e:
         logger.error(f"Chat error: {e}")
@@ -207,10 +236,14 @@ async def chat(req: ChatRequest, _: None = Depends(verify_internal_request)):
 
 
 @app.post("/mission/generate", response_model=MissionGenerationResponse)
-async def generate_mission(req: MissionGenerationRequest, _: None = Depends(verify_internal_request)):
+async def generate_mission(
+    req: MissionGenerationRequest, _: None = Depends(verify_internal_request)
+):
     """Generate a mission from a free-form description."""
     try:
-        result = mission_service.generate_mission_from_description(req.description, req.days)
+        result = mission_service.generate_mission_from_description(
+            req.description, req.days
+        )
         return MissionGenerationResponse.model_validate(result)
     except Exception as e:
         logger.error(f"Mission generation error: {e}")
@@ -218,7 +251,9 @@ async def generate_mission(req: MissionGenerationRequest, _: None = Depends(veri
 
 
 @app.post("/mission/generate-custom", response_model=MissionGenerationResponse)
-async def generate_custom_mission(req: CustomMissionGenerationRequest, _: None = Depends(verify_internal_request)):
+async def generate_custom_mission(
+    req: CustomMissionGenerationRequest, _: None = Depends(verify_internal_request)
+):
     """Generate a mission from user-provided quests."""
     try:
         result = mission_service.generate_custom_mission(req.quests, req.days)
@@ -229,7 +264,9 @@ async def generate_custom_mission(req: CustomMissionGenerationRequest, _: None =
 
 
 @app.post("/quest/upgrade", response_model=QuestUpgradeResponse)
-async def upgrade_quests(req: QuestUpgradeRequest, _: None = Depends(verify_internal_request)):
+async def upgrade_quests(
+    req: QuestUpgradeRequest, _: None = Depends(verify_internal_request)
+):
     """Upgrade quests to a higher difficulty."""
     try:
         result = mission_service.upgrade_quests(req.quests)
@@ -240,7 +277,9 @@ async def upgrade_quests(req: QuestUpgradeRequest, _: None = Depends(verify_inte
 
 
 @app.post("/history/summarize", response_model=SummarizeResponse)
-async def summarize_history(req: SummarizeRequest, _: None = Depends(verify_internal_request)):
+async def summarize_history(
+    req: SummarizeRequest, _: None = Depends(verify_internal_request)
+):
     """
     Condense old chat messages into a rolling summary.
     Called periodically by Node.js when messages exceed 30 days.
@@ -257,6 +296,7 @@ async def summarize_history(req: SummarizeRequest, _: None = Depends(verify_inte
         raise HTTPException(500, f"Summarization failed: {str(e)}")
 
 
+# this is rarely used path when detelting users or deleting memory manually
 @app.delete("/users/{user_id}")
 async def delete_user(user_id: str, _: None = Depends(verify_internal_request)):
     """Delete all vectors for a user (GDPR compliance)."""
@@ -268,6 +308,7 @@ async def delete_user(user_id: str, _: None = Depends(verify_internal_request)):
         raise HTTPException(500, f"Deletion failed: {str(e)}")
 
 
+# this is small potato fallback not gonna use in future as latency increases
 @app.post("/pages/build/{user_id}")
 async def build_pages(user_id: str, _: None = Depends(verify_internal_request)):
     """

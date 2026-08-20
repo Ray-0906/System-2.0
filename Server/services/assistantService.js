@@ -175,9 +175,9 @@ export const chat = async (userId, message) => {
   const pendingMission = await getPendingMissionProposal(userId);
 
   // 3. Trigger page build on RAG-Service (safety net — Redis consumer usually handles this)
-  ragService.triggerPageBuild(userId).catch(err =>
-    console.error('[Assistant] Page build trigger error:', err.message)
-  );
+  // ragService.triggerPageBuild(userId).catch(err =>
+  //   console.error('[Assistant] Page build trigger error:', err.message)
+  // );
 
 
 // 5. Send to RAG-Service for Semantic Search + LLM response
